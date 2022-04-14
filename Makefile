@@ -13,15 +13,15 @@ deps/dev: deps
 build: build/linux build/windows build/macosx ;
 
 .PHONY: build/linux
-build/linux:
+build/linux: deps
 	env GOOS=linux GOARCH=amd64 go build -o build/bin/cifuzz_linux
 
 .PHONY: build/windows
-build/windows:
+build/windows: deps
 	env GOOS=windows GOARCH=amd64 go build -o build/bin/cifuzz_windows.exe
 
 .PHONY: build/macosx
-build/macosx:
+build/macosx: deps
 	env GOOS=darwin GOARCH=amd64 go build -o build/bin/cifuzz_mac
 
 .PHONY: lint
