@@ -1,0 +1,16 @@
+name: Main Pipeline
+
+on: 
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  linting:
+    uses: CodeIntelligenceTesting/cifuzz/.github/workflows/resuable_linting.yml@main
+  testing:
+    uses: CodeIntelligenceTesting/cifuzz/.github/workflows/reusable_testing.yml@main
+  building:
+    uses: CodeIntelligenceTesting/cifuzz/.github/workflows/reusable_testing.yml@main

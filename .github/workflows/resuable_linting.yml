@@ -1,9 +1,9 @@
-name: Testing 
+name: Linting
 
-on: [push, pull_request, workflow_dispatch]
+on: [workflow_call]
 
 jobs:
-  unit-tests:
+  linting:
     runs-on: ubuntu-latest
 
     steps:
@@ -14,6 +14,7 @@ jobs:
         with:
           go-version: '^1.18'
 
-      - name: Run unit tests
+      - name: Run gofmt and print changes
         run: |
-          make test
+          make fmt/check 
+          make lint

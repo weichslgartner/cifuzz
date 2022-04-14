@@ -1,11 +1,6 @@
 name: Building 
 
-on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
-  workflow_dispatch:
+on: [workflow_call]
 
 jobs:
   building:
