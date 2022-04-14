@@ -30,6 +30,10 @@ lint:
 fmt:
 	go fmt $$(go list ./...)
 
+.PHONY: fmt/check
+fmt/check:
+	if [ "$$(gofmt -d -l . | wc -l)" -gt 0 ]; then exit 1; fi;
+
 .PHONY: test
 test:
 	go test ./...
