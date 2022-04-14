@@ -13,4 +13,28 @@ jobs:
   testing:
     uses: CodeIntelligenceTesting/cifuzz/.github/workflows/reusable_testing.yml@main
   building:
-    uses: CodeIntelligenceTesting/cifuzz/.github/workflows/reusable_testing.yml@main
+    uses: CodeIntelligenceTesting/cifuzz/.github/workflows/reusable_building.yml@main
+
+  test_binaries:
+    needs: building 
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-11, windows-latest]
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: binaries
+      - name: Run binary
+        run: |
+         if [ "$RUNNER_OS" == "Linux" ]; then
+            chmod u+x cifuzz_linux
+            ./cifuzz_linux;
+         elif [ "$RUNNER_OS" == "Windows" ]; then
+            ./cifuzz_windows.exe;
+         elif [ "$RUNNER_OS" == "macOS" ]; then
+            chmod u+x cifuzz_mac;
+            ./cifuzz_mac
+         fi
+        shell: bash
