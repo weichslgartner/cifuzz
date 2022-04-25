@@ -1,11 +1,20 @@
 name: Testing 
 
-on: [workflow_call]
-
+on:
+  workflow_call:
+    inputs:
+      unit-tests:
+        default: true
+        required: false
+        type: boolean 
+      integration-tests:
+        default: false 
+        required: false
+        type: boolean 
 jobs:
   unit-tests:
+    if: ${{ inputs.unit-tests }}
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v3
 
@@ -15,5 +24,22 @@ jobs:
           go-version: '^1.18'
 
       - name: Run unit tests
-        run: |
-          make test
+        run: make test/unit
+
+  integration-tests:
+    if: ${{ inputs.integration-tests }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Go environment
+        uses: actions/setup-go@v3
+        with:
+          go-version: '^1.18'
+
+      - name: Run integration tests 
+        run: make test/integration
+        shell: bash
