@@ -3,9 +3,13 @@ module code-intelligence.com/cifuzz
 go 1.18
 
 require (
+	github.com/bazelbuild/rules_go v0.31.0
+	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
+	github.com/phst/runfiles v0.0.0-20220326201552-61ddb5beae0a
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/cobra v1.4.0
 	github.com/spf13/viper v1.11.0
+	golang.org/x/sync v0.0.0-20201207232520-09787c993a3a
 )
 
 require (
