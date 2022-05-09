@@ -4,11 +4,14 @@ import (
 	"os"
 	"testing"
 
-	"code-intelligence.com/cifuzz/pkg/cmdutils"
 	"github.com/stretchr/testify/assert"
+
+	"code-intelligence.com/cifuzz/pkg/cmdutils"
+	"code-intelligence.com/cifuzz/pkg/storage"
 )
 
 func TestRunCmd(t *testing.T) {
-	_, err := cmdutils.ExecuteCommand(t, New(), os.Stdin)
+	fs := storage.NewMemFileSystem()
+	_, err := cmdutils.ExecuteCommand(t, New(fs), os.Stdin)
 	assert.Error(t, err)
 }

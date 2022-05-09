@@ -52,7 +52,7 @@ func New(fs *afero.Afero) *cobra.Command {
 	rootCmd.AddCommand(initCmd.New(fs))
 	rootCmd.AddCommand(createCmd.New(fs))
 	rootCmd.AddCommand(buildCmd.New())
-	rootCmd.AddCommand(runCmd.New())
+	rootCmd.AddCommand(runCmd.New(fs))
 
 	return rootCmd
 }
