@@ -257,9 +257,7 @@ func runMinijail(fuzzerArgs []string) error {
 	// The process wrapper sets environment variables inside the sandbox
 	// to the remaining arguments until the first "--", so we pass
 	// variables from the --env flags
-	for _, e := range viper.GetStringSlice(minijail.EnvFlag) {
-		processWrapperArgs = append(processWrapperArgs, e)
-	}
+	processWrapperArgs = append(processWrapperArgs, viper.GetStringSlice(minijail.EnvFlag)...)
 
 	// --------------------
 	// --- Run minijail ---
