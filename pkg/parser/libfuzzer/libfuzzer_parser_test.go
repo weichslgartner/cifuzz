@@ -32,6 +32,7 @@ func TestLibFuzzerAdapter_ReportsParsing(t *testing.T) {
 	require.NoError(t, err, "failed to create temp slow input file")
 	testInput := []byte{'t', 'e', 's', 't'}
 	_, err = testInputFile.Write(testInput)
+	require.NoError(t, err)
 	defer fileutil.Cleanup(testInputFile.Name())
 
 	tests := []struct {
