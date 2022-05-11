@@ -7,8 +7,8 @@ import (
 	"github.com/pkg/errors"
 
 	"code-intelligence.com/cifuzz/pkg/report"
+	"code-intelligence.com/cifuzz/pkg/runfiles"
 	"code-intelligence.com/cifuzz/util/envutil"
-	"code-intelligence.com/cifuzz/util/runfileutil"
 	"code-intelligence.com/cifuzz/util/stringutil"
 )
 
@@ -147,7 +147,7 @@ func FuzzerEnvironment() ([]string, error) {
 
 	// Tell the address sanitizer where it can find llvm-symbolizer.
 	// See https://clang.llvm.org/docs/AddressSanitizer.html#symbolizing-the-reports
-	llvmSymbolizer, err := runfileutil.FindFollowSymlinks("llvm/bin/llvm-symbolizer")
+	llvmSymbolizer, err := runfiles.Finder.LLVMSymbolizerPath()
 	if err != nil {
 		return nil, err
 	}

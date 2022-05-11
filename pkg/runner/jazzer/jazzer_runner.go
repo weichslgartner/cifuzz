@@ -10,9 +10,9 @@ import (
 	"github.com/pkg/errors"
 
 	minijail "code-intelligence.com/cifuzz/pkg/minijail/pkg"
+	"code-intelligence.com/cifuzz/pkg/runfiles"
 	"code-intelligence.com/cifuzz/pkg/runner/libfuzzer"
 	"code-intelligence.com/cifuzz/util/envutil"
-	"code-intelligence.com/cifuzz/util/runfileutil"
 	"code-intelligence.com/cifuzz/util/stringutil"
 )
 
@@ -61,11 +61,11 @@ func (r *Runner) Run(ctx context.Context) error {
 	var err error
 
 	var driverPath string
-	driverPath, err = runfileutil.FindFollowSymlinks("jazzer/driver/jazzer_driver")
+	driverPath, err = runfiles.Finder.JazzerDriverPath()
 	if err != nil {
 		return err
 	}
-	agentPath, err := runfileutil.FindFollowSymlinks("jazzer/agent/jazzer_agent_deploy.jar")
+	agentPath, err := runfiles.Finder.JazzerAgentDeployJarPath()
 	if err != nil {
 		return err
 	}
@@ -158,7 +158,7 @@ func (r *Runner) Run(ctx context.Context) error {
 		}
 
 		// Add binding for the system JDK and pass it to minijail.
-		javaHome, err := runfileutil.FindSystemJavaHome()
+		javaHome, err := runfiles.FindSystemJavaHome()
 		if err != nil {
 			return err
 		}
@@ -196,7 +196,7 @@ func (r *Runner) FuzzerEnvironment() ([]string, error) {
 	}
 
 	// Set JAVA_HOME
-	javaHome, err := runfileutil.FindSystemJavaHome()
+	javaHome, err := runfiles.FindSystemJavaHome()
 	if err != nil {
 		return nil, err
 	}

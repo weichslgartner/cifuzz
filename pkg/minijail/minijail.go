@@ -23,9 +23,9 @@ import (
 	"golang.org/x/sys/unix"
 
 	minijail "code-intelligence.com/cifuzz/pkg/minijail/pkg"
+	"code-intelligence.com/cifuzz/pkg/runfiles"
 	"code-intelligence.com/cifuzz/util/fileutil"
 	"code-intelligence.com/cifuzz/util/glogutil"
-	"code-intelligence.com/cifuzz/util/runfileutil"
 	"code-intelligence.com/cifuzz/util/stringutil"
 )
 
@@ -130,7 +130,7 @@ func runMinijail(fuzzerArgs []string) error {
 	// ----------------------------
 	// --- Set up minijail args ---
 	// ----------------------------
-	minijailPath, err := runfileutil.FindFollowSymlinks("minijail/minijail_make/bin/minijail0")
+	minijailPath, err := runfiles.Finder.Minijail0Path()
 	if err != nil {
 		return err
 	}
@@ -147,10 +147,7 @@ func runMinijail(fuzzerArgs []string) error {
 		// [1] https://google.github.io/minijail/minijail0.1.html#implementation
 		minijailArgs = append(minijailArgs, "-T", "static", "--ambient")
 	} else {
-
-		// Set path to libminijailpreload.so
-		libminijailpreloadRunfilePath := "minijail/minijail_make/lib/libminijailpreload.so"
-		libminijailpreload, err := runfileutil.FindFollowSymlinks(libminijailpreloadRunfilePath)
+		libminijailpreload, err := runfiles.Finder.LibMinijailPreloadPath()
 		if err != nil {
 			return err
 		}
@@ -181,16 +178,17 @@ func runMinijail(fuzzerArgs []string) error {
 	bindings = append(bindings, &minijail.Binding{Source: fuzzer})
 
 	// Add llvm to bindings
-	llvmDir, err := runfileutil.FindDirFollowSymlinks("llvm", "bin/llvm-symbolizer")
+	llvmSymbolizerPath, err := runfiles.Finder.LLVMSymbolizerPath()
 	if err != nil {
 		return err
 	}
+	llvmDir := filepath.Dir(llvmSymbolizerPath)
 	bindings = append(bindings, &minijail.Binding{Source: llvmDir})
 
 	// Add binding for process_wrapper. process_wrapper changes the
 	// working directory and sets environment variables and then
 	// executes the specified command.
-	processWrapperPath, err := runfileutil.FindFollowSymlinks("code_intelligence/cifuzz/pkg/minijail/process_wrapper/process_wrapper")
+	processWrapperPath, err := runfiles.Finder.ProcessWrapperPath()
 	if err != nil {
 		return err
 	}

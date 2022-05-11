@@ -16,10 +16,10 @@ import (
 	minijail "code-intelligence.com/cifuzz/pkg/minijail/pkg"
 	libfuzzer_parser "code-intelligence.com/cifuzz/pkg/parser/libfuzzer"
 	"code-intelligence.com/cifuzz/pkg/report"
+	"code-intelligence.com/cifuzz/pkg/runfiles"
 	fuzzer_runner "code-intelligence.com/cifuzz/pkg/runner"
 	"code-intelligence.com/cifuzz/util/envutil"
 	"code-intelligence.com/cifuzz/util/executil"
-	"code-intelligence.com/cifuzz/util/runfileutil"
 	"code-intelligence.com/cifuzz/util/sliceutil"
 	"code-intelligence.com/cifuzz/util/stringutil"
 )
@@ -120,7 +120,7 @@ func (r *Runner) Run(ctx context.Context) error {
 		libfuzzerArgs := args
 
 		// Execute libfuzzer via minijail
-		minijailPath, err := runfileutil.FindFollowSymlinks("code_intelligence/cifuzz/pkg/minijail/minijail_/minijail")
+		minijailPath, err := runfiles.Finder.MinijailWrapperPath()
 		if err != nil {
 			return err
 		}

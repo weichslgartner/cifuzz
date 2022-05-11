@@ -9,12 +9,12 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"code-intelligence.com/cifuzz/pkg/runfiles"
 	"code-intelligence.com/cifuzz/util/fileutil"
-	"code-intelligence.com/cifuzz/util/runfileutil"
 )
 
 func TestProcessWrapper_ChangesDirectory(t *testing.T) {
-	processWrapperPath, err := runfileutil.Find("code_intelligence/cifuzz/pkg/minijail/process_wrapper/process_wrapper")
+	processWrapperPath, err := runfiles.Finder.ProcessWrapperPath()
 	require.NoError(t, err)
 	tempDir, err := fileutil.TempDir("process_wrapper")
 	require.NoError(t, err)
@@ -31,7 +31,7 @@ func TestProcessWrapper_ChangesDirectory(t *testing.T) {
 }
 
 func TestProcessWrapper_SetsArgvAndEnvp(t *testing.T) {
-	processWrapperPath, err := runfileutil.Find("code_intelligence/cifuzz/pkg/minijail/process_wrapper/process_wrapper")
+	processWrapperPath, err := runfiles.Finder.ProcessWrapperPath()
 	require.NoError(t, err)
 	tempDir, err := fileutil.TempDir("process_wrapper")
 	require.NoError(t, err)
