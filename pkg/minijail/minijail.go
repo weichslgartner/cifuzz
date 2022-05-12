@@ -140,9 +140,14 @@ func runMinijail(fuzzerArgs []string) error {
 		glog.Warningf("Running minijail in debug mode, this is NOT SAFE FOR PRODUCTION!")
 		// This causes minijail to not use preload hooking, which
 		// sometimes results in better error messages, so it can be
-		// useful for debugging but shouldn't be used in production
+		// useful for debugging but shouldn't be used in production,
+		// because (quoting the Minijail manual [1]): "some jailing can
+		// only be achieved from the process to which they will actually
+		// apply [via preloading]".
+		// [1] https://google.github.io/minijail/minijail0.1.html#implementation
 		minijailArgs = append(minijailArgs, "-T", "static", "--ambient")
 	} else {
+
 		// Set path to libminijailpreload.so
 		libminijailpreloadRunfilePath := "minijail/minijail_make/lib/libminijailpreload.so"
 		libminijailpreload, err := runfileutil.FindFollowSymlinks(libminijailpreloadRunfilePath)
