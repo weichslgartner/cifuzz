@@ -21,20 +21,23 @@ func (x *Report) GetFinding() *Finding {
 	return nil
 }
 
-type RunStatus int32
+type RunStatus string
 
+// These constants must have this exact value (in uppercase) to be able
+// to parse JSON-marshalled reports as protobuf reports which use an
+// enum for this field.
 const (
-	RunStatus_RUNSTATUS_UNSPECIFIED      RunStatus = 0
-	RunStatus_PENDING                    RunStatus = 1
-	RunStatus_COMPILING                  RunStatus = 2
-	RunStatus_RUNNING                    RunStatus = 3
-	RunStatus_STOPPED                    RunStatus = 4
-	RunStatus_FAILED                     RunStatus = 5
-	RunStatus_SUCCEEDED                  RunStatus = 6
-	RunStatus_UNKNOWN                    RunStatus = 7
-	RunStatus_INITIALIZING               RunStatus = 8
-	RunStatus_FAILED_TO_START            RunStatus = 9
-	RunStatus_WAITING_FOR_FUZZING_AGENTS RunStatus = 10
+	RunStatus_RUNSTATUS_UNSPECIFIED      RunStatus = "UNSPECIFIED"
+	RunStatus_PENDING                    RunStatus = "PENDING"
+	RunStatus_COMPILING                  RunStatus = "COMPILING"
+	RunStatus_RUNNING                    RunStatus = "RUNNING"
+	RunStatus_STOPPED                    RunStatus = "STOPPED"
+	RunStatus_FAILED                     RunStatus = "FAILED"
+	RunStatus_SUCCEEDED                  RunStatus = "SUCCEEDED"
+	RunStatus_UNKNOWN                    RunStatus = "UNKNOWN"
+	RunStatus_INITIALIZING               RunStatus = "INITIALIZING"
+	RunStatus_FAILED_TO_START            RunStatus = "FAILED_TO_START"
+	RunStatus_WAITING_FOR_FUZZING_AGENTS RunStatus = "WAITING_FOR_FUZZING_AGENTS"
 )
 
 type FuzzingMetric struct {
@@ -66,14 +69,17 @@ func (x *Finding) GetDetails() string {
 	return ""
 }
 
-type ErrorType int32
+type ErrorType string
 
+// These constants must have this exact value (in uppercase) to be able
+// to parse JSON-marshalled reports as protobuf reports which use an
+// enum for this field.
 const (
-	ErrorType_UNKNOWN_ERROR     ErrorType = 0
-	ErrorType_COMPILATION_ERROR ErrorType = 1
-	ErrorType_CRASH             ErrorType = 2
-	ErrorType_WARNING           ErrorType = 3
-	ErrorType_RUNTIME_ERROR     ErrorType = 4
+	ErrorType_UNKNOWN_ERROR     ErrorType = "UNKNOWN_ERROR"
+	ErrorType_COMPILATION_ERROR ErrorType = "COMPILATION_ERROR"
+	ErrorType_CRASH             ErrorType = "CRASH"
+	ErrorType_WARNING           ErrorType = "WARNING"
+	ErrorType_RUNTIME_ERROR     ErrorType = "RUNTIME_ERROR"
 )
 
 type ErrorDetails struct {
