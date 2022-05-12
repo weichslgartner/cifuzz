@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -18,7 +19,6 @@ import (
 	fuzzer_runner "code-intelligence.com/cifuzz/pkg/runner"
 	"code-intelligence.com/cifuzz/util/envutil"
 	"code-intelligence.com/cifuzz/util/executil"
-	"code-intelligence.com/cifuzz/util/fileutil"
 	"code-intelligence.com/cifuzz/util/runfileutil"
 	"code-intelligence.com/cifuzz/util/sliceutil"
 	"code-intelligence.com/cifuzz/util/stringutil"
@@ -50,12 +50,19 @@ type RunnerOptions struct {
 
 func (options *RunnerOptions) ValidateOptions() error {
 	if options.UseMinijail {
-		// To be able to make the fuzz target accessible to minijail, it
-		// must not be a symlink
-		if fileutil.IsSymlink(options.FuzzTarget) {
-			return errors.Errorf("fuzz target must not be a symlink: %s", options.FuzzTarget)
+		// To be able to make the fuzz target accessible to minijail,
+		// its path must be absolute and all symlinks must be resolved.
+		var err error
+		options.FuzzTarget, err = filepath.EvalSymlinks(options.FuzzTarget)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+		options.FuzzTarget, err = filepath.Abs(options.FuzzTarget)
+		if err != nil {
+			return errors.WithStack(err)
 		}
 	}
+
 	return nil
 }
 
