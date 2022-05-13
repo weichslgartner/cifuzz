@@ -69,10 +69,6 @@ func (r *Runner) Run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	additionalSanitizersPath, err := runfileutil.FindFollowSymlinks("code_intelligence/pkg/web_app/agents/java/runtime_sanitizers_only_deploy.jar")
-	if err != nil {
-		return err
-	}
 
 	args := []string{driverPath}
 
@@ -85,8 +81,7 @@ func (r *Runner) Run(ctx context.Context) error {
 		args = append(args, "--target_class="+r.TargetClass)
 	}
 
-	classpathWithInternalTools := append(r.ClassPaths, additionalSanitizersPath)
-	args = append(args, fmt.Sprintf("--cp=%s", strings.Join(classpathWithInternalTools, ":")))
+	args = append(args, fmt.Sprintf("--cp=%s", strings.Join(r.ClassPaths, ":")))
 
 	args = append(args, "--agent_path="+agentPath)
 	args = append(args, instrumentorAgentArgs(r.InstrumentationPackageFilters)...)
@@ -155,8 +150,6 @@ func (r *Runner) Run(ctx context.Context) error {
 			// The first corpus directory must be writable, because
 			// libfuzzer writes new test inputs to it
 			{Source: r.SeedsDir, Writable: minijail.ReadWrite},
-			// The additional sanitizers jar must be accessible
-			{Source: additionalSanitizersPath},
 		}
 
 		// Add bindings for the Java dependencies
