@@ -1,0 +1,5 @@
+cc_binary(
+    name = "process_wrapper",
+    srcs = ["process_wrapper.c"],
+    visibility = ["//visibility:public"],
+)
