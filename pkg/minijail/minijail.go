@@ -1,12 +1,4 @@
-package main
-
-// A small wrapper around minijail.
-// We use a separate tool to call minijail via syscall.Exec() because:
-// * Sometimes, for a reason unknown to me, when called via
-//   exec.Command(), minijail doesn't print anything to stderr, while
-//   it does when called via syscall.Exec().
-// * It allows fuzzer_monitor to kill minijail by sending signals to its
-//   child process (i.e. the one started for this program).
+package minijail
 
 import (
 	"fmt"
@@ -14,20 +6,128 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"syscall"
 
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
-	"github.com/spf13/pflag"
-	"github.com/spf13/viper"
 	"golang.org/x/sys/unix"
 
-	minijail "code-intelligence.com/cifuzz/pkg/minijail/pkg"
 	"code-intelligence.com/cifuzz/pkg/runfiles"
+	"code-intelligence.com/cifuzz/util/envutil"
 	"code-intelligence.com/cifuzz/util/fileutil"
-	"code-intelligence.com/cifuzz/util/glogutil"
 	"code-intelligence.com/cifuzz/util/stringutil"
 )
+
+const (
+	OutputDir = "/tmp/minijail-out"
+
+	EnvPrefix = "CIFUZZ_MINIJAIL_"
+
+	DebugEnvVarName    = EnvPrefix + "DEBUG"
+	BindingsEnvVarName = EnvPrefix + "BINDINGS"
+
+	BindingFlag = "bind"
+	EnvFlag     = "env"
+)
+
+type WritableOption int
+
+const (
+	ReadOnly WritableOption = iota
+	ReadWrite
+)
+
+type Binding struct {
+	Source   string
+	Target   string
+	Writable WritableOption
+}
+
+func (b *Binding) String() string {
+	if b.Target == "" {
+		b.Target = b.Source
+	}
+	if b.Writable == ReadWrite {
+		return fmt.Sprintf("%s,%s,1", b.Source, b.Target)
+	}
+	// Don't use a short form if the source or target contain a comma,
+	// which would be interpreted as separators by minijail.
+	if strings.ContainsRune(b.Source, ',') || strings.ContainsRune(b.Target, ',') {
+		return fmt.Sprintf("%s,%s,0", b.Source, b.Target)
+	}
+	if b.Source != b.Target {
+		return fmt.Sprintf("%s,%s", b.Source, b.Target)
+	}
+	return b.Source
+}
+
+func BindingFromString(s string) (*Binding, error) {
+	tokens := strings.SplitN(s, ",", 3)
+	switch len(tokens) {
+	case 1:
+		return &Binding{Source: tokens[0], Target: tokens[0], Writable: 0}, nil
+	case 2:
+		return &Binding{Source: tokens[0], Target: tokens[1], Writable: 0}, nil
+	case 3:
+		writable, err := strconv.Atoi(tokens[2])
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+		return &Binding{Source: tokens[0], Target: tokens[1], Writable: WritableOption(writable)}, nil
+	}
+	return nil, errors.Errorf("Bad binding: %s", s)
+}
+
+// Deprecated: Use AddMinijailBindingToEnv instead, which doesn't use os.Setenv.
+// TODO(adrian): AddMinijailBindingDeprecated will be removed once all adapters are
+//               rewritten (CIFUZZ-1289).
+func AddMinijailBindingDeprecated(path string, writable WritableOption) error {
+	binding, err := getMinijailBinding(path, writable)
+	if err != nil {
+		return err
+	}
+
+	bindings := os.Getenv(BindingsEnvVarName)
+	if bindings == "" {
+		bindings = binding
+	} else {
+		bindings += ":" + binding
+	}
+
+	err = os.Setenv(BindingsEnvVarName, bindings)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	return nil
+}
+
+func AddMinijailBindingToEnv(env []string, binding *Binding) ([]string, error) {
+	bindings := envutil.Getenv(env, BindingsEnvVarName)
+	if bindings == "" {
+		bindings = binding.Source
+	} else {
+		bindings += ":" + binding.String()
+	}
+
+	env, err := envutil.Setenv(env, BindingsEnvVarName, bindings)
+	if err != nil {
+		return nil, err
+	}
+
+	return env, nil
+}
+
+func getMinijailBinding(path string, writable WritableOption) (string, error) {
+	src, err := filepath.EvalSymlinks(path)
+	if err != nil {
+		return "", errors.WithStack(err)
+	}
+	writableStr := "0"
+	if writable == ReadWrite {
+		writableStr = "1"
+	}
+	return fmt.Sprintf("%s,%s,%s", src, path, writableStr), nil
+}
 
 var fixedMinijailArgs = []string{
 	// Most of these args are the same as the ones clusterfuzz sets in
@@ -64,7 +164,7 @@ var fixedMinijailArgs = []string{
 	"--logging=stderr",
 }
 
-var defaultBindings = []*minijail.Binding{
+var defaultBindings = []*Binding{
 	// The second value specifies whether the binding is read-only (0)
 	// or read-write (1).
 	{Source: "/lib"},
@@ -73,14 +173,14 @@ var defaultBindings = []*minijail.Binding{
 	{Source: "/usr/lib"},
 	{Source: "/usr/lib32"},
 	// Added by us
-	{Source: minijail.OutputDir, Writable: minijail.ReadWrite},
+	{Source: OutputDir, Writable: ReadWrite},
 	// We allow access to /dev/null and /dev/urandom because AFL needs
 	// access to them and some fuzz targets might as well (for example
 	// our lighttpd example fuzz target).
 	// They have to be mounted read-write, else minijail fails with
 	// libminijail[1]: cannot bind-remount: [...] Operation not permitted
-	{Source: "/dev/null", Writable: minijail.ReadWrite},
-	{Source: "/dev/urandom", Writable: minijail.ReadWrite},
+	{Source: "/dev/null", Writable: ReadWrite},
+	{Source: "/dev/urandom", Writable: ReadWrite},
 	// We allow access to /etc/passwd and /etc/group because some fuzz
 	// targets (for example nginx) will fail if they can't obtain the
 	// UID and GID for a specified user and group (specifying a UID
@@ -89,13 +189,25 @@ var defaultBindings = []*minijail.Binding{
 	{Source: "/etc/group"},
 }
 
-func runMinijail(fuzzerArgs []string) error {
-	// Evaluate symlinks in the fuzzer path
-	fuzzer, err := filepath.EvalSymlinks(fuzzerArgs[0])
+type Options struct {
+	Args     []string
+	Env      []string
+	Bindings []*Binding
+}
+
+type minijail struct {
+	*Options
+	Args      []string
+	chrootDir string
+}
+
+func NewMinijail(opts *Options) (*minijail, error) {
+	// Evaluate symlinks in the executable path
+	path, err := filepath.EvalSymlinks(opts.Args[0])
 	if err != nil {
-		return errors.WithStack(err)
+		return nil, errors.WithStack(err)
 	}
-	fuzzerArgs[0] = fuzzer
+	opts.Args[0] = path
 
 	// --------------------------
 	// --- Create directories ---
@@ -103,28 +215,29 @@ func runMinijail(fuzzerArgs []string) error {
 	// Create chroot directory
 	chrootDir, err := fileutil.TempDir("minijail-chroot-")
 	if err != nil {
-		return err
+		return nil, err
 	}
-	defer fileutil.Cleanup(chrootDir)
+	// TODO: Return a cleanup function
+	//defer fileutil.Cleanup(chrootDir)
 
 	// Create output directory
-	err = os.MkdirAll(minijail.OutputDir, 0700)
+	err = os.MkdirAll(OutputDir, 0700)
 	if err != nil {
-		return errors.WithStack(err)
+		return nil, errors.WithStack(err)
 	}
 
 	// Create /tmp, /proc directories.
 	for _, dir := range []string{"/proc", "/tmp"} {
 		err = os.MkdirAll(filepath.Join(chrootDir, dir), 0o755)
 		if err != nil {
-			return errors.WithStack(err)
+			return nil, errors.WithStack(err)
 		}
 	}
 
 	// Create /dev/shm which is required to allow using shared memory
 	err = os.MkdirAll(filepath.Join(chrootDir, "/dev/shm"), 0o755)
 	if err != nil {
-		return errors.WithStack(err)
+		return nil, errors.WithStack(err)
 	}
 
 	// ----------------------------
@@ -132,11 +245,11 @@ func runMinijail(fuzzerArgs []string) error {
 	// ----------------------------
 	minijailPath, err := runfiles.Finder.Minijail0Path()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	minijailArgs := append([]string{minijailPath}, fixedMinijailArgs...)
 
-	if os.Getenv(minijail.DebugEnvVarName) != "" {
+	if os.Getenv(DebugEnvVarName) != "" {
 		glog.Warningf("Running minijail in debug mode, this is NOT SAFE FOR PRODUCTION!")
 		// This causes minijail to not use preload hooking, which
 		// sometimes results in better error messages, so it can be
@@ -149,7 +262,7 @@ func runMinijail(fuzzerArgs []string) error {
 	} else {
 		libminijailpreload, err := runfiles.Finder.LibMinijailPreloadPath()
 		if err != nil {
-			return err
+			return nil, err
 		}
 		minijailArgs = append(minijailArgs, "--preload-library="+libminijailpreload)
 	}
@@ -160,7 +273,7 @@ func runMinijail(fuzzerArgs []string) error {
 	// -----------------------
 	// --- Set up bindings ---
 	// -----------------------
-	bindings := defaultBindings
+	bindings := append(opts.Bindings, defaultBindings...)
 
 	// We expect the current working directory to be the artifacts
 	// directory, which should be accessible to the fuzz target, so we
@@ -170,50 +283,41 @@ func runMinijail(fuzzerArgs []string) error {
 	// this is fine on CIFUZZ-1192.
 	workdir, err := os.Getwd()
 	if err != nil {
-		return errors.WithStack(err)
+		return nil, errors.WithStack(err)
 	}
-	bindings = append(bindings, &minijail.Binding{Source: workdir, Writable: minijail.ReadWrite})
+	bindings = append(bindings, &Binding{Source: workdir, Writable: ReadWrite})
 
-	// Add binding for the fuzzer executable
-	bindings = append(bindings, &minijail.Binding{Source: fuzzer})
+	// Add binding for the executable
+	bindings = append(bindings, &Binding{Source: path})
 
 	// Add llvm to bindings
 	llvmSymbolizerPath, err := runfiles.Finder.LLVMSymbolizerPath()
 	if err != nil {
-		return err
+		return nil, err
 	}
-	llvmDir := filepath.Dir(llvmSymbolizerPath)
-	bindings = append(bindings, &minijail.Binding{Source: llvmDir})
+	llvmDir := filepath.Dir(filepath.Dir(llvmSymbolizerPath))
+	bindings = append(bindings, &Binding{Source: llvmDir})
 
 	// Add binding for process_wrapper. process_wrapper changes the
 	// working directory and sets environment variables and then
 	// executes the specified command.
 	processWrapperPath, err := runfiles.Finder.ProcessWrapperPath()
 	if err != nil {
-		return err
+		return nil, err
 	}
-	bindings = append(bindings, &minijail.Binding{Source: processWrapperPath})
+	bindings = append(bindings, &Binding{Source: processWrapperPath})
 
 	// Add additional bindings from the environment variable
-	additionalBindings := os.Getenv(minijail.BindingsEnvVarName)
-	for _, s := range strings.Split(additionalBindings, ":") {
+	additionalBindingsEnv := os.Getenv(BindingsEnvVarName)
+	for _, s := range strings.Split(additionalBindingsEnv, ":") {
 		if s == "" {
 			continue
 		}
-		binding, err := minijail.BindingFromString(s)
+		binding, err := BindingFromString(s)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		bindings = append(bindings, binding)
-	}
-
-	// Add bindings from flags
-	for _, s := range viper.GetStringSlice(minijail.BindingFlag) {
-		b, err := minijail.BindingFromString(s)
-		if err != nil {
-			return err
-		}
-		bindings = append(bindings, b)
 	}
 
 	// Create the bindings
@@ -224,7 +328,7 @@ func runMinijail(fuzzerArgs []string) error {
 		// Skip if the source doesn't exist
 		exists, err := fileutil.Exists(binding.Source)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if !exists {
 			continue
@@ -234,16 +338,16 @@ func runMinijail(fuzzerArgs []string) error {
 		if fileutil.IsDir(binding.Source) {
 			err = os.MkdirAll(filepath.Join(chrootDir, binding.Target), 0o755)
 			if err != nil {
-				return errors.WithStack(err)
+				return nil, errors.WithStack(err)
 			}
 		} else {
 			err = os.MkdirAll(filepath.Join(chrootDir, filepath.Dir(binding.Target)), 0o755)
 			if err != nil {
-				return errors.WithStack(err)
+				return nil, errors.WithStack(err)
 			}
 			err = fileutil.Touch(filepath.Join(chrootDir, binding.Target))
 			if err != nil {
-				return err
+				return nil, err
 			}
 		}
 
@@ -258,15 +362,13 @@ func runMinijail(fuzzerArgs []string) error {
 	processWrapperArgs := []string{processWrapperPath, workdir}
 
 	// The process wrapper sets environment variables inside the sandbox
-	// to the remaining arguments until the first "--", so we pass
-	// variables from the --env flags
-	processWrapperArgs = append(processWrapperArgs, viper.GetStringSlice(minijail.EnvFlag)...)
+	// to the remaining arguments until the first "--".
+	processWrapperArgs = append(processWrapperArgs, opts.Env...)
 
 	// --------------------
 	// --- Run minijail ---
 	// --------------------
-	var env []string
-	args := stringutil.JoinSlices("--", minijailArgs, processWrapperArgs, fuzzerArgs)
+	args := stringutil.JoinSlices("--", minijailArgs, processWrapperArgs, opts.Args)
 
 	// When CI_DEBUG_MINIJAIL_SLEEP_FOREVER is set, instead of executing
 	// the actual command, we store it in the CMD environment variable
@@ -274,72 +376,17 @@ func runMinijail(fuzzerArgs []string) error {
 	if os.Getenv("CI_DEBUG_MINIJAIL_SLEEP_FOREVER") != "" {
 		_ = os.MkdirAll(filepath.Join(chrootDir, "bin"), 0o755)
 		minijailArgs = append(minijailArgs, "-b", "/bin")
-		processWrapperArgs = append(processWrapperArgs, "CMD="+strings.Join(fuzzerArgs, " "))
+		processWrapperArgs = append(processWrapperArgs, "CMD="+strings.Join(opts.Args, " "))
 		args = stringutil.JoinSlices("--", minijailArgs, processWrapperArgs, []string{"/bin/sh"})
 	}
 
-	glog.Infof("Command: %s", strings.Join(stringutil.QuotedStrings(args), " "))
-	err = syscall.Exec(args[0], args, env)
-	if err != nil {
-		return errors.WithStack(err)
-	}
-
-	return nil
+	return &minijail{
+		Options:   opts,
+		chrootDir: chrootDir,
+		Args:      args,
+	}, nil
 }
 
-func run(args []string) error {
-	help := pflag.BoolP("help", "h", false, "Print usage")
-	// The double backtick in the usage string avoids that the type name
-	// "StringArray" is printed in the usage. Instead, we document the
-	// expected format via the NoOptDefVal attribute.
-	pflag.StringArrayP(minijail.EnvFlag, "e", nil,
-		"``Set environment variables inside the sandbox. Example: -e FOO=BAR")
-	pflag.Lookup(minijail.EnvFlag).NoOptDefVal = "<key>=<val>"
-	pflag.StringArrayP(minijail.BindingFlag, "b", nil,
-		"``Bind <src> to <dest> in chroot, writable if <writable> is 1. Example: -b /foo,/bar,1")
-	pflag.Lookup(minijail.BindingFlag).NoOptDefVal = "<src>[,[dest][,<writeable>]]"
-
-	err := glogutil.SetupGlogAlwaysPrintToStderr()
-	if err != nil {
-		return err
-	}
-
-	err = viper.BindPFlags(pflag.CommandLine)
-	if err != nil {
-		return err
-	}
-
-	err = pflag.CommandLine.Parse(args[1:])
-	if err != nil {
-		return err
-	}
-
-	pflag.Usage = func() {
-		_, _ = fmt.Fprintf(os.Stderr, "Usage: %s [<option>...] -- <program> [<arg>...]\n%s", args[0], pflag.CommandLine.FlagUsages())
-	}
-
-	if *help {
-		pflag.Usage()
-		return nil
-	}
-
-	if pflag.NArg() < 1 {
-		pflag.Usage()
-		return fmt.Errorf("error: %s requires least one argument", args[0])
-	}
-
-	err = runMinijail(pflag.Args())
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func main() {
-	err := run(os.Args)
-	if err != nil {
-		_, _ = fmt.Fprintf(os.Stderr, "%+v\n", err)
-		os.Exit(1)
-	}
+func (m *minijail) Cleanup() {
+	fileutil.Cleanup(m.chrootDir)
 }

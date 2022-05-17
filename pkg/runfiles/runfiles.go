@@ -14,7 +14,6 @@ type RunfilesFinder interface {
 	LibMinijailPreloadPath() (string, error)
 	LLVMSymbolizerPath() (string, error)
 	Minijail0Path() (string, error)
-	MinijailWrapperPath() (string, error)
 	ProcessWrapperPath() (string, error)
 }
 

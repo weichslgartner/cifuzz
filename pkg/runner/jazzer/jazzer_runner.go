@@ -7,9 +7,9 @@ import (
 	"strconv"
 	"strings"
 
+	"code-intelligence.com/cifuzz/pkg/minijail"
 	"github.com/pkg/errors"
 
-	minijail "code-intelligence.com/cifuzz/pkg/minijail/pkg"
 	"code-intelligence.com/cifuzz/pkg/runfiles"
 	"code-intelligence.com/cifuzz/pkg/runner/libfuzzer"
 	"code-intelligence.com/cifuzz/util/envutil"
@@ -133,18 +133,7 @@ func (r *Runner) Run(ctx context.Context) error {
 	if r.UseMinijail {
 		jazzerArgs := args
 
-		// Execute Jazzer via minijail
-		minijailPath, err := runfileutil.FindFollowSymlinks("code_intelligence/cifuzz/pkg/minijail/minijail_/minijail")
-		if err != nil {
-			return err
-		}
-		minijailArgs := []string{minijailPath}
-
-		// TODO(adrian): I couldn't find out what this option does
-		//args = append(args, "--reproducer_path="+minijail.OutputDir)
-
-		// Add bindings
-		bindings := []minijail.Binding{
+		bindings := []*minijail.Binding{
 			// The Jazzer agent must be accessible
 			{Source: agentPath},
 			// The first corpus directory must be writable, because
@@ -154,7 +143,7 @@ func (r *Runner) Run(ctx context.Context) error {
 
 		// Add bindings for the Java dependencies
 		for _, p := range r.ClassPaths {
-			bindings = append(bindings, minijail.Binding{Source: p})
+			bindings = append(bindings, &minijail.Binding{Source: p})
 		}
 
 		// Add binding for the system JDK and pass it to minijail.
@@ -162,18 +151,21 @@ func (r *Runner) Run(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		bindings = append(bindings, minijail.Binding{Source: javaHome})
+		bindings = append(bindings, &minijail.Binding{Source: javaHome})
 
-		for _, b := range bindings {
-			minijailArgs = append(minijailArgs, "--"+minijail.BindingFlag+"="+b.String())
+		// Set up Minijail
+		mj, err := minijail.NewMinijail(&minijail.Options{
+			Args:     jazzerArgs,
+			Bindings: bindings,
+			Env:      fuzzerEnv,
+		})
+		if err != nil {
+			return err
 		}
+		defer mj.Cleanup()
 
-		// Pass environment variables via --env flags
-		for _, e := range fuzzerEnv {
-			minijailArgs = append(minijailArgs, "--"+minijail.EnvFlag+"="+e)
-		}
-
-		args = append(append(minijailArgs, "--"), jazzerArgs...)
+		// Use the command which runs Jazzer via minijail
+		args = mj.Args
 	} else {
 		// We don't use minijail, so we can set the environment
 		// variables for the fuzzer in the wrapper environment

@@ -23,9 +23,6 @@ function install() {
   cp libminijailpreload.so "${CIFUZZ_INSTALL_ROOT}/lib"
   popd
 
-  # Install our minijail wrapper
-  go build -o "${CIFUZZ_INSTALL_ROOT}/lib/minijail" pkg/minijail/minijail.go
-
   # Install process_wrapper
   "${CC:-clang}" -o "${CIFUZZ_INSTALL_ROOT}/lib/process_wrapper" pkg/minijail/process_wrapper/src/process_wrapper.c
 

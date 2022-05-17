@@ -33,10 +33,6 @@ func (f RunfilesFinderImpl) Minijail0Path() (string, error) {
 	return f.findFollowSymlinks("bin/minijail0")
 }
 
-func (f RunfilesFinderImpl) MinijailWrapperPath() (string, error) {
-	return f.findFollowSymlinks("lib/minijail")
-}
-
 func (f RunfilesFinderImpl) ProcessWrapperPath() (string, error) {
 	return f.findFollowSymlinks("lib/process_wrapper")
 }

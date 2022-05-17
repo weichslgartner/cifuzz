@@ -9,14 +9,13 @@ import (
 	"strings"
 	"time"
 
+	"code-intelligence.com/cifuzz/pkg/minijail"
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
 	"golang.org/x/sync/errgroup"
 
-	minijail "code-intelligence.com/cifuzz/pkg/minijail/pkg"
 	libfuzzer_parser "code-intelligence.com/cifuzz/pkg/parser/libfuzzer"
 	"code-intelligence.com/cifuzz/pkg/report"
-	"code-intelligence.com/cifuzz/pkg/runfiles"
 	fuzzer_runner "code-intelligence.com/cifuzz/pkg/runner"
 	"code-intelligence.com/cifuzz/util/envutil"
 	"code-intelligence.com/cifuzz/util/executil"
@@ -107,47 +106,43 @@ func (r *Runner) Run(ctx context.Context) error {
 		args = append(args, r.FuzzTargetArgs...)
 	}
 
-	// The environment we run our minijail wrapper in
+	// The environment to run libfuzzer in
 	fuzzerEnv, err := r.FuzzerEnvironment()
 	if err != nil {
 		return err
 	}
 
-	// The environment we run our minijail wrapper in
+	// The environment we run minijail in
 	wrapperEnv := os.Environ()
 
 	if r.UseMinijail {
 		libfuzzerArgs := args
 
-		// Execute libfuzzer via minijail
-		minijailPath, err := runfiles.Finder.MinijailWrapperPath()
-		if err != nil {
-			return err
-		}
-		minijailArgs := []string{minijailPath}
-
 		// Make libfuzzer create artifacts (e.g. crash files) in the
 		// minijail output directory.
 		libfuzzerArgs = append(libfuzzerArgs, "-artifact_prefix="+minijail.OutputDir+"/")
 
-		// Add bindings
-		bindings := []minijail.Binding{
+		bindings := []*minijail.Binding{
 			// The fuzz target must be accessible
 			{Source: r.FuzzTarget},
 			// The first corpus directory must be writable, because
 			// libfuzzer writes new test inputs to it
 			{Source: r.SeedsDir, Writable: minijail.ReadWrite},
 		}
-		for _, b := range bindings {
-			minijailArgs = append(minijailArgs, "--"+minijail.BindingFlag+"="+b.String())
-		}
 
-		// Pass environment variables via --env flags
-		for _, e := range fuzzerEnv {
-			minijailArgs = append(minijailArgs, "--"+minijail.EnvFlag+"="+e)
+		// Set up Minijail
+		mj, err := minijail.NewMinijail(&minijail.Options{
+			Args:     libfuzzerArgs,
+			Bindings: bindings,
+			Env:      fuzzerEnv,
+		})
+		if err != nil {
+			return err
 		}
+		defer mj.Cleanup()
 
-		args = append(append(minijailArgs, "--"), libfuzzerArgs...)
+		// Use the command which runs libfuzzer via minijail
+		args = mj.Args
 	} else {
 		// We don't use minijail, so we can set the environment
 		// variables for the fuzzer in the wrapper environment
