@@ -2,6 +2,8 @@ package process_wrapper
 
 import (
 	"bytes"
+	"log"
+	"os"
 	"os/exec"
 	"strings"
 	"testing"
@@ -10,8 +12,25 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"code-intelligence.com/cifuzz/pkg/runfiles"
+	"code-intelligence.com/cifuzz/tools/install"
 	"code-intelligence.com/cifuzz/util/fileutil"
 )
+
+func TestMain(m *testing.M) {
+	installer, err := install.NewInstaller(nil)
+	if err != nil {
+		log.Fatalf("%+v", err)
+	}
+	err = installer.InstallProcessWrapper()
+	if err != nil {
+		log.Fatalf("%+v", err)
+	}
+	runfiles.Finder = runfiles.RunfilesFinderImpl{InstallDir: installer.InstallDir}
+
+	res := m.Run()
+	installer.Cleanup()
+	os.Exit(res)
+}
 
 func TestProcessWrapper_ChangesDirectory(t *testing.T) {
 	processWrapperPath, err := runfiles.Finder.ProcessWrapperPath()
