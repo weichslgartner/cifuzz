@@ -164,8 +164,15 @@ func (r *Runner) RunLibfuzzerAndReport(ctx context.Context, args []string, env [
 	// later a SIGKILL if it still didn't exit.
 	// To give libfuzzer some time to exit on its own, we send the
 	// SIGTERM a bit later than the timeout specified via `-max_total_time`.
-	terminateTimeout := r.Timeout + ExitGracePeriod
-	cmdCtx, cancelCmdCtx := context.WithTimeout(ctx, terminateTimeout)
+	var cmdCtx context.Context
+	var cancelCmdCtx context.CancelFunc
+	if r.Timeout > 0 {
+		terminateTimeout := r.Timeout + ExitGracePeriod
+		cmdCtx, cancelCmdCtx = context.WithTimeout(ctx, terminateTimeout)
+	} else {
+		// No timeout
+		cmdCtx, cancelCmdCtx = context.WithCancel(ctx)
+	}
 	defer cancelCmdCtx()
 	cmd := executil.CommandContext(cmdCtx, args[0], args[1:]...)
 	cmd.TerminateProcessGroupWhenContextDone = true
