@@ -396,6 +396,16 @@ static void sanitizer_report_handler(void) {
 }
 #endif
 
+/* Returns a non-zero value if arg is an argument added to the invocation of a
+ * Doctest target by the CLion test framework integration. */
+static int is_clion_doctest_arg(const char *arg) {
+  if (strcmp(arg, "-r=xml") && strncmp(arg, "-ts=", 4) &&
+      strncmp(arg, "-tc=", 4)) {
+    return 0;
+  }
+  return 1;
+}
+
 int main(int argc, char **argv) {
   int i;
   unsigned char empty[1];
@@ -424,6 +434,16 @@ int main(int argc, char **argv) {
   _set_abort_behavior(0, _WRITE_ABORT_MSG);
 #endif
 #endif
+
+  /* Filter out arguments passed by CLion's test framework integration that takes us for a Doctest test.
+   * These arguments are always added after user-configured arguments, which allows us to skip the arguments simply by
+   * modifying argc. */
+  for (i = 1; i < argc; i++) {
+    if (is_clion_doctest_arg(argv[i])) {
+      argc = i;
+      break;
+    }
+  }
 
   WITH_DEFAULT(LLVMFuzzerInitialize)(&argc, &argv);
 
