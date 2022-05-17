@@ -9,7 +9,6 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
-	"golang.org/x/sys/unix"
 
 	"code-intelligence.com/cifuzz/pkg/runfiles"
 	"code-intelligence.com/cifuzz/util/envutil"
@@ -27,6 +26,13 @@ const (
 
 	BindingFlag = "bind"
 	EnvFlag     = "env"
+
+	// Mount flags as defined in golang.org/x/sys/unix. We're not using
+	// that package because it's not available on macOS.
+	MS_RDONLY      = 0x1
+	MS_NOSUID      = 0x2
+	MS_NODEV       = 0x4
+	MS_STRICTATIME = 0x1000000
 )
 
 type WritableOption int
@@ -157,9 +163,9 @@ var fixedMinijailArgs = []string{
 	"-l", // IPC namespace
 	"-I", // Run jailed process as init.
 	// Mount procfs read-only
-	"-k", "proc,/proc,proc," + strconv.Itoa(unix.MS_RDONLY),
+	"-k", "proc,/proc,proc," + strconv.Itoa(MS_RDONLY),
 	// Mount a tmpfs on /dev/shm to allow using shared memory.
-	"-k", "tmpfs,/dev/shm,tmpfs," + strconv.Itoa(unix.MS_NOSUID|unix.MS_NODEV|unix.MS_STRICTATIME) + ",mode=1777",
+	"-k", "tmpfs,/dev/shm,tmpfs," + strconv.Itoa(MS_NOSUID|MS_NODEV|MS_STRICTATIME) + ",mode=1777",
 	// Added by us, to log to stderr
 	"--logging=stderr",
 }
