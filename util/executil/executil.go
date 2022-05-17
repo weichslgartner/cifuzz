@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/exec"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/golang/glog"
@@ -93,11 +92,7 @@ func (c *Cmd) Start() error {
 	}
 
 	if c.TerminateProcessGroupWhenContextDone {
-		// Set PGID so that we're able to terminate the process group on timeout
-		if c.SysProcAttr == nil {
-			c.SysProcAttr = &syscall.SysProcAttr{}
-		}
-		c.SysProcAttr.Setpgid = true
+		c.prepareProcessGroupTermination()
 	}
 
 	err := c.Cmd.Start()
@@ -107,9 +102,9 @@ func (c *Cmd) Start() error {
 	}
 
 	if c.TerminateProcessGroupWhenContextDone && c.ctx != nil {
-		pgid, err := syscall.Getpgid(c.Process.Pid)
+		pgid, err := c.getpgid()
 		if err != nil {
-			return errors.WithStack(err)
+			return err
 		}
 
 		c.waitDone = make(chan struct{}, 1)
@@ -151,28 +146,6 @@ func (c *Cmd) Wait() error {
 		close(c.waitDone)
 	}
 	return errors.WithStack(err)
-}
-
-func (c *Cmd) TerminateProcessGroup(pgid int) {
-	glog.Infof("Sending SIGTERM to process group %d", pgid)
-	// We ignore errors here because the process group might not exist
-	// anymore at this point.
-	_ = syscall.Kill(-pgid, syscall.SIGTERM) // note the minus sign
-
-	// Give the process group a few seconds to exit
-	select {
-	case <-time.After(processGroupTerminationGracePeriod):
-		// The process group didn't exit within the grace period, so we
-		// send it a SIGKILL now
-		glog.Infof("Sending SIGKILL to process group %d", pgid)
-		// We ignore errors here because the process group might not exist
-		// anymore at this point.
-		_ = syscall.Kill(-pgid, syscall.SIGKILL) // note the minus sign
-	case <-c.waitDone:
-		// The process has already exited, nothing else to do here.
-		// Note: This might leave other processes in the process group
-		// running (which ignored the SIGTERM).
-	}
 }
 
 // Same as exec.Cmd.Run() but uses the wrapper methods of this struct.
