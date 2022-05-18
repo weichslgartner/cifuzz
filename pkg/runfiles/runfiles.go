@@ -1,9 +1,12 @@
 package runfiles
 
 import (
+	"bytes"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
+	"strings"
 
 	"github.com/pkg/errors"
 )
@@ -49,6 +52,18 @@ func FindSystemJavaHome() (string, error) {
 	javaHome := os.Getenv("JAVA_HOME")
 	if javaHome != "" {
 		return javaHome, nil
+	}
+
+	if strings.HasPrefix(runtime.GOOS, "darwin") {
+		// On some macOS installations, an executable 'java_home' exists
+		// which prints the JAVA_HOME of the default installation to stdout
+		var outbuf bytes.Buffer
+		cmd := exec.Command("/usr/libexec/java_home")
+		cmd.Stdout = &outbuf
+		err := cmd.Run()
+		if err == nil {
+			return strings.TrimSpace(outbuf.String()), nil
+		}
 	}
 
 	javaSymlink, err := exec.LookPath("java")
