@@ -166,27 +166,55 @@ func buildEnv() ([]string, error) {
 	// spaces, because the environment variables are space separated.
 	// TODO: These flags were copied from ci-build, we should explain
 	//       for each why we use it
-	flags := []string{
-		// Common flags
+	cflags := []string{
+		// ----- Common flags -----
+		// Keep debug symbols
 		"-g",
-		"-DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION",
-		// Flags used to build with libFuzzer
-		"-fno-omit-frame-pointer",
-		"-fsanitize=fuzzer-no-link",
+		// Do optimizations which don't harm debugging
 		"-Og",
-		"-gline-tables-only",
-		"-fsanitize-coverage=indirect-calls,trace-cmp,trace-div,trace-gep",
-		// Flags used to build with ASan
+		// To get good stack frames for better debugging
+		"-fno-omit-frame-pointer",
+		// Conventional macro to conditionally compile out fuzzer road blocks
+		// See https://llvm.org/docs/LibFuzzer.html#fuzzer-friendly-build-mode
+		"-DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION",
+
+		// ----- Flags used to build with libFuzzer -----
+		// Compile with edge coverage and compare instrumentation. We
+		// use fuzzer-no-link here instead of -fsanitize=fuzzer because
+		// CFLAGS are often also passed to the linker, which would cause
+		// errors if the build includes tools which have a main function.
+		"-fsanitize=fuzzer-no-link",
+
+		// ----- Flags used to build with ASan -----
+		// Build with instrumentation for ASan and UBSan and link in
+		// their runtime
 		"-fsanitize=address,undefined",
-		"-fno-sanitize=function,vptr",
+		// To support recovering from ASan findings
 		"-fsanitize-recover=address",
+		// Use additional error detectors for use-after-scope bugs
+		// TODO: Evaluate the slow down caused by this flag
+		// TODO: Check if there are other additional error detectors
+		//       which we want to use
 		"-fsanitize-address-use-after-scope",
 	}
-	env, err = envutil.Setenv(env, "CFLAGS", strings.Join(flags, " "))
+	env, err = envutil.Setenv(env, "CFLAGS", strings.Join(cflags, " "))
 	if err != nil {
 		return nil, err
 	}
-	env, err = envutil.Setenv(env, "CXXFLAGS", strings.Join(flags, " "))
+	env, err = envutil.Setenv(env, "CXXFLAGS", strings.Join(cflags, " "))
+	if err != nil {
+		return nil, err
+	}
+
+	ldflags := []string{
+		// ----- Flags used to build with ASan -----
+		// Link ASan and UBSan runtime
+		"-fsanitize=address,undefined",
+		// To avoid issues with clang (not clang++) and UBSan, see
+		// https://github.com/bazelbuild/bazel/issues/11122#issuecomment-896613570
+		"-fsanitize-link-c++-runtime",
+	}
+	env, err = envutil.Setenv(env, "LDFLAGS", strings.Join(ldflags, " "))
 	if err != nil {
 		return nil, err
 	}
@@ -199,10 +227,12 @@ func buildEnv() ([]string, error) {
 		return nil, err
 	}
 
-	// TODO: ci-build sets ASAN_OPTIONS to "detect_leaks=0:verify_asan_link_order=0".
-	//       Should we do the same? If so, should we override these
-	//       settings or not (allowing the user to set the environment
-	//       variable themself).
+	// We don't want to fail if ASan is set up incorrectly for tools
+	// built and executed during the build or they contain leaks.
+	env, err = envutil.Setenv(env, "ASAN_OPTIONS", "detect_leaks=0:verify_asan_link_order=0")
+	if err != nil {
+		return nil, err
+	}
 
 	return env, nil
 }
