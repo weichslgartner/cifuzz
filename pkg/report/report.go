@@ -41,14 +41,14 @@ const (
 )
 
 type FuzzingMetric struct {
-	Timestamp                time.Time `json:"timestamp,omitempty"`
-	ExecutionsPerSecond      int32     `json:"executions_per_second,omitempty"`
-	Features                 int32     `json:"features,omitempty"`
-	CorpusSize               int32     `json:"corpus_size,omitempty"`
-	SecondsSinceLastCoverage uint64    `json:"seconds_since_last_coverage,omitempty"`
-	TotalExecutions          uint64    `json:"total_executions,omitempty"`
-	Edges                    int32     `json:"edges,omitempty"`
-	SecondsSinceLastEdge     uint64    `json:"seconds_since_last_edge,omitempty"`
+	Timestamp               time.Time `json:"timestamp,omitempty"`
+	ExecutionsPerSecond     int32     `json:"executions_per_second,omitempty"`
+	Features                int32     `json:"features,omitempty"`
+	CorpusSize              int32     `json:"corpus_size,omitempty"`
+	SecondsSinceLastFeature uint64    `json:"seconds_since_last_coverage,omitempty"`
+	TotalExecutions         uint64    `json:"total_executions,omitempty"`
+	Edges                   int32     `json:"edges,omitempty"`
+	SecondsSinceLastEdge    uint64    `json:"seconds_since_last_edge,omitempty"`
 }
 
 type Finding struct {

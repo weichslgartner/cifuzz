@@ -55,10 +55,10 @@ type parser struct {
 	pendingFinding                       *report.Finding
 	numMetricsLinesSinceFindingIsPending int
 
-	lastNewFeaturesTime time.Time // Timestamp representing the point when the last new feature was reported
-	lastFeatures        int       // Last features reported by Libfuzzer
-	lastNewEdgesTime    time.Time // Timestamp representing the point when the last new edge was reported
-	lastEdges           int       // Last edges reported by Libfuzzer
+	lastNewFeatureTime time.Time // Timestamp representing the point when the last new feature was reported
+	lastFeatures       int       // Last features reported by Libfuzzer
+	lastNewEdgeTime    time.Time // Timestamp representing the point when the last new edge was reported
+	lastEdges          int       // Last edges reported by Libfuzzer
 }
 
 type Options struct {
@@ -364,27 +364,27 @@ func (p *parser) parseAsFuzzingMetric(log string) *report.FuzzingMetric {
 			return nil
 		}
 		now := time.Now()
-		secondsSinceLastCoverage := now.Unix() - p.lastNewFeaturesTime.Unix()
+		secondsSinceLastFeature := now.Unix() - p.lastNewFeatureTime.Unix()
 		if features > p.lastFeatures {
-			p.lastNewFeaturesTime = now
+			p.lastNewFeatureTime = now
 			p.lastFeatures = features
-			secondsSinceLastCoverage = 0
+			secondsSinceLastFeature = 0
 		}
-		secondsSinceLastEdge := now.Unix() - p.lastNewEdgesTime.Unix()
+		secondsSinceLastEdge := now.Unix() - p.lastNewEdgeTime.Unix()
 		if edges > p.lastEdges {
-			p.lastNewEdgesTime = now
+			p.lastNewEdgeTime = now
 			p.lastEdges = edges
 			secondsSinceLastEdge = 0
 		}
 		return &report.FuzzingMetric{
-			Timestamp:                time.Now(),
-			ExecutionsPerSecond:      int32(execsPerSec),
-			Features:                 int32(features),
-			Edges:                    int32(edges),
-			CorpusSize:               int32(corpusSize),
-			TotalExecutions:          totalExecs,
-			SecondsSinceLastCoverage: uint64(secondsSinceLastCoverage),
-			SecondsSinceLastEdge:     uint64(secondsSinceLastEdge),
+			Timestamp:               time.Now(),
+			ExecutionsPerSecond:     int32(execsPerSec),
+			Features:                int32(features),
+			Edges:                   int32(edges),
+			CorpusSize:              int32(corpusSize),
+			TotalExecutions:         totalExecs,
+			SecondsSinceLastFeature: uint64(secondsSinceLastFeature),
+			SecondsSinceLastEdge:    uint64(secondsSinceLastEdge),
 		}
 	}
 	return nil
