@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"runtime"
 	"strings"
 	"time"
 
@@ -88,7 +89,8 @@ func New(fs *afero.Afero) *cobra.Command {
 	cmd.Flags().StringArrayVar(&opts.engineArgs, "engine-arg", nil, "Command-line argument to pass to the fuzzing engine.\nSee https://llvm.org/docs/LibFuzzer.html#options and\nhttps://www.mankier.com/8/afl-fuzz.")
 	cmd.Flags().StringArrayVar(&opts.fuzzTargetArgs, "fuzz-target-arg", nil, "Command-line argument to pass to the fuzz target.")
 	cmd.Flags().DurationVar(&opts.timeout, "timeout", 0, "Maximum time in seconds to run the fuzz test. The default is to run indefinitely.")
-	cmd.Flags().BoolVar(&opts.useSandbox, "sandbox", true, "By default, fuzz tests are executed in a sandbox to prevent accidental damage to the system.\nUse --sandbox=false to run the fuzz test unsandboxed.")
+	useMinijailDefault := strings.HasPrefix(runtime.GOOS, "linux")
+	cmd.Flags().BoolVar(&opts.useSandbox, "sandbox", useMinijailDefault, "By default, fuzz tests are executed in a sandbox to prevent accidental damage to the system.\nUse --sandbox=false to run the fuzz test unsandboxed.\nOnly supported on Linux.")
 	cmdutils.MarkFlagsRequired(cmd, "build-command", "seeds-dir", "fuzz-test")
 
 	return cmd

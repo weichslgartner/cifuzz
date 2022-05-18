@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -49,6 +50,10 @@ type RunnerOptions struct {
 
 func (options *RunnerOptions) ValidateOptions() error {
 	if options.UseMinijail {
+		if !strings.HasPrefix(runtime.GOOS, "linux") {
+			return errors.Errorf("Minijail is only supported on Linux")
+		}
+
 		// To be able to make the fuzz target accessible to minijail,
 		// its path must be absolute and all symlinks must be resolved.
 		var err error
