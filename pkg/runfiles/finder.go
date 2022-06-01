@@ -21,6 +21,10 @@ func (f RunfilesFinderImpl) ClangPath() (string, error) {
 	return path, errors.WithStack(err)
 }
 
+func (f RunfilesFinderImpl) CMakePresetsPath() (string, error) {
+	return f.findFollowSymlinks("share/cifuzz/share/CMakePresets.json")
+}
+
 func (f RunfilesFinderImpl) JazzerAgentDeployJarPath() (string, error) {
 	return f.findFollowSymlinks("bin/jazzer_driver")
 }

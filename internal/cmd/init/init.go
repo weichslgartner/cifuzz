@@ -2,13 +2,17 @@ package init
 
 import (
 	"os"
+	"path/filepath"
 
+	copy2 "github.com/otiai10/copy"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
 	"code-intelligence.com/cifuzz/internal/config"
 	"code-intelligence.com/cifuzz/pkg/cmdutils"
 	"code-intelligence.com/cifuzz/pkg/log"
+	"code-intelligence.com/cifuzz/pkg/runfiles"
+	"code-intelligence.com/cifuzz/util/fileutil"
 )
 
 type cmdOpts struct {
@@ -51,14 +55,14 @@ func run(cmd *cobra.Command, args []string, opts *cmdOpts) (err error) {
 	}
 	log.Successf("Configuration saved in %s", configpath)
 
-	printBuildSystemInstructions(cwd)
+	setUpAndMentionBuildSystemIntegrations(cwd)
 
 	log.Print(`
 Use 'cifuzz create' to create your first fuzz test.`)
 	return
 }
 
-func printBuildSystemInstructions(cwd string) {
+func setUpAndMentionBuildSystemIntegrations(cwd string) {
 	// Printing build system instructions is best-effort: Do not fail on errors.
 	cfg, err := config.ReadProjectConfig(cwd)
 	if err != nil {
@@ -75,6 +79,41 @@ add_library(...) or add_executable(...) calls:
 
     find_package(cifuzz)
     enable_fuzz_testing()`)
-	}
+		cmakePresetsSrc, err := runfiles.Finder.CMakePresetsPath()
+		if err != nil {
+			return
+		}
+		cmakePresetsDst := filepath.Join(cwd, "CMakeUserPresets.json")
+		hasPresets, err := fileutil.Exists(cmakePresetsDst)
+		if err != nil {
+			return
+		}
+		if !hasPresets {
+			// Situation: The user doesn't have a CMake user preset set up and
+			// may thus be unaware of this functionality. Create one and tell
+			// them about it.
+			err = copy2.Copy(cmakePresetsSrc, cmakePresetsDst)
+			if err != nil {
+				return
+			}
+			log.Printf(`
+CMakeUserPresets.json has been created to provide integration with IDEs
+such as CLion and Visual Studio Code. This file should not be checked
+in to version control systems. To learn more about CMake presets, visit:
 
+    https://github.com/microsoft/vscode-cmake-tools/blob/main/docs/cmake-presets.md
+    https://www.jetbrains.com/help/clion/cmake-presets.html`)
+		} else {
+			// Situation: The user does have a CMake user preset set up, so we
+			// assume them to know about the benefits. We don't want to edit the
+			// preset ourselves, so let them know how they can add the presets
+			// themselves.
+			log.Printf(`
+Add the CMake presets contained in the following file to your
+CMakeUserPresets.json to be able to run regression tests and measure
+code coverage right from your IDE:
+
+    %s`, cmakePresetsSrc)
+		}
+	}
 }

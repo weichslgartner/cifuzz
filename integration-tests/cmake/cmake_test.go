@@ -254,12 +254,14 @@ func followStepsPrintedByInitCommand(t *testing.T, initOutput io.Reader, cmakeLi
 	// `cifuzz init` tells us to add
 
 	// First, parse the `cifuzz init` output to find the lines we should
-	// add to CMakeLists.txt - the ones that are indented.
+	// add to CMakeLists.txt - the first indented block.
 	scanner := bufio.NewScanner(initOutput)
 	var linesToAdd []string
 	for scanner.Scan() {
 		if strings.HasPrefix(scanner.Text(), "    ") {
 			linesToAdd = append(linesToAdd, strings.TrimSpace(scanner.Text()))
+		} else if len(linesToAdd) != 0 {
+			break
 		}
 	}
 	if len(linesToAdd) == 0 {
