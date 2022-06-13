@@ -102,7 +102,7 @@ func (i *installer) Cleanup() {
 }
 
 func (i *installer) InstallCIFuzzAndDeps() error {
-  var err error
+	var err error
 	if runtime.GOOS == "linux" {
 		err = i.InstallMinijail()
 		if err != nil {
