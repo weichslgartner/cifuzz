@@ -3,6 +3,7 @@ module code-intelligence.com/cifuzz
 go 1.18
 
 require (
+	github.com/alexflint/go-filemutex v1.2.0
 	github.com/gookit/color v1.5.1
 	github.com/hectane/go-acl v0.0.0-20190604041725-da78bae5fc95
 	github.com/hokaccha/go-prettyjson v0.0.0-20211117102719-0474bc63780f

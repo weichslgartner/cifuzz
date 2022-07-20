@@ -9,6 +9,7 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/alexflint/go-filemutex"
 	"github.com/otiai10/copy"
 	"github.com/pkg/errors"
 
@@ -20,6 +21,8 @@ type Installer struct {
 	InstallDir string
 
 	projectDir string
+	mutex      *filemutex.FileMutex
+	isLocked   bool
 }
 
 type Options struct {
@@ -70,6 +73,11 @@ func NewInstaller(opts *Options) (*Installer, error) {
 		InstallDir: opts.InstallDir,
 	}
 
+	i.mutex, err = filemutex.New(i.lockFile())
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
 	// Create the directory layout
 	err = os.MkdirAll(i.binDir(), 0755)
 	if err != nil {
@@ -102,6 +110,10 @@ func (i *Installer) shareDir() string {
 	return filepath.Join(i.InstallDir, "share", "cifuzz")
 }
 
+func (i *Installer) lockFile() string {
+	return filepath.Join(i.projectDir, ".installer-lock")
+}
+
 func (i *Installer) CIFuzzExecutablePath() string {
 	path := filepath.Join(i.binDir(), "cifuzz")
 	if runtime.GOOS == "windows" {
@@ -112,10 +124,53 @@ func (i *Installer) CIFuzzExecutablePath() string {
 
 func (i *Installer) Cleanup() {
 	fileutil.Cleanup(i.InstallDir)
+	// Always remove the lock file, even if SKIP_CLEANUP is set, because
+	// keeping it around is not useful for debugging purposes.
+	_ = os.Remove(i.lockFile())
+}
+
+// Lock acquires a file lock to make sure that only one instance of the
+// installer is executed at the same time. Note that this function does
+// not provide thread-safety for using the same installer instance
+// multiple times.
+func (i *Installer) Lock() error {
+	if i.isLocked {
+		return nil
+	}
+	err := i.mutex.Lock()
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	i.isLocked = true
+	return nil
+
+}
+
+// Unlock releases the file lock to allow other installer instances to
+// run.
+func (i *Installer) Unlock() error {
+	err := i.mutex.Unlock()
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	i.isLocked = false
+	return nil
 }
 
 func (i *Installer) InstallCIFuzzAndDeps() error {
 	var err error
+
+	err = i.Lock()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		err = i.Unlock()
+		if err != nil {
+			log.Printf("error: %v", err)
+		}
+	}()
+
 	if runtime.GOOS == "linux" {
 		err = i.InstallMinijail()
 		if err != nil {
@@ -144,9 +199,22 @@ func (i *Installer) InstallCIFuzzAndDeps() error {
 func (i *Installer) InstallMinijail() error {
 	var err error
 
+	err = i.Lock()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		err = i.Unlock()
+		if err != nil {
+			log.Printf("error: %v", err)
+		}
+	}()
+
+	minijailDir := filepath.Join(i.projectDir, "third-party", "minijail")
+
 	// Build minijail
 	cmd := exec.Command("make", "CC_BINARY(minijail0)", "CC_LIBRARY(libminijailpreload.so)")
-	cmd.Dir = filepath.Join(i.projectDir, "third-party", "minijail")
+	cmd.Dir = minijailDir
 	// The minijail Makefile changes the directory to $PWD, so we have
 	// to set that.
 	cmd.Env, err = envutil.Setenv(os.Environ(), "PWD", filepath.Join(i.projectDir, "third-party", "minijail"))
@@ -179,6 +247,18 @@ func (i *Installer) InstallMinijail() error {
 }
 
 func (i *Installer) InstallProcessWrapper() error {
+	var err error
+	err = i.Lock()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		err = i.Unlock()
+		if err != nil {
+			log.Printf("error: %v", err)
+		}
+	}()
+
 	compiler := os.Getenv("CC")
 	if compiler == "" {
 		compiler = "clang"
@@ -189,7 +269,7 @@ func (i *Installer) InstallProcessWrapper() error {
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
 	log.Printf("Command: %s", cmd.String())
-	err := cmd.Run()
+	err = cmd.Run()
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -197,13 +277,25 @@ func (i *Installer) InstallProcessWrapper() error {
 }
 
 func (i *Installer) InstallCIFuzz() error {
+	var err error
+	err = i.Lock()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		err = i.Unlock()
+		if err != nil {
+			log.Printf("error: %v", err)
+		}
+	}()
+
 	// Build and install cifuzz
 	cmd := exec.Command("go", "build", "-o", i.CIFuzzExecutablePath(), "cmd/cifuzz/main.go")
 	cmd.Dir = i.projectDir
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
 	log.Printf("Command: %s", cmd.String())
-	err := cmd.Run()
+	err = cmd.Run()
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -211,6 +303,18 @@ func (i *Installer) InstallCIFuzz() error {
 }
 
 func (i *Installer) InstallCMakeIntegration() error {
+	var err error
+	err = i.Lock()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		err = i.Unlock()
+		if err != nil {
+			log.Printf("error: %v", err)
+		}
+	}()
+
 	if runtime.GOOS != "windows" && os.Getuid() == 0 {
 		// On non-Windows systems, CMake doesn't have the concept of a system
 		// package registry. Instead, install the package into the well-known
