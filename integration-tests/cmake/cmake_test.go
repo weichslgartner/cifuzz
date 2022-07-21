@@ -159,10 +159,11 @@ func TestIntegration_CMake_InitCreateRunCoverageBundle(t *testing.T) {
 	}
 
 	// Check that options set via the config file are respected
-	configFileContent := `engine-args:
- - -rss_limit_mb=1234`
+	configFileContent := `use-sandbox: false`
 	err = os.WriteFile(filepath.Join(dir, "cifuzz.yaml"), []byte(configFileContent), 0644)
-	runFuzzer(t, cifuzz, dir, regexp.MustCompile(`-rss_limit_mb=1234`), false)
+	// When minijail is used, the artifact prefix is set to the minijail
+	// output path
+	runFuzzer(t, cifuzz, dir, regexp.MustCompile(`artifact_prefix='./'`), false)
 
 	// Building with coverage instrumentation doesn't work on Windows yet
 	if runtime.GOOS != "windows" {
