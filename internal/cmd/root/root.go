@@ -104,7 +104,6 @@ func Execute() {
 	}
 
 	if cmd, err := rootCmd.ExecuteC(); err != nil {
-
 		// Errors that are not ErrSilent are not expected and we want to show their full stacktrace
 		var silentErr *cmdutils.SilentError
 		if !errors.As(err, &silentErr) {
@@ -118,12 +117,19 @@ func Execute() {
 		if errors.As(err, &usageErr) ||
 			strings.HasPrefix(err.Error(), "unknown command") ||
 			regexp.MustCompile(`(accepts|requires).*arg\(s\)`).MatchString(err.Error()) {
+
 			// Ensure that there is an extra newline between the error
 			// and the usage message
 			if !strings.HasSuffix(err.Error(), "\n") {
 				_, _ = fmt.Fprintln(cmd.ErrOrStderr())
 			}
-			_, _ = fmt.Fprintln(cmd.ErrOrStderr(), cmd.UsageString())
+
+			// Make cmd.Help() print to stderr
+			cmd.SetOut(cmd.ErrOrStderr())
+			// Print the usage message of the command. We use cmd.Help()
+			// here instead of cmd.UsageString() because the latter
+			// doesn't include the long description.
+			_ = cmd.Help()
 		}
 
 		var couldBeSandboxError *cmdutils.CouldBeSandboxError
