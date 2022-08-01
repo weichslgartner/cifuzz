@@ -1,9 +1,10 @@
 package main
 
 import (
-	"github.com/spf13/pflag"
 	"os"
 	"path/filepath"
+
+	"github.com/spf13/pflag"
 
 	"code-intelligence.com/cifuzz/pkg/install"
 	"code-intelligence.com/cifuzz/pkg/log"
