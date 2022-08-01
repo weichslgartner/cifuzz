@@ -100,7 +100,22 @@ func New() *cobra.Command {
 		// TODO: Write long description (easier once we support more
 		//       than just the fallback mode). In particular, explain how a
 		//       "fuzz test" is identified on the CLI.
-		Long:              "",
+		Long: `This command builds and executes a fuzz test. The usage of this command
+depends on the build system configured for the project:
+
+ * For CMake, <fuzz test> is the name of the fuzz test as defined in the
+   'add_fuzz_test' command in your CMakeLists.txt. Command completion for
+   the <fuzz test> argument works if the fuzz test has been built before
+   or after running 'cifuzz reload'. The '--build-command' flag is ignored.
+
+ * For other build systems, a command which builds the fuzz test executable
+   must be provided via '--build-command' and <fuzz test> is the path to
+   the fuzz test executable created by the build command. Example:
+
+       cifuzz run --build-command="make clean && make my_fuzz_test" my_fuzz_test
+
+   Alternatively, <fuzz test> can be the name of the fuzz test executable,
+   which will then be searched for recursively in the current directory.`,
 		ValidArgsFunction: completion.ValidFuzzTests,
 		Args:              cobra.ExactArgs(1),
 		PreRunE: func(cmd *cobra.Command, args []string) error {
@@ -133,7 +148,7 @@ func New() *cobra.Command {
 
 	// Note: If a flag should be configurable via cifuzz.yaml as well,
 	// bind it to viper in the PreRunE function.
-	cmd.Flags().String("build-command", "", "The command to build the fuzz test. Example: \"make clean && make my-fuzz-test\"")
+	cmd.Flags().String("build-command", "", "The command to build the fuzz test. Ignored when the build system is CMake.")
 	cmd.Flags().StringArrayP("seed-corpus", "s", nil, "Directory containing sample inputs for the code under test.\nSee https://llvm.org/docs/LibFuzzer.html#corpus and\nhttps://aflplus.plus/docs/fuzzing_in_depth/#a-collecting-inputs.")
 	cmd.Flags().String("dict", "", "A file containing input language keywords or other interesting byte sequences.\nSee https://llvm.org/docs/LibFuzzer.html#dictionaries and\nhttps://github.com/AFLplusplus/AFLplusplus/blob/stable/dictionaries/README.md.")
 	cmd.Flags().StringArray("engine-arg", nil, "Command-line argument to pass to the fuzzing engine.\nSee https://llvm.org/docs/LibFuzzer.html#options and\nhttps://www.mankier.com/8/afl-fuzz.")
