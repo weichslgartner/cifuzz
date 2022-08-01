@@ -30,7 +30,6 @@ func New() (*cobra.Command, error) {
 
 	rootCmd := &cobra.Command{
 		Use:     "cifuzz",
-		Short:   "#tbd",
 		Version: version,
 		// We are using our custom ErrSilent instead to support a more specific
 		// error handling
