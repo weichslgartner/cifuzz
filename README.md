@@ -19,46 +19,46 @@ look at our [Glossary](docs/Glossary.md).
 
 ### Installation
 
-#### Building from Source (Linux)
-
 **Prerequisites**
-* [git](https://git-scm.com/)
-* [make](https://www.gnu.org/software/make/)
 * [CMake >= 3.16](https://cmake.org/)
 * [LLVM >= 11](https://clang.llvm.org/get_started.html)
-* [go >= 1.18](https://go.dev/doc/install)
-* [libcap](https://man7.org/linux/man-pages/man3/libcap.3.html)
-
 
 **Ubuntu / Debian**
 <!-- when changing this, please make sure it is in sync with the E2E pipeline -->
 ```bash
-sudo apt install git make cmake clang llvm golang-go libcap-dev
+sudo apt install cmake clang llvm
 ```
 
 **Arch**
 <!-- when changing this, please make sure it is in sync with the E2E pipeline -->
 ```bash
-sudo pacman -S git make cmake clang llvm go libcap
+sudo pacman -S cmake clang llvm
 ```
 
-To build **cifuzz** from source you have to execute the following steps:
+**MacOS**
+<!-- when changing this, please make sure it is in sync with the E2E pipeline -->
 ```bash
-git clone https://github.com/CodeIntelligenceTesting/cifuzz.git
-cd cifuzz
-make test
-make install
+brew install cmake clang llvm
 ```
-If everything went fine, you will find the newly created directory
-`~/cifuzz`. Do not forget to add `~/cifuzz/bin` to your `$PATH`.
 
-To verify the installation we recommend you to start a fuzzing run
-in one of our example projects:
-``` bash
-cd examples/cmake
-cifuzz run my_fuzz_test
+**Windows**
+<!-- when changing this, please make sure it is in sync with the E2E pipeline -->
+<!-- clang is included in the llvm package --->
+```bash
+choco install cmake llvm
 ```
-This should stop after a few seconds with an actual finding.
+
+Get the latest release binaries from the [release page](https://github.com/CodeIntelligenceTesting/cifuzz/releases/latest).
+Run the installer by executing:
+```bash
+curl -L -o cifuzz_installer https://github.com/CodeIntelligenceTesting/cifuzz/releases/latest/download/cifuzz_installer_linux # or _darwin for MacOS
+chmod +x cifuzz_installer && ./cifuzz_installer
+```
+
+By default, cifuzz gets installed in your home directory under `~/cifuzz`.
+You can customize the installation directory with `./cifuzz_installer -i /target/dir`.
+
+Do not forget to add the installation directory to your `$PATH`.
 
 ### Setup / Create your first fuzz test
 
