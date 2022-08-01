@@ -1,19 +1,28 @@
 current_os :=
+bin_ext := 
+
 ifeq ($(OS),Windows_NT)
 	current_os = windows
+	bin_ext = .exe
 else
 	UNAME_S := $(shell uname -s)
 	ifeq ($(UNAME_S),Linux)
 		current_os = linux
 	endif
 	ifeq ($(UNAME_S),Darwin)
-		current_os = darwin 
+		current_os = darwin
 	endif
 endif
 
-binary_base_path = build/bin/cifuzz
+bin_dir = build/bin
+binary_base_path = $(bin_dir)/cifuzz
+installer_base_path = $(bin_dir)/cifuzz_installer
 
 project := "code-intelligence.com/cifuzz"
+
+# default version can be overriden by
+# make version=1.0.0-dev [target]
+version = dev
 
 default:
 	@echo cifuzz
@@ -33,11 +42,15 @@ deps/dev: deps
 
 .PHONY: install
 install:
-	go run tools/install/bundler/bundler.go --version dev && go run -tags installer tools/install/installer/installer.go && rm -r tools/install/bundler/embed/bundle
+	go run tools/install/bundler/bundler.go --version $(version) 
+	go run -tags installer tools/install/installer/installer.go
+	rm -r tools/install/bundler/embed/bundle
 
 .PHONY: installer
 installer:
-	go run tools/install/bundler/bundler.go --version dev && go build -tags installer -o build/bin/installer tools/install/installer/installer.go && rm -r tools/install/bundler/embed/bundle
+	go run tools/install/bundler/bundler.go --version $(version) 
+	go build -tags installer -o $(installer_base_path)_$(current_os)$(bin_ext) tools/install/installer/installer.go
+	rm -r tools/install/bundler/embed/bundle
 
 .PHONY: build
 build: build/$(current_os)
