@@ -83,6 +83,7 @@ func New() (*cobra.Command, error) {
 
 	rootCmd.SetFlagErrorFunc(rootFlagErrorFunc)
 
+	cobra.EnableCommandSorting = false
 	rootCmd.AddCommand(initCmd.New())
 	rootCmd.AddCommand(createCmd.New(cmdConfig))
 	rootCmd.AddCommand(runCmd.New())
