@@ -1,4 +1,4 @@
-name: Release Pipeline
+name: Release Pipeline # this name is referenced in the `pipeline_e2e_installer.yml`
 
 on:
   push:
