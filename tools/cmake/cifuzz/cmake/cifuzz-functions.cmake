@@ -92,6 +92,17 @@ function(enable_fuzz_testing)
         add_compile_options(-fprofile-instr-generate -fcoverage-mapping)
         add_link_options(-fprofile-instr-generate -fcoverage-mapping)
       endif()
+    elseif(sanitizer STREQUAL gcov)
+      if(MSVC)
+        message(FATAL_ERROR "CIFuzz: MSVC does not support coverage builds yet")
+      else()
+        # We useand gcov style coverage instrumentation instead of llvm-cov since CLion does not correctly collect
+        # coverage for shared libraries with llvm-cov. The flag is supported by both gcc and clang.
+        # TODO: Investigate whether this extra sanitizer is needed once the following issue has been fixed:
+        #  https://youtrack.jetbrains.com/issue/CPP-29628/LLVM-Code-coverage-not-usable-with-shared-libraries
+        add_compile_options(--coverage)
+        add_link_options(--coverage)
+      endif()
     else()
       message(FATAL_ERROR "CIFuzz: Unsupported value in CIFUZZ_SANITIZERS: ${sanitizer}")
     endif()
@@ -143,6 +154,11 @@ function(add_fuzz_test name)
       set_source_files_properties("${_replayer_src}"
                                   PROPERTIES COMPILE_FLAGS
                                   "-fno-profile-instr-generate -fno-coverage-mapping")
+    elseif(gcov IN_LIST CIFUZZ_SANITIZERS)
+      # Never instrument the replayer file for coverage.
+      set_source_files_properties("${_replayer_src}"
+                                  PROPERTIES COMPILE_FLAGS
+                                  "-fprofile-exclude-files=.*")
     elseif(CIFUZZ_SANITIZERS)
       target_compile_definitions("${name}" PRIVATE CIFUZZ_HAS_SANITIZER)
     endif()
@@ -175,7 +191,7 @@ function(add_fuzz_test name)
   target_compile_definitions("${name}" PRIVATE CIFUZZ_SEED_CORPUS="${_source_seed_corpus}")
 
   # Coverage builds should always run over the full generated corpus in addition to the seed corpus.
-  if(coverage IN_LIST CIFUZZ_SANITIZERS)
+  if(coverage IN_LIST CIFUZZ_SANITIZERS OR gcov IN_LIST CIFUZZ_SANITIZERS)
     set(_source_generated_corpus "${CMAKE_SOURCE_DIR}/.cifuzz-corpus/${name}")
     if(WIN32)
       string(REGEX REPLACE "/" "\\\\" _source_generated_corpus "${_source_generated_corpus}")
