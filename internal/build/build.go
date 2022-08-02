@@ -2,6 +2,7 @@ package build
 
 import (
 	"os"
+	"path"
 	"runtime"
 
 	"code-intelligence.com/cifuzz/util/envutil"
@@ -32,16 +33,20 @@ func CommonBuildEnv() ([]string, error) {
 	// a developer command prompt anyway and thus don't need to set the
 	// compiler explicitly.
 	if runtime.GOOS != "windows" {
-		// Set the C/C++ compiler to clang/clang++, which is needed to build a
-		// binary with fuzzing instrumentation (gcc doesn't have
-		// -fsanitize=fuzzer).
-		env, err = envutil.Setenv(env, "CC", "clang")
-		if err != nil {
-			return nil, err
+		// Set the C/C++ compiler to clang/clang++ (if not already set),
+		// which is needed to build a  binary with fuzzing instrumentation
+		// gcc doesn't have -fsanitize=fuzzer.
+		if val, ok := envutil.LookupEnv(env, "CC"); !ok || path.Base(val) != "clang" {
+			env, err = envutil.Setenv(env, "CC", "clang")
+			if err != nil {
+				return nil, err
+			}
 		}
-		env, err = envutil.Setenv(env, "CXX", "clang++")
-		if err != nil {
-			return nil, err
+		if val, ok := envutil.LookupEnv(env, "CXX"); !ok || path.Base(val) != "clang++" {
+			env, err = envutil.Setenv(env, "CXX", "clang++")
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 
