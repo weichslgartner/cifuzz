@@ -126,3 +126,9 @@ you don't expect your fuzz tests to do any harm to the system (or you're
 already running **cifuzz** in a container), you might want to disable
 the sandbox via the `--use-sandbox=false` flag or the
 [`use-sandbox: false` config file setting](docs/Configuration.md#use-sandbox).
+
+## Contributing
+Want to help improve cifuzz? Check out our [contributing documentation](CONTRIBUTING.md).
+There you will find instructions for building the tool locally.
+
+If you find an issue, please report it on the issue tracker.
