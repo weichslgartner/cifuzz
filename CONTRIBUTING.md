@@ -1,0 +1,43 @@
+# Contributing
+
+## Building from Source (Linux)
+
+**Prerequisites**
+* [git](https://git-scm.com/)
+* [make](https://www.gnu.org/software/make/)
+* [CMake >= 3.21](https://cmake.org/)
+* [LLVM >= 11](https://clang.llvm.org/get_started.html)
+* [go >= 1.18](https://go.dev/doc/install)
+* [libcap](https://man7.org/linux/man-pages/man3/libcap.3.html)
+
+
+**Ubuntu / Debian**
+<!-- when changing this, please make sure it is in sync with the E2E pipeline -->
+```bash
+sudo apt install git make cmake clang llvm golang-go libcap-dev
+```
+
+**Arch**
+<!-- when changing this, please make sure it is in sync with the E2E pipeline -->
+```bash
+sudo pacman -S git make cmake clang llvm go libcap
+```
+
+To build **cifuzz** from source you have to execute the following steps:
+```bash
+git clone https://github.com/CodeIntelligenceTesting/cifuzz.git
+cd cifuzz
+make test
+make install
+```
+If everything went fine, you will find the newly created directory
+`~/cifuzz`. Do not forget to add `~/cifuzz/bin` to your `$PATH`.
+
+To verify the installation we recommend you to start a fuzzing run
+in one of our example projects:
+``` bash
+cd examples/cmake
+cifuzz run my_fuzz_test
+```
+This should stop after a few seconds with an actual finding.
+
