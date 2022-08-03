@@ -40,6 +40,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <signal.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -204,6 +205,16 @@ DEFINE_DEFAULT(const char*, cifuzz_seed_corpus, (void)) {
 
 DEFINE_DEFAULT(const char*, cifuzz_generated_corpus, (void)) {
   return NULL;
+}
+
+/* Commonly called from LLVMFuzzerCustomMutator. We define it here to prevent linker errors. */
+C_LINKAGE size_t LLVMFuzzerMutate(uint8_t *Data, size_t Size, size_t MaxSize);
+size_t LLVMFuzzerMutate(uint8_t *Data, size_t Size, size_t MaxSize) {
+  (void) Data;
+  (void) Size;
+  (void) MaxSize;
+  assert(0 && "LLVMFuzzerMutate should only be called from LLVMFuzzerCustomMutator");
+  return 0;
 }
 
 /* Set by the CMake integration if a sanitizer is linked in.
