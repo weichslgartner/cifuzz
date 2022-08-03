@@ -69,6 +69,7 @@ func New() (*cobra.Command, error) {
 		},
 	}
 
+	rootCmd.PersistentFlags().Bool("help", false, "Show help for command")
 	rootCmd.PersistentFlags().BoolP("verbose", "v", false,
 		"Show more verbose output, can be helpful for debugging problems")
 	if err := viper.BindPFlag("verbose", rootCmd.PersistentFlags().Lookup("verbose")); err != nil {
