@@ -142,7 +142,7 @@ Write out an lcov trace file:
 	// bind it to viper in the PreRunE function.
 	cmd.Flags().StringP("format", "f", "html", "Output format of the coverage report (html/lcov).")
 	cmd.Flags().StringP("output", "o", "", "Output path of the coverage report.")
-	cmd.Flags().String("build-command", "", `The command to build the fuzz test. Example: "make clean && make my-fuzz-test"`)
+	cmd.Flags().String("build-command", "", "The `command` to build the fuzz test. Ignored when the build system is CMake.")
 	// TODO(afl): Also link to https://aflplus.plus/docs/fuzzing_in_depth/#a-collecting-inputs
 	cmd.Flags().StringArrayP("seed-corpus", "s", nil, "A `directory` containing sample inputs for the code under test.\nSee https://llvm.org/docs/LibFuzzer.html#corpus.")
 	cmd.Flags().StringArray("fuzz-test-arg", nil, "Command-line `argument` to pass to the fuzz test.")
