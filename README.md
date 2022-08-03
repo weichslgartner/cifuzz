@@ -38,7 +38,7 @@ sudo pacman -S cmake clang llvm
 **MacOS**
 <!-- when changing this, please make sure it is in sync with the E2E pipeline -->
 ```bash
-brew install cmake clang llvm
+brew install cmake llvm
 ```
 
 **Windows**
