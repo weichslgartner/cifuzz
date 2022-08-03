@@ -30,12 +30,30 @@ func TestMain(m *testing.M) {
 	var err error
 
 	// The CMake integration is installed globally once and used by all tests.
-	bundler, err := install.NewInstallationBundler(install.Options{Version: "dev"})
+	baseTempDir, err = os.MkdirTemp("", "cmake-test-")
+	if err != nil {
+		log.Fatalf("Failed to create temp dir for tests: %+v", err)
+	}
+
+	installDir := filepath.Join(baseTempDir, "install-dir")
+	opts := install.Options{
+		Version:   "dev",
+		TargetDir: installDir,
+	}
+	bundler, err := install.NewInstallationBundler(opts)
 	if err != nil {
 		bundler.Cleanup()
 		log.Fatalf("Failed to install CMake integration: %+v", err)
 	}
 	err = bundler.CopyCMakeIntegration()
+	if err != nil {
+		bundler.Cleanup()
+		log.Fatalf("Failed to install CMake integration: %+v", err)
+	}
+
+	// Include the CMake package by setting the CMAKE_PREFIX_PATH.
+	// The CMake registration is tested in the integration test.
+	err = os.Setenv("CMAKE_PREFIX_PATH", installDir)
 	if err != nil {
 		bundler.Cleanup()
 		log.Fatalf("Failed to install CMake integration: %+v", err)
