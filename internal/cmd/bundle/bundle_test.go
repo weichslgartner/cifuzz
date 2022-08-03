@@ -69,7 +69,7 @@ func TestAssembleArtifacts(t *testing.T) {
 		Sanitizer:    "ADDRESS",
 		ProjectDir:   projectDir,
 		Seeds:        filepath.Join("libfuzzer", "address", "some_fuzz_test", "seeds"),
-		LibraryPaths: filepath.Join("libfuzzer", "address", "some_fuzz_test", "external_libs"),
+		LibraryPaths: []string{filepath.Join("libfuzzer", "address", "some_fuzz_test", "external_libs")},
 	}, *fuzzers[0])
 
 	assert.Equal(t, map[string]string{

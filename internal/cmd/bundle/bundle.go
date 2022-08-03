@@ -386,7 +386,7 @@ depsLoop:
 		Path:         fuzzTestArchivePath,
 		ProjectDir:   projectDir,
 		Seeds:        archiveSeedsDir,
-		LibraryPaths: externalLibrariesPrefix,
+		LibraryPaths: []string{externalLibrariesPrefix},
 	}
 
 	if buildResult.Engine == "replayer" {
