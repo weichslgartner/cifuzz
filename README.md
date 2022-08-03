@@ -44,6 +44,7 @@ brew install cmake llvm
 **Windows**
 <!-- when changing this, please make sure it is in sync with the E2E pipeline -->
 <!-- clang is included in the llvm package --->
+At least Visual Studio 2022 version 17 is required.
 ```bash
 choco install cmake llvm
 ```
