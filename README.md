@@ -23,6 +23,22 @@ look at our [Glossary](docs/Glossary.md).
 * [CMake >= 3.16](https://cmake.org/)
 * [LLVM >= 11](https://clang.llvm.org/get_started.html)
 
+You can get the latest release [here](https://github.com/CodeIntelligenceTesting/cifuzz/releases/latest)
+or by running our install script:
+
+```bash
+sh -c "$(curl -fsSL https://raw.githubusercontent.com/CodeIntelligenceTesting/main/install.sh)"
+```
+
+If you are using Windows you can download the [latest release](https://github.com/CodeIntelligenceTesting/cifuzz/releases/latest/download/cifuzz_installer_windows.exe) 
+and execute it.
+
+By default, cifuzz gets installed in your home directory under `cifuzz`.
+You can customize the installation directory with `./cifuzz_installer -i /target/dir`.
+
+Do not forget to add the installation directory to your `PATH`.
+
+#### Installing required dependencies
 **Ubuntu / Debian**
 <!-- when changing this, please make sure it is in sync with the E2E pipeline -->
 ```bash
@@ -48,18 +64,6 @@ At least Visual Studio 2022 version 17 is required.
 ```bash
 choco install cmake llvm
 ```
-
-Get the latest release binaries from the [release page](https://github.com/CodeIntelligenceTesting/cifuzz/releases/latest).
-Run the installer by executing:
-```bash
-curl -L -o cifuzz_installer https://github.com/CodeIntelligenceTesting/cifuzz/releases/latest/download/cifuzz_installer_linux # or _darwin for MacOS
-chmod +x cifuzz_installer && ./cifuzz_installer
-```
-
-By default, cifuzz gets installed in your home directory under `~/cifuzz`.
-You can customize the installation directory with `./cifuzz_installer -i /target/dir`.
-
-Do not forget to add the installation directory to your `$PATH`.
 
 ### Setup / Create your first fuzz test
 
