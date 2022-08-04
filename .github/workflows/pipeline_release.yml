@@ -34,6 +34,9 @@ jobs:
       contents: write # for creating releases
 
     steps:
+      # needed for the release template
+      - uses: actions/checkout@v3
+
       - name: Download Artifacts 
         uses: actions/download-artifact@v3
         with:
@@ -44,8 +47,8 @@ jobs:
         with:
           name: cifuzz Release ${{ needs.version.outputs.version }}
           tag_name: ${{ github.ref }}
-          body: |
-            This is a draft release
+          body_path: ./.github/release_template.md
+          generate_release_notes: true
           draft: true
           files: cifuzz_installer_*
           fail_on_unmatched_files: true
