@@ -18,6 +18,7 @@ import (
 	"code-intelligence.com/cifuzz/internal/completion"
 	"code-intelligence.com/cifuzz/internal/config"
 	"code-intelligence.com/cifuzz/pkg/cmdutils"
+	"code-intelligence.com/cifuzz/pkg/coverage"
 	"code-intelligence.com/cifuzz/pkg/log"
 	"code-intelligence.com/cifuzz/pkg/minijail"
 	"code-intelligence.com/cifuzz/pkg/runfiles"
@@ -154,12 +155,18 @@ func (c *coverageCmd) run() error {
 		return err
 	}
 
+	lcovReport, err := c.generateLcovReport(buildResult.Executable, buildResult.RuntimeDeps)
+	if err != nil {
+		return err
+	}
+	coverage.ParseLcov(lcovReport).PrintTable(c.OutOrStderr())
+
 	err = c.generateHTMLReport(buildResult.Executable, buildResult.RuntimeDeps)
 	if err != nil {
 		return err
 	}
 
-	log.Successf("Created coverage report %s", c.htmlReportPath(buildResult.Executable))
+	log.Successf("Created coverage HTML report: %s", c.htmlReportPath(buildResult.Executable))
 
 	return nil
 }
@@ -338,16 +345,16 @@ func (c *coverageCmd) indexRawProfile(fuzzTestExecutable string) error {
 	return nil
 }
 
-func (c *coverageCmd) generateHTMLReport(fuzzTestExecutable string, runtimeDeps []string) error {
+func (c *coverageCmd) runLlvmCov(args []string, fuzzTestExecutable string, runtimeDeps []string) (string, error) {
 	llvmCov, err := runfiles.Finder.LLVMCovPath()
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	// Add all runtime dependencies of the fuzz test to the binaries
 	// processed by llvm-cov to include them in the coverage report
-	args := []string{"show", "-instr-profile=" + c.indexedProfilePath(fuzzTestExecutable), "-format=html",
-		fuzzTestExecutable}
+	args = append(args, "-instr-profile="+c.indexedProfilePath(fuzzTestExecutable))
+	args = append(args, fuzzTestExecutable)
 	for _, path := range runtimeDeps {
 		args = append(args, "-object="+path)
 	}
@@ -357,11 +364,28 @@ func (c *coverageCmd) generateHTMLReport(fuzzTestExecutable string, runtimeDeps 
 	log.Debugf("Command: %s", strings.Join(stringutil.QuotedStrings(cmd.Args), " "))
 	output, err := cmd.Output()
 	if err != nil {
-		return cmdutils.WrapExecError(errors.WithStack(err), cmd)
+		return "", cmdutils.WrapExecError(errors.WithStack(err), cmd)
+	}
+	return string(output), nil
+}
+
+func (c *coverageCmd) generateLcovReport(fuzzTestExecutable string, runtimeDeps []string) (string, error) {
+	output, err := c.runLlvmCov([]string{"export", "-format=lcov", "-summary-only"}, fuzzTestExecutable, runtimeDeps)
+	if err != nil {
+		return "", err
+	}
+
+	return output, nil
+}
+
+func (c *coverageCmd) generateHTMLReport(fuzzTestExecutable string, runtimeDeps []string) error {
+	output, err := c.runLlvmCov([]string{"show", "-format=html"}, fuzzTestExecutable, runtimeDeps)
+	if err != nil {
+		return err
 	}
 
 	// Write the HTML output to file
-	err = os.WriteFile(c.htmlReportPath(fuzzTestExecutable), output, 0644)
+	err = os.WriteFile(c.htmlReportPath(fuzzTestExecutable), []byte(output), 0644)
 	if err != nil {
 		return errors.WithStack(err)
 	}
