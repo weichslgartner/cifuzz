@@ -172,7 +172,7 @@ func (c *runCmd) run() error {
 		return err
 	}
 
-	err = c.printFinalMetrics()
+	err = c.printFinalMetrics(buildResult.SeedCorpus)
 	if err != nil {
 		return err
 	}
@@ -334,8 +334,8 @@ func (c *runCmd) runFuzzTest(buildResult *build.Result) error {
 	return err
 }
 
-func (c *runCmd) printFinalMetrics() error {
-	numSeeds, err := countSeeds(append(c.opts.SeedCorpusDirs, c.generatedCorpusPath()))
+func (c *runCmd) printFinalMetrics(seedCorpus string) error {
+	numSeeds, err := countSeeds(append(c.opts.SeedCorpusDirs, c.generatedCorpusPath(), seedCorpus))
 	if err != nil {
 		return err
 	}
