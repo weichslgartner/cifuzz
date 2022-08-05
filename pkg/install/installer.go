@@ -20,8 +20,7 @@ import (
 )
 
 type InstallationBundler struct {
-	Version   string
-	TargetDir string
+	Options
 
 	projectDir string
 	mutex      *filemutex.FileMutex
@@ -31,6 +30,8 @@ type InstallationBundler struct {
 type Options struct {
 	Version   string
 	TargetDir string
+	GOOS      string
+	GOARCH    string
 }
 
 func NewInstallationBundler(opts Options) (*InstallationBundler, error) {
@@ -51,8 +52,7 @@ func NewInstallationBundler(opts Options) (*InstallationBundler, error) {
 	}
 
 	i := &InstallationBundler{
-		TargetDir:  opts.TargetDir,
-		Version:    opts.Version,
+		Options:    opts,
 		projectDir: projectDir,
 	}
 
@@ -276,11 +276,16 @@ func (i *InstallationBundler) BuildCIFuzz() error {
 		}
 	}()
 
+	// Add GOOS and GOARCH envs to support cross compilation
+	buildEnv := os.Environ()
+	buildEnv = append(buildEnv, []string{"GOOS=" + i.GOOS, "GOARCH=" + i.GOARCH}...)
+
 	// Build cifuzz
 	ldFlags := fmt.Sprintf("-ldflags=-X code-intelligence.com/cifuzz/internal/cmd/root.version=%s", i.Version)
 	cifuzz := filepath.Join(i.projectDir, "cmd", "cifuzz", "main.go")
 	cmd := exec.Command("go", "build", "-o", CIFuzzExecutablePath(i.binDir()), ldFlags, cifuzz)
 	cmd.Dir = i.projectDir
+	cmd.Env = buildEnv
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
 	log.Printf("Command: %s", cmd.String())

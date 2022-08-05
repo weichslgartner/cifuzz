@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 
 	"github.com/spf13/pflag"
 
@@ -13,6 +14,8 @@ import (
 func main() {
 	flags := pflag.NewFlagSet("bundler", pflag.ExitOnError)
 	version := flags.StringP("version", "v", "dev", "the target version of cifuzz")
+	goos := flags.String("goos", runtime.GOOS, "cross compilation OS, defaults to runtime.GOOS")
+	goarch := flags.String("goarch", runtime.GOARCH, "cross compilation GOARCH, defaults to runtime.GOARCH")
 	helpRequested := flags.BoolP("help", "h", false, "")
 
 	if err := flags.Parse(os.Args); err != nil {
@@ -40,6 +43,8 @@ func main() {
 	opts := install.Options{
 		Version:   *version,
 		TargetDir: targetDir,
+		GOOS:      *goos,
+		GOARCH:    *goarch,
 	}
 
 	bundler, err := install.NewInstallationBundler(opts)
