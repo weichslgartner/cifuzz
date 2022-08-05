@@ -45,7 +45,8 @@
     {
       "name": "cifuzz (Regression Test)",
       "displayName": "cifuzz (Regression Test)",
-      "configurePreset": "cifuzz (Regression Test)"
+      "configurePreset": "cifuzz (Regression Test)",
+      "configuration": "RelWithDebInfo"
     }
   ],
   "testPresets": [
