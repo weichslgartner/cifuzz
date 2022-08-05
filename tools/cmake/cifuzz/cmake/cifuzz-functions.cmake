@@ -130,9 +130,9 @@ function(add_fuzz_test name)
     endif()
   else()
     target_include_directories("${name}" SYSTEM PRIVATE "${CIFUZZ_INCLUDE_DIR}")
-    # This macro is consumed by cifuzz.h.
-    target_compile_definitions("${name}" PRIVATE CIFUZZ_TEST_NAME="${name}")
   endif()
+  # This macro is consumed by cifuzz.h and cifuzz_launcher.c.
+  target_compile_definitions("${name}" PRIVATE CIFUZZ_TEST_NAME="${name}")
 
   get_property(_enabled_languages GLOBAL PROPERTY ENABLED_LANGUAGES)
 
@@ -171,6 +171,18 @@ function(add_fuzz_test name)
     else()
       message(FATAL_ERROR "CIFuzz: ${CMAKE_CXX_COMPILER_ID} compiler is not supported with the libfuzzer engine")
     endif()
+    # The launcher is written so that it can be compiled as both C and C++.
+    # Since we do not have control over the enabled languages, we add the
+    # launcher with a source file extension matching the enabled language.
+    if(C IN_LIST _enabled_languages)
+      set(_launcher_src "${CIFUZZ_LAUNCHER_C_SRC}")
+    else()
+      if (NOT CXX IN_LIST _enabled_languages)
+        message(FATAL "CIFuzz: At least one of C and CXX has to be an enabled language")
+      endif()
+      set(_launcher_src "${CIFUZZ_LAUNCHER_CXX_SRC}")
+    endif()
+    target_sources("${name}" PRIVATE "${_launcher_src}")
   else()
     message(FATAL_ERROR "CIFuzz: Unsupported value for CIFUZZ_ENGINE: ${CIFUZZ_ENGINE}")
   endif()

@@ -63,13 +63,14 @@ func TestAssembleArtifacts(t *testing.T) {
 
 	require.Equal(t, 1, len(fuzzers))
 	assert.Equal(t, artifact.Fuzzer{
-		Target:       "some_fuzz_test",
-		Path:         filepath.Join("libfuzzer", "address", "some_fuzz_test", "bin", "pkg", "some_fuzz_test"),
-		Engine:       "LIBFUZZER",
-		Sanitizer:    "ADDRESS",
-		ProjectDir:   projectDir,
-		Seeds:        filepath.Join("libfuzzer", "address", "some_fuzz_test", "seeds"),
-		LibraryPaths: []string{filepath.Join("libfuzzer", "address", "some_fuzz_test", "external_libs")},
+		Target:        "some_fuzz_test",
+		Path:          filepath.Join("libfuzzer", "address", "some_fuzz_test", "bin", "pkg", "some_fuzz_test"),
+		Engine:        "LIBFUZZER",
+		Sanitizer:     "ADDRESS",
+		ProjectDir:    projectDir,
+		Seeds:         filepath.Join("libfuzzer", "address", "some_fuzz_test", "seeds"),
+		LibraryPaths:  []string{filepath.Join("libfuzzer", "address", "some_fuzz_test", "external_libs")},
+		EngineOptions: artifact.EngineOptions{Env: []string{"CIFUZZ_IN_CIFUZZ=1"}},
 	}, *fuzzers[0])
 
 	assert.Equal(t, map[string]string{

@@ -408,6 +408,8 @@ func runArchivedFuzzer(t *testing.T, archiveDir string) {
 	cmd := executil.Command(fuzzerPath, "-runs=0")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
+	// CIFUZZ_IN_CIFUZZ is set on the backend via engine_options.
+	cmd.Env = append(os.Environ(), "CIFUZZ_IN_CIFUZZ=1")
 	err = cmd.Run()
 	require.NoError(t, err)
 

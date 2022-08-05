@@ -343,6 +343,16 @@ func (i *InstallationBundler) CopyCMakeIntegration() error {
 	if err != nil {
 		return errors.WithStack(err)
 	}
+	// The same applies to the C++ version of the launcher.
+	launcherSrc := filepath.Join(i.projectDir, "tools", "cmake", "cifuzz", "src", "launcher.c")
+	err = os.MkdirAll(replayerDir, 0755)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	err = copy.Copy(launcherSrc, filepath.Join(destDir, "src", "launcher.cpp"))
+	if err != nil {
+		return errors.WithStack(err)
+	}
 
 	return nil
 }

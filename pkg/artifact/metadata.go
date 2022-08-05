@@ -24,9 +24,10 @@ type Fuzzer struct {
 	// The different YAML field name is *not* a typo: For historical reasons, the "build_dir" field is supposed to
 	// include the root directory of the *source* rather than the build tree of the project. Rather than expose all
 	// cifuzz devs to this inconsistency, we keep it in the serialization logic.
-	ProjectDir   string   `yaml:"build_dir"`
-	Seeds        string   `yaml:"seeds,omitempty"`
-	LibraryPaths []string `yaml:"library_paths,omitempty"`
+	ProjectDir    string        `yaml:"build_dir"`
+	Seeds         string        `yaml:"seeds,omitempty"`
+	LibraryPaths  []string      `yaml:"library_paths,omitempty"`
+	EngineOptions EngineOptions `yaml:"engine_options,omitempty"`
 }
 
 // RunEnvironment specifies the environment in which the fuzzers are to be run.
@@ -42,6 +43,11 @@ type CodeRevision struct {
 type GitRevision struct {
 	Commit string `yaml:"commit,omitempty"`
 	Branch string `yaml:"branch,omitempty"`
+}
+
+type EngineOptions struct {
+	Flags []string `yaml:"flags,omitempty"`
+	Env   []string `yaml:"env,omitempty"`
 }
 
 func (a *Metadata) ToYaml() ([]byte, error) {

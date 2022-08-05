@@ -245,7 +245,69 @@ func TestIntegration_RuntimeDepsInfo(t *testing.T) {
 	assert.Empty(t, extractRuntimeDeps(t, buildDir, "c_fuzz_test"))
 }
 
-func build(t *testing.T, buildType string, cacheVariables map[string]string) string {
+const fakeCifuzzSource = `
+#include <stdio.h>
+
+int main(int argc, char **argv) {
+  for (int i = 1; i < argc; i++) {
+    printf("%s\n", argv[i]);
+  }
+  return 0;
+}
+`
+
+func TestIntegration_FuzzTestBinaryLaunchesCifuzz(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
+	t.Parallel()
+	testutil.RegisterTestDeps("testdata", "cifuzz")
+
+	cmakeVariables := map[string]string{
+		"CIFUZZ_ENGINE":     "libfuzzer",
+		"CIFUZZ_SANITIZERS": "address",
+	}
+	if runtime.GOOS != "windows" {
+		cmakeVariables["CMAKE_C_COMPILER"] = "clang"
+		cmakeVariables["CMAKE_CXX_COMPILER"] = "clang++"
+	}
+	buildDir := build(t, cifuzzCmakeBuildType, cmakeVariables, "--target", "c_fuzz_test")
+
+	// Using c_fuzz_test here as it doesn't have any shared library dependencies - those are not supported with fuzzing
+	// instrumentation on Windows.
+	cFuzzTestInfo := filepath.Join(buildDir, cifuzzCmakeBuildType, ".cifuzz", "fuzz_tests", "c_fuzz_test", "executable")
+	fuzzTestPath, err := os.ReadFile(cFuzzTestInfo)
+	require.NoError(t, err)
+
+	// Verify that running the fuzz test directly executes cifuzz from the path by adding a fake cifuzz to PATH first in
+	// search order.
+	fakeCifuzzDir, err := os.MkdirTemp(baseTempDir, "")
+	require.NoError(t, err)
+	fakeCifuzzSrc := filepath.Join(fakeCifuzzDir, "cifuzz.c")
+	err = os.WriteFile(fakeCifuzzSrc, []byte(fakeCifuzzSource), 0o644)
+	require.NoError(t, err)
+	var fakeCifuzz string
+	var fakeCifuzzCompileCmd *exec.Cmd
+	if runtime.GOOS == "windows" {
+		fakeCifuzz = filepath.Join(fakeCifuzzDir, "cifuzz.exe")
+		fakeCifuzzCompileCmd = exec.Command("cl", fakeCifuzzSrc, "/Fe"+fakeCifuzz)
+	} else {
+		fakeCifuzz = filepath.Join(fakeCifuzzDir, "cifuzz")
+		fakeCifuzzCompileCmd = exec.Command("clang", fakeCifuzzSrc, "-o", fakeCifuzz)
+	}
+	fakeCifuzzCompileCmd.Stdout = os.Stdout
+	fakeCifuzzCompileCmd.Stderr = os.Stderr
+	err = fakeCifuzzCompileCmd.Run()
+	require.NoError(t, err)
+
+	cmd := exec.Command(string(fuzzTestPath))
+	cmd.Env = append(os.Environ(), fmt.Sprintf("PATH=%s%c%s", fakeCifuzzDir, os.PathListSeparator, os.Getenv("PATH")))
+	out, err := cmd.Output()
+	require.NoError(t, err)
+	require.Equal(t, "run\nc_fuzz_test\n", strings.ReplaceAll(string(out), "\r\n", "\n"))
+}
+
+func build(t *testing.T, buildType string, cacheVariables map[string]string, additionalBuildArgs ...string) string {
 	buildDir, err := os.MkdirTemp(baseTempDir, "build")
 	require.NoError(t, err)
 
@@ -266,6 +328,7 @@ func build(t *testing.T, buildType string, cacheVariables map[string]string) str
 	if buildType != "" {
 		buildArgs = append(buildArgs, "--config", buildType)
 	}
+	buildArgs = append(buildArgs, additionalBuildArgs...)
 	if runtime.GOOS == "windows" {
 		// CMAKE_VERBOSE_MAKEFILE has no effect on MSBuild, so we have to increase verbosity manually.
 		// https://stackoverflow.com/a/70728115/297261

@@ -284,6 +284,7 @@ func (c *runCmd) runFuzzTest(buildResult *build.Result) error {
 		UseMinijail:        c.opts.UseSandbox,
 		Verbose:            viper.GetBool("verbose"),
 		KeepColor:          !c.opts.PrintJSON,
+		EnvVars:            []string{"CIFUZZ_IN_CIFUZZ=1"},
 	}
 	runner := libfuzzer.NewRunner(runnerOpts)
 
