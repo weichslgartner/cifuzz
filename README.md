@@ -114,9 +114,11 @@ on how to build that binary).
 This will use the replayer to apply existing input data from the
 seed corpus, which has to be stored in the directory
 `<fuzz-test-name>_seed_corpus` beside your fuzz test. Note that this
-directory has to be created manually.
-In this case the fuzz test will stop immediately after
-applying all input or earlier if a regression occurs.
+directory has to be created manually. In case a crash was found, the
+directory will be created and the crashing input
+is added to this directory automatically.
+The fuzz test will stop immediately after
+applying all inputs or earlier if a regression occurs.
 
 
 ### Sandboxing
