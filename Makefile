@@ -52,6 +52,12 @@ installer:
 	go build -tags installer -o $(installer_base_path)_$(current_os)$(bin_ext) tools/install/installer/installer.go
 	rm -r tools/install/bundler/embed/bundle
 
+.PHONY: installer/darwin-arm64
+installer/darwin-arm64:
+	go run tools/install/bundler/bundler.go --version $(version) --goos darwin --goarch arm64 
+	GOOS=darwin GOARCH=arm64 go build -tags installer -o $(installer_base_path)_darwin_arm64 tools/install/installer/installer.go
+	rm -r tools/install/bundler/embed/bundle
+
 .PHONY: build
 build: build/$(current_os)
 

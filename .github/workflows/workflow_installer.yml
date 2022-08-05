@@ -22,8 +22,13 @@ jobs:
           os: ${{ matrix.os }}
 
       - name: Build installer
-        run: |
-          make version=${{ inputs.version }} installer
+        run: make version=${{ inputs.version }} installer
+
+      # as long as we do not have a mac m1 runner
+      # we have to cross compile
+      - name: Build darwin/arm64 installer (cross compilation)
+        if: contains(matrix.os, 'mac')
+        run: make version=${{ inputs.version }} installer/darwin-arm64
 
       - name: Upload installer
         uses: actions/upload-artifact@v3
