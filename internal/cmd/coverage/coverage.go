@@ -1,12 +1,15 @@
 package coverage
 
 import (
+	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
 
+	"github.com/pkg/browser"
 	"github.com/pkg/errors"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
@@ -165,8 +168,12 @@ func (c *coverageCmd) run() error {
 	if err != nil {
 		return err
 	}
+	reportPath := c.htmlReportPath(buildResult.Executable)
+	log.Successf("Created coverage HTML report: %s", reportPath)
 
-	log.Successf("Created coverage HTML report: %s", c.htmlReportPath(buildResult.Executable))
+	if err := c.openReport(reportPath); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -412,4 +419,23 @@ func (c *coverageCmd) indexedProfilePath(fuzzTestExecutable string) string {
 
 func (c *coverageCmd) htmlReportPath(fuzzTestExecutable string) string {
 	return filepath.Base(fuzzTestExecutable) + ".coverage.html"
+}
+
+func (c *coverageCmd) openReport(reportPath string) error {
+	// ignore output of browser package
+	browser.Stdout = io.Discard
+	browser.Stderr = io.Discard
+	// try to open the report in the browser...
+	if err := browser.OpenFile(reportPath); err != nil {
+
+		//... if this fails print the file uri
+		absReportPath, err := filepath.Abs(reportPath)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+		reportUri := fmt.Sprintf("file://%s", filepath.ToSlash(absReportPath))
+		log.Infof("You can open the report by copying this uri into your browser:\n   %s", reportUri)
+	}
+
+	return nil
 }
