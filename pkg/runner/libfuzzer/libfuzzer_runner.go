@@ -43,6 +43,7 @@ type RunnerOptions struct {
 	SeedCorpusDirs     []string
 	Dictionary         string
 	LibraryDirs        []string
+	ReadOnlyBindings   []string
 	EnvVars            []string
 	EngineArgs         []string
 	FuzzTestArgs       []string
@@ -145,6 +146,10 @@ func (r *Runner) Run(ctx context.Context) error {
 			// The first corpus directory must be writable, because
 			// libfuzzer writes new test inputs to it
 			{Source: r.GeneratedCorpusDir, Writable: minijail.ReadWrite},
+		}
+
+		for _, dir := range r.ReadOnlyBindings {
+			bindings = append(bindings, &minijail.Binding{Source: dir})
 		}
 
 		for _, dir := range r.SeedCorpusDirs {
