@@ -17,6 +17,10 @@
         "CIFUZZ_TESTING": {
           "type": "BOOL",
           "value": "ON"
+        },
+        "CMAKE_BUILD_RPATH_USE_ORIGIN": {
+          "type": "BOOL",
+          "value": "ON"
         }
       }
     },
@@ -29,6 +33,10 @@
         "CIFUZZ_ENGINE": "replayer",
         "CIFUZZ_SANITIZERS": "address;undefined",
         "CIFUZZ_TESTING": {
+          "type": "BOOL",
+          "value": "ON"
+        },
+        "CMAKE_BUILD_RPATH_USE_ORIGIN": {
           "type": "BOOL",
           "value": "ON"
         }
