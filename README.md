@@ -27,7 +27,7 @@ You can get the latest release [here](https://github.com/CodeIntelligenceTesting
 or by running our install script:
 
 ```bash
-sh -c "$(curl -fsSL https://raw.githubusercontent.com/CodeIntelligenceTesting/main/install.sh)"
+sh -c "$(curl -fsSL https://raw.githubusercontent.com/CodeIntelligenceTesting/cifuzz/main/install.sh)"
 ```
 
 If you are using Windows you can download the [latest release](https://github.com/CodeIntelligenceTesting/cifuzz/releases/latest/download/cifuzz_installer_windows.exe) 
