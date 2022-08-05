@@ -4,7 +4,11 @@
 if [[ "$OSTYPE" == "linux-gnu"* ]]; then
   DOWNLOAD_URL="https://github.com/CodeIntelligenceTesting/cifuzz/releases/latest/download/cifuzz_installer_linux"
 elif [[ "$OSTYPE" == "darwin"* ]]; then
-  DOWNLOAD_URL="https://github.com/CodeIntelligenceTesting/cifuzz/releases/latest/download/cifuzz_installer_darwin"
+  if [[ $(uname -m) == 'arm64' ]]; then
+    DOWNLOAD_URL="https://github.com/CodeIntelligenceTesting/cifuzz/releases/latest/download/cifuzz_installer_darwin_arm64"
+  else
+    DOWNLOAD_URL="https://github.com/CodeIntelligenceTesting/cifuzz/releases/latest/download/cifuzz_installer_darwin"
+  fi
 elif [[ "$OSTYPE" == "cygwin" || "$OSTYPE" == "msys" ]]; then
   DOWNLOAD_URL="https://github.com/CodeIntelligenceTesting/cifuzz/releases/latest/download/cifuzz_installer_windows"
 else
