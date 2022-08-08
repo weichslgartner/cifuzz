@@ -53,24 +53,10 @@ jobs:
           echo "CXX=$LLVM_PATH/bin/clang++" >> $GITHUB_ENV
           echo "PATH=$PATH:$LLVM_PATH/bin" >> $GITHUB_ENV
 
-      - name: Download latest installer (linux)
-        if: contains(matrix.os, 'ubuntu')
-        run: curl -L -o cifuzz_installer https://github.com/CodeIntelligenceTesting/cifuzz/releases/latest/download/cifuzz_installer_linux
-
-      - name: Download latest installer (macos)
-        if: contains(matrix.os, 'macos')
-        run: curl -L -o cifuzz_installer https://github.com/CodeIntelligenceTesting/cifuzz/releases/latest/download/cifuzz_installer_darwin
-
-      - name: Download latest installer (windows)
-        if: contains(matrix.os, 'windows')
-        run: curl -L -o cifuzz_installer https://github.com/CodeIntelligenceTesting/cifuzz/releases/latest/download/cifuzz_installer_windows.exe
-        shell: bash
-
-      - name: Execute Installer
-        run: |
-          chmod u+x cifuzz_installer
-          ./cifuzz_installer
-        shell: bash
+      - name: Download & execute latest installer
+        run: sh -c "$(curl -fsSL https://raw.githubusercontent.com/CodeIntelligenceTesting/cifuzz/main/install.sh)"
+        # to make sure our install script is compatible to all the shells 
+        shell: sh 
 
       - name: Test cifuzz 
         run: ~/cifuzz/bin/cifuzz --version | grep -E "^cifuzz version [0-9]+.[0-9]+.[0-9]+$"
