@@ -31,6 +31,7 @@ import (
 )
 
 type coverageOptions struct {
+	OutputFormat   string   `mapstructure:"format"`
 	BuildSystem    string   `mapstructure:"build-system"`
 	BuildCommand   string   `mapstructure:"build-command"`
 	SeedCorpusDirs []string `mapstructure:"seed-corpus-dirs"`
@@ -41,8 +42,17 @@ type coverageOptions struct {
 	fuzzTest   string
 }
 
+func supportedOutputFormats() []string {
+	return []string{"html", "lcov"}
+}
+
 func (opts *coverageOptions) validate() error {
 	var err error
+
+	if !stringutil.Contains(supportedOutputFormats(), opts.OutputFormat) {
+		msg := `Flag "format" must be html or lcov`
+		return cmdutils.WrapIncorrectUsageError(errors.New(msg))
+	}
 
 	opts.SeedCorpusDirs, err = cmdutils.ValidateSeedCorpusDirs(opts.SeedCorpusDirs)
 	if err != nil {
@@ -91,6 +101,7 @@ func New() *cobra.Command {
 			// Bind viper keys to flags. We can't do this in the New
 			// function, because that would re-bind viper keys which
 			// were bound to the flags of other commands before.
+			cmdutils.ViperMustBindPFlag("format", cmd.Flags().Lookup("format"))
 			cmdutils.ViperMustBindPFlag("build-command", cmd.Flags().Lookup("build-command"))
 			cmdutils.ViperMustBindPFlag("seed-corpus-dirs", cmd.Flags().Lookup("seed-corpus"))
 			cmdutils.ViperMustBindPFlag("fuzz-test-args", cmd.Flags().Lookup("fuzz-test-arg"))
@@ -113,6 +124,7 @@ func New() *cobra.Command {
 
 	// Note: If a flag should be configurable via cifuzz.yaml as well,
 	// bind it to viper in the PreRunE function.
+	cmd.Flags().StringP("format", "f", "html", "Output format of the coverage report (html/lcov).")
 	cmd.Flags().String("build-command", "", `The command to build the fuzz test. Example: "make clean && make my-fuzz-test"`)
 	cmd.Flags().StringArrayP("seed-corpus", "s", nil, "Directory containing sample inputs for the code under test.\nSee https://llvm.org/docs/LibFuzzer.html#corpus and\nhttps://aflplus.plus/docs/fuzzing_in_depth/#a-collecting-inputs.")
 	cmd.Flags().StringArray("fuzz-test-arg", nil, "Command-line argument to pass to the fuzz test.")
@@ -130,12 +142,12 @@ func (c *coverageCmd) run() error {
 		baseTmpDir = minijail.OutputDir
 		err = os.MkdirAll(baseTmpDir, 0700)
 		if err != nil {
-			return errors.WithStack(err)
+			return err
 		}
 	}
 	c.tmpDir, err = os.MkdirTemp(baseTmpDir, "coverage-")
 	if err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 	defer fileutil.Cleanup(c.tmpDir)
 
@@ -158,21 +170,37 @@ func (c *coverageCmd) run() error {
 		return err
 	}
 
-	lcovReport, err := c.generateLcovReport(buildResult.Executable, buildResult.RuntimeDeps)
+	lcovReportSummary, err := c.generateLcovReport(buildResult.Executable, buildResult.RuntimeDeps, true)
 	if err != nil {
 		return err
 	}
-	coverage.ParseLcov(lcovReport).PrintTable(c.OutOrStderr())
+	coverage.ParseLcov(lcovReportSummary).PrintTable(c.OutOrStderr())
 
-	err = c.generateHTMLReport(buildResult.Executable, buildResult.RuntimeDeps)
+	var report string
+	switch c.opts.OutputFormat {
+	case "html":
+		report, err = c.generateHTMLReport(buildResult.Executable, buildResult.RuntimeDeps)
+		if err != nil {
+			return err
+		}
+
+	case "lcov":
+		report, err = c.generateLcovReport(buildResult.Executable, buildResult.RuntimeDeps, false)
+		if err != nil {
+			return err
+		}
+	}
+
+	reportPath, err := c.writeReportToFile(buildResult.Executable, report)
 	if err != nil {
 		return err
 	}
-	reportPath := c.htmlReportPath(buildResult.Executable)
-	log.Successf("Created coverage HTML report: %s", reportPath)
+	log.Successf("Created coverage %s report: %s", strings.ToUpper(c.opts.OutputFormat), reportPath)
 
-	if err := c.openReport(reportPath); err != nil {
-		return err
+	if c.opts.OutputFormat == "html" {
+		if err := c.openReport(reportPath); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -380,8 +408,23 @@ func (c *coverageCmd) runLlvmCov(args []string, fuzzTestExecutable string, runti
 	return string(output), nil
 }
 
-func (c *coverageCmd) generateLcovReport(fuzzTestExecutable string, runtimeDeps []string) (string, error) {
-	output, err := c.runLlvmCov([]string{"export", "-format=lcov", "-summary-only"}, fuzzTestExecutable, runtimeDeps)
+func (c *coverageCmd) writeReportToFile(fuzzTestExecutable string, report string) (string, error) {
+	reportPath := c.defaultReportPath(fuzzTestExecutable, c.opts.OutputFormat)
+	err := os.WriteFile(reportPath, []byte(report), 0644)
+	if err != nil {
+		return "", err
+	}
+
+	return reportPath, nil
+}
+
+func (c *coverageCmd) generateLcovReport(fuzzTestExecutable string, runtimeDeps []string, summaryOnly bool) (string, error) {
+	args := []string{"export", "-format=lcov"}
+	if summaryOnly {
+		args = append(args, "-summary-only")
+	}
+
+	output, err := c.runLlvmCov(args, fuzzTestExecutable, runtimeDeps)
 	if err != nil {
 		return "", err
 	}
@@ -389,19 +432,13 @@ func (c *coverageCmd) generateLcovReport(fuzzTestExecutable string, runtimeDeps 
 	return output, nil
 }
 
-func (c *coverageCmd) generateHTMLReport(fuzzTestExecutable string, runtimeDeps []string) error {
+func (c *coverageCmd) generateHTMLReport(fuzzTestExecutable string, runtimeDeps []string) (string, error) {
 	output, err := c.runLlvmCov([]string{"show", "-format=html"}, fuzzTestExecutable, runtimeDeps)
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	// Write the HTML output to file
-	err = os.WriteFile(c.htmlReportPath(fuzzTestExecutable), []byte(output), 0644)
-	if err != nil {
-		return errors.WithStack(err)
-	}
-
-	return nil
+	return output, nil
 }
 
 func (c *coverageCmd) rawProfilePattern() string {
@@ -421,8 +458,8 @@ func (c *coverageCmd) indexedProfilePath(fuzzTestExecutable string) string {
 	return filepath.Join(c.tmpDir, filepath.Base(fuzzTestExecutable)+".profdata")
 }
 
-func (c *coverageCmd) htmlReportPath(fuzzTestExecutable string) string {
-	return filepath.Base(fuzzTestExecutable) + ".coverage.html"
+func (c *coverageCmd) defaultReportPath(fuzzTestExecutable string, outputFormat string) string {
+	return filepath.Base(fuzzTestExecutable) + ".coverage." + outputFormat
 }
 
 func (c *coverageCmd) openReport(reportPath string) error {
