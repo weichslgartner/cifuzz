@@ -1,6 +1,10 @@
 # Note: Keep the clang flags used below in sync with internal/cmd/run/run.go
 #       Explanations of these flags are provided in that file.
 function(enable_fuzz_testing)
+  if(${CMAKE_MINIMUM_REQUIRED_VERSION} VERSION_LESS 3.16)
+    message(FATAL_ERROR "cifuzz: CMake minimum version 3.16 required, got ${CMAKE_MINIMUM_REQUIRED_VERSION}")
+  endif()
+
   # Remove the metadata directory we populate with fuzz test target information at configuration time so that e.g.
   # metadata for renamed or removed targets doesn't linger around.
   file(REMOVE_RECURSE "${CMAKE_BINARY_DIR}/$<CONFIG>/.cifuzz")
