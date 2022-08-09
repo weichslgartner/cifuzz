@@ -21,6 +21,11 @@ func (f RunfilesFinderImpl) ClangPath() (string, error) {
 	return path, errors.WithStack(err)
 }
 
+func (f RunfilesFinderImpl) CMakePath() (string, error) {
+	path, err := exec.LookPath("cmake")
+	return path, errors.WithStack(err)
+}
+
 func (f RunfilesFinderImpl) CMakePresetsPath() (string, error) {
 	return f.findFollowSymlinks("share/cifuzz/share/CMakePresets.json")
 }

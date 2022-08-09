@@ -4,6 +4,7 @@ go 1.18
 
 require (
 	atomicgo.dev/keyboard v0.2.8
+	github.com/Masterminds/semver v1.5.0
 	github.com/alexflint/go-filemutex v1.2.0
 	github.com/gookit/color v1.5.1
 	github.com/hectane/go-acl v0.0.0-20190604041725-da78bae5fc95
@@ -33,6 +34,7 @@ require (
 	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/spf13/afero v1.8.2 // indirect
+	github.com/stretchr/objx v0.4.0 // indirect
 	github.com/xo/terminfo v0.0.0-20210125001918-ca9a967f8778 // indirect
 )
 

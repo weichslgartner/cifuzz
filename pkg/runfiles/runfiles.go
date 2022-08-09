@@ -14,6 +14,7 @@ import (
 type RunfilesFinder interface {
 	CIFuzzIncludePath() (string, error)
 	ClangPath() (string, error)
+	CMakePath() (string, error)
 	CMakePresetsPath() (string, error)
 	JazzerAgentDeployJarPath() (string, error)
 	JazzerDriverPath() (string, error)

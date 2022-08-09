@@ -22,3 +22,4 @@
 /docs @jochil 
 /examples @jochil
 /pkg/coverage @jochil
+/pkg/dependencies @jochil
