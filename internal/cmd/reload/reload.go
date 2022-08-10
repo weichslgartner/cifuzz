@@ -6,6 +6,8 @@ import (
 
 	"code-intelligence.com/cifuzz/internal/build/cmake"
 	"code-intelligence.com/cifuzz/internal/config"
+	"code-intelligence.com/cifuzz/pkg/dependencies"
+	"code-intelligence.com/cifuzz/pkg/runfiles"
 )
 
 // TODO: The reload command allows to reload the fuzz test names used
@@ -33,6 +35,13 @@ func New(projectConfig *config.Config) *cobra.Command {
 }
 
 func (c *reloadCmd) run() error {
+	depsOk, err := c.checkDependencies()
+	if err != nil {
+		return err
+	}
+	if !depsOk {
+		return dependencies.Error()
+	}
 
 	if c.config.BuildSystem == config.BuildSystemCMake {
 		return c.reloadCMake()
@@ -65,4 +74,12 @@ func (c *reloadCmd) reloadCMake() error {
 		return err
 	}
 	return nil
+}
+
+func (c *reloadCmd) checkDependencies() (bool, error) {
+	deps := []dependencies.Key{}
+	if c.config.BuildSystem == config.BuildSystemCMake {
+		deps = append(deps, []dependencies.Key{dependencies.CLANG, dependencies.CMAKE}...)
+	}
+	return dependencies.Check(deps, dependencies.Default, runfiles.Finder)
 }
