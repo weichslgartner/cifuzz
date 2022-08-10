@@ -23,9 +23,9 @@ case $(uname -s) in
     exit 1 ;;
 esac
 
-DOWNLOAD_URL=$BASE_URL$INSTALLER
+DOWNLOAD_URL="${BASE_URL}${INSTALLER}"
 printf '%s' "Downloading installer... "
-curl -fsSL -o cifuzz_installer $DOWNLOAD_URL
+curl --fail --silent --show-error --location -o cifuzz_installer "${DOWNLOAD_URL}"
 echo "ok"
 
 echo "Starting installer..."
