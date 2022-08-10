@@ -10,8 +10,10 @@ import (
 
 	"code-intelligence.com/cifuzz/internal/config"
 	"code-intelligence.com/cifuzz/pkg/cmdutils"
+	"code-intelligence.com/cifuzz/pkg/dependencies"
 	"code-intelligence.com/cifuzz/pkg/dialog"
 	"code-intelligence.com/cifuzz/pkg/log"
+	"code-intelligence.com/cifuzz/pkg/runfiles"
 	"code-intelligence.com/cifuzz/pkg/stubs"
 )
 
@@ -83,6 +85,13 @@ func (c *createCmd) run() (err error) {
 	}
 	log.Debugf("Output path: %s", c.opts.outputPath)
 
+	// we ignore the first value, as this command has no actual
+	// dependencies and we just want to give recommendations
+	// instead of letting the command fail
+	if _, err := c.checkDependencies(); err != nil {
+		return err
+	}
+
 	// create stub
 	err = stubs.Create(c.opts.outputPath, c.opts.testType)
 	if err != nil {
@@ -123,4 +132,15 @@ a regular add_executable(...):
 
 `, strings.TrimSuffix(filename, filepath.Ext(filename)), filename)
 	}
+}
+
+func (c *createCmd) checkDependencies() (bool, error) {
+	deps := []dependencies.Key{}
+	if c.opts.testType == config.CPP {
+		deps = append(deps, dependencies.CLANG)
+	}
+	if c.config.BuildSystem == config.BuildSystemCMake {
+		deps = append(deps, dependencies.CMAKE)
+	}
+	return dependencies.Check(deps, dependencies.Default, runfiles.Finder)
 }
