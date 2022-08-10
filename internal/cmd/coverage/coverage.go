@@ -22,6 +22,7 @@ import (
 	"code-intelligence.com/cifuzz/internal/config"
 	"code-intelligence.com/cifuzz/pkg/cmdutils"
 	"code-intelligence.com/cifuzz/pkg/coverage"
+	"code-intelligence.com/cifuzz/pkg/dependencies"
 	"code-intelligence.com/cifuzz/pkg/log"
 	"code-intelligence.com/cifuzz/pkg/minijail"
 	"code-intelligence.com/cifuzz/pkg/runfiles"
@@ -153,7 +154,13 @@ Write out an lcov trace file:
 }
 
 func (c *coverageCmd) run() error {
-	var err error
+	depsOk, err := c.checkDependencies()
+	if err != nil {
+		return err
+	}
+	if !depsOk {
+		return dependencies.Error()
+	}
 
 	var baseTmpDir string
 	if c.opts.UseSandbox {
@@ -531,4 +538,14 @@ func (c *coverageCmd) printReportURI(reportPath string) error {
 	reportUri := fmt.Sprintf("file://%s", filepath.ToSlash(absReportPath))
 	log.Infof("To view the report, open this URI in a browser:\n\n   %s\n\n", reportUri)
 	return nil
+}
+
+func (c *coverageCmd) checkDependencies() (bool, error) {
+	deps := []dependencies.Key{
+		dependencies.CLANG, dependencies.LLVM_SYMBOLIZER, dependencies.LLVM_COV, dependencies.LLVM_PROFDATA,
+	}
+	if c.opts.BuildSystem == config.BuildSystemCMake {
+		deps = append(deps, dependencies.CMAKE)
+	}
+	return dependencies.Check(deps, dependencies.Default, runfiles.Finder)
 }
