@@ -12,7 +12,7 @@ case $(uname -s) in
     INSTALLER="cifuzz_installer_windows.exe" ;;
 
   Darwin*)
-    if [ $(uname -m) = 'arm64' ]; then
+    if [ "$(uname -m)" = 'arm64' ]; then
       INSTALLER="cifuzz_installer_darwin_arm64"
     else
       INSTALLER="cifuzz_installer_darwin"
