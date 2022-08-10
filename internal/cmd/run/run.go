@@ -23,7 +23,9 @@ import (
 	"code-intelligence.com/cifuzz/internal/completion"
 	"code-intelligence.com/cifuzz/internal/config"
 	"code-intelligence.com/cifuzz/pkg/cmdutils"
+	"code-intelligence.com/cifuzz/pkg/dependencies"
 	"code-intelligence.com/cifuzz/pkg/log"
+	"code-intelligence.com/cifuzz/pkg/runfiles"
 	"code-intelligence.com/cifuzz/pkg/runner/libfuzzer"
 	"code-intelligence.com/cifuzz/util/fileutil"
 )
@@ -165,7 +167,13 @@ depends on the build system configured for the project:
 }
 
 func (c *runCmd) run() error {
-	var err error
+	depsOk, err := c.checkDependencies()
+	if err != nil {
+		return err
+	}
+	if !depsOk {
+		return dependencies.Error()
+	}
 
 	buildResult, err := c.buildFuzzTest()
 	if err != nil {
@@ -372,6 +380,14 @@ func (c *runCmd) generatedCorpusPath() string {
 	// Store the generated corpus in a single persistent directory per
 	// fuzz test in a hidden subdirectory.
 	return filepath.Join(c.opts.ProjectDir, ".cifuzz-corpus", c.opts.fuzzTest)
+}
+
+func (c *runCmd) checkDependencies() (bool, error) {
+	deps := []dependencies.Key{dependencies.CLANG, dependencies.LLVM_SYMBOLIZER}
+	if c.opts.BuildSystem == config.BuildSystemCMake {
+		deps = append(deps, dependencies.CMAKE)
+	}
+	return dependencies.Check(deps, dependencies.Default, runfiles.Finder)
 }
 
 func countSeeds(seedCorpusDirs []string) (numSeeds uint, err error) {
