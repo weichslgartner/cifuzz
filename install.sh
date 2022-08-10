@@ -24,7 +24,7 @@ case $(uname -s) in
 esac
 
 DOWNLOAD_URL=$BASE_URL$INSTALLER
-echo -n "Downloading installer... "
+printf '%s' "Downloading installer... "
 curl -fsSL -o cifuzz_installer $DOWNLOAD_URL
 echo "ok"
 
