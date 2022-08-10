@@ -15,10 +15,15 @@ import (
 	"code-intelligence.com/cifuzz/pkg/stubs"
 )
 
-type cmdOpts struct {
+type createOpts struct {
 	outputPath string
 	testType   config.FuzzTestType
+}
 
+type createCmd struct {
+	*cobra.Command
+
+	opts   *createOpts
 	config *config.Config
 }
 
@@ -27,8 +32,8 @@ var supportedTestTypes = map[string]string{
 	"C/C++": string(config.CPP),
 }
 
-func New(config *config.Config) *cobra.Command {
-	opts := &cmdOpts{config: config}
+func New(projectConfig *config.Config) *cobra.Command {
+	opts := &createOpts{}
 
 	createCmd := &cobra.Command{
 		Use:   fmt.Sprintf("create [%s]", strings.Join(maps.Values(supportedTestTypes), "|")),
@@ -37,8 +42,19 @@ func New(config *config.Config) *cobra.Command {
 After running this command, you should edit the created file in order to
 make it call the functions you want to fuzz. You can then execute the
 fuzz test via 'cifuzz run'.`,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return run(cmd, args, opts)
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) == 1 {
+				opts.testType = config.FuzzTestType(args[0])
+			}
+			return nil
+		},
+		RunE: func(c *cobra.Command, args []string) error {
+			cmd := createCmd{
+				Command: c,
+				opts:    opts,
+				config:  projectConfig,
+			}
+			return cmd.run()
 		},
 		Args:      cobra.MatchAll(cobra.MaximumNArgs(1), cobra.OnlyValidArgs),
 		ValidArgs: maps.Values(supportedTestTypes),
@@ -49,45 +65,44 @@ fuzz test via 'cifuzz run'.`,
 	return createCmd
 }
 
-func run(cmd *cobra.Command, args []string, opts *cmdOpts) (err error) {
+func (c *createCmd) run() (err error) {
 	// get test type
-	opts.testType, err = getTestType(args)
-	if err != nil {
-		return err
-	}
-	log.Debugf("Selected fuzz test type: %s", opts.testType)
-
-	if opts.outputPath == "" {
-		opts.outputPath, err = stubs.FuzzTestFilename(opts.testType)
+	if c.opts.testType == "" {
+		c.opts.testType, err = c.getTestType()
 		if err != nil {
 			return err
 		}
 	}
-	log.Debugf("Output path: %s", opts.outputPath)
+	log.Debugf("Selected fuzz test type: %s", c.opts.testType)
+
+	if c.opts.outputPath == "" {
+		c.opts.outputPath, err = stubs.FuzzTestFilename(c.opts.testType)
+		if err != nil {
+			return err
+		}
+	}
+	log.Debugf("Output path: %s", c.opts.outputPath)
 
 	// create stub
-	err = stubs.Create(opts.outputPath, opts.testType)
+	err = stubs.Create(c.opts.outputPath, c.opts.testType)
 	if err != nil {
-		log.Errorf(err, "Failed to create fuzz test stub %s: %s", opts.outputPath, err.Error())
+		log.Errorf(err, "Failed to create fuzz test stub %s: %s", c.opts.outputPath, err.Error())
 		return cmdutils.ErrSilent
 	}
 
 	// show success message
-	log.Successf("Created fuzz test stub %s", opts.outputPath)
+	log.Successf("Created fuzz test stub %s", c.opts.outputPath)
 	log.Print(`
 Note: Fuzz tests can be put anywhere in your repository, but it makes sense
 to keep them close to the tested code - just like regular unit tests.`)
 
-	printBuildSystemInstructions(opts.config.BuildSystem, filepath.Base(opts.outputPath))
+	c.printBuildSystemInstructions()
 
 	return
 }
 
 // getTestType returns the test type (selected by argument or input dialog)
-func getTestType(args []string) (config.FuzzTestType, error) {
-	if len(args) == 1 {
-		return config.FuzzTestType(args[0]), nil
-	}
+func (c *createCmd) getTestType() (config.FuzzTestType, error) {
 	userSelectedType, err := dialog.Select("Select type of the fuzz test", supportedTestTypes)
 	if err != nil {
 		fmt.Printf("%+v \n", err)
@@ -96,9 +111,10 @@ func getTestType(args []string) (config.FuzzTestType, error) {
 	return config.FuzzTestType(userSelectedType), nil
 }
 
-func printBuildSystemInstructions(buildSystem, filename string) {
+func (c *createCmd) printBuildSystemInstructions() {
+	filename := filepath.Base(c.opts.outputPath)
 	// Printing build system instructions is best-effort: Do not fail on errors.
-	if buildSystem == config.BuildSystemCMake {
+	if c.config.BuildSystem == config.BuildSystemCMake {
 		log.Printf(`
 Create a CMake target for the fuzz test as follows - it behaves just like
 a regular add_executable(...):
