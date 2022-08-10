@@ -18,7 +18,9 @@ import (
 	"code-intelligence.com/cifuzz/internal/completion"
 	"code-intelligence.com/cifuzz/internal/config"
 	"code-intelligence.com/cifuzz/pkg/artifact"
+	"code-intelligence.com/cifuzz/pkg/dependencies"
 	"code-intelligence.com/cifuzz/pkg/log"
+	"code-intelligence.com/cifuzz/pkg/runfiles"
 	"code-intelligence.com/cifuzz/pkg/vcs"
 	"code-intelligence.com/cifuzz/util/fileutil"
 )
@@ -103,6 +105,15 @@ func New(conf *config.Config) *cobra.Command {
 }
 
 func (c *bundleCmd) run() (err error) {
+
+	depsOk, err := c.checkDependencies()
+	if err != nil {
+		return err
+	}
+	if !depsOk {
+		return dependencies.Error()
+	}
+
 	if c.opts.outputPath == "" {
 		if len(c.opts.fuzzTests) == 1 {
 			c.opts.outputPath = c.opts.fuzzTests[0] + ".tar.gz"
@@ -277,6 +288,14 @@ func (c *bundleCmd) buildAllVariants() ([]map[string]*build.Result, error) {
 	}
 
 	return allVariantBuildResults, nil
+}
+
+func (c *bundleCmd) checkDependencies() (bool, error) {
+	deps := []dependencies.Key{dependencies.CLANG}
+	if c.config.BuildSystem == config.BuildSystemCMake {
+		deps = append(deps, dependencies.CMAKE)
+	}
+	return dependencies.Check(deps, dependencies.Default, runfiles.Finder)
 }
 
 func assembleArtifacts(fuzzTest string, buildResult *build.Result, projectDir string) (

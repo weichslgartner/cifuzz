@@ -1,21 +1,31 @@
 package bundle
 
 import (
+	"bytes"
+	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"runtime"
 	"testing"
 
+	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"code-intelligence.com/cifuzz/internal/build"
+	"code-intelligence.com/cifuzz/internal/config"
 	"code-intelligence.com/cifuzz/pkg/artifact"
+	"code-intelligence.com/cifuzz/pkg/cmdutils"
+	"code-intelligence.com/cifuzz/pkg/dependencies"
+	"code-intelligence.com/cifuzz/pkg/log"
 	"code-intelligence.com/cifuzz/util/fileutil"
 )
 
 // A library in a system library directory that is not certain to exist in the Docker image.
 const uncommonSystemDepUnix = "/usr/lib/libBLAS.so"
+
+var testOut io.ReadWriter
 
 // An external library in a non-system location.
 var externalDep = generateExternalDepPath()
@@ -26,6 +36,24 @@ func generateExternalDepPath() string {
 		panic(err)
 	}
 	return filepath.Join(home, ".conan", "cache", "libfoo.so")
+}
+
+func TestMain(m *testing.M) {
+	// capture log output
+	testOut = bytes.NewBuffer([]byte{})
+	oldOut := log.Output
+	log.Output = testOut
+	viper.Set("verbose", true)
+
+	m.Run()
+
+	log.Output = oldOut
+	dependencies.ResetDefaultsForTestsOnly()
+}
+
+func TestUnknownBuildSystem(t *testing.T) {
+	_, err := cmdutils.ExecuteCommand(t, New(config.NewConfig()), os.Stdin)
+	require.Error(t, err)
 }
 
 func TestAssembleArtifacts(t *testing.T) {
@@ -84,4 +112,58 @@ func TestAssembleArtifacts(t *testing.T) {
 	if runtime.GOOS != "windows" {
 		assert.Equal(t, []string{uncommonSystemDepUnix}, systemDeps)
 	}
+}
+
+func TestClangMissing(t *testing.T) {
+	deps := dependencies.CreateTestDeps(t, []dependencies.Key{
+		dependencies.CLANG, dependencies.CMAKE,
+	})
+	dependencies.OverwriteInstalledWithFalse(deps[dependencies.CLANG])
+
+	conf := config.NewConfig()
+	conf.BuildSystem = config.BuildSystemCMake
+
+	_, err := cmdutils.ExecuteCommand(t, New(conf), os.Stdin)
+	require.Error(t, err)
+
+	output, err := io.ReadAll(testOut)
+	require.NoError(t, err)
+	assert.Contains(t, string(output), fmt.Sprintf(dependencies.MESSAGE_MISSING, "clang"))
+}
+
+func TestClangVersion(t *testing.T) {
+	deps := dependencies.CreateTestDeps(t, []dependencies.Key{
+		dependencies.CLANG, dependencies.CMAKE,
+	})
+
+	dep := deps[dependencies.CLANG]
+	version := dependencies.OverwriteGetVersionWith0(dep)
+
+	conf := config.NewConfig()
+	conf.BuildSystem = config.BuildSystemCMake
+
+	_, err := cmdutils.ExecuteCommand(t, New(conf), os.Stdin)
+	require.Error(t, err)
+
+	output, err := io.ReadAll(testOut)
+	require.NoError(t, err)
+	assert.Contains(t, string(output),
+		fmt.Sprintf(dependencies.MESSAGE_VERSION, "clang", dep.MinVersion.String(), version))
+}
+
+func TestCMakeMissing(t *testing.T) {
+	deps := dependencies.CreateTestDeps(t, []dependencies.Key{
+		dependencies.CLANG, dependencies.CMAKE,
+	})
+	dependencies.OverwriteInstalledWithFalse(deps[dependencies.CMAKE])
+
+	conf := config.NewConfig()
+	conf.BuildSystem = config.BuildSystemCMake
+
+	_, err := cmdutils.ExecuteCommand(t, New(conf), os.Stdin)
+	require.Error(t, err)
+
+	output, err := io.ReadAll(testOut)
+	require.NoError(t, err)
+	assert.Contains(t, string(output), fmt.Sprintf(dependencies.MESSAGE_MISSING, "cmake"))
 }
