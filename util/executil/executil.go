@@ -5,8 +5,6 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"path/filepath"
-	"strings"
 	"sync"
 	"time"
 
@@ -22,20 +20,6 @@ const (
 	// Cmd.
 	processGroupTerminationGracePeriod = 3 * time.Second
 )
-
-// CallablePath returns a path that is equivalent to its argument and can be
-// invoked via exec.Command and its variants.
-// For example, it turns "my_binary" into "./my_binary" on Unix.
-func CallablePath(path string) string {
-	if filepath.IsAbs(path) {
-		return path
-	}
-	if strings.ContainsRune(path, os.PathSeparator) {
-		return path
-	}
-	// Can't use filepath.Join as it cleans away the "./".
-	return "." + string(os.PathSeparator) + path
-}
 
 // Cmd provides the same functionality as exec.Cmd plus some utility
 // methods.
