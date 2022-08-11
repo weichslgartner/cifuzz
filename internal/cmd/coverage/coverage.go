@@ -32,6 +32,7 @@ import (
 
 type coverageOptions struct {
 	OutputFormat   string   `mapstructure:"format"`
+	OutputPath     string   `mapstructure:"out"`
 	BuildSystem    string   `mapstructure:"build-system"`
 	BuildCommand   string   `mapstructure:"build-command"`
 	SeedCorpusDirs []string `mapstructure:"seed-corpus-dirs"`
@@ -102,6 +103,7 @@ func New() *cobra.Command {
 			// function, because that would re-bind viper keys which
 			// were bound to the flags of other commands before.
 			cmdutils.ViperMustBindPFlag("format", cmd.Flags().Lookup("format"))
+			cmdutils.ViperMustBindPFlag("out", cmd.Flags().Lookup("out"))
 			cmdutils.ViperMustBindPFlag("build-command", cmd.Flags().Lookup("build-command"))
 			cmdutils.ViperMustBindPFlag("seed-corpus-dirs", cmd.Flags().Lookup("seed-corpus"))
 			cmdutils.ViperMustBindPFlag("fuzz-test-args", cmd.Flags().Lookup("fuzz-test-arg"))
@@ -125,6 +127,7 @@ func New() *cobra.Command {
 	// Note: If a flag should be configurable via cifuzz.yaml as well,
 	// bind it to viper in the PreRunE function.
 	cmd.Flags().StringP("format", "f", "html", "Output format of the coverage report (html/lcov).")
+	cmd.Flags().StringP("out", "o", "", "Output path of the coverage report.")
 	cmd.Flags().String("build-command", "", `The command to build the fuzz test. Example: "make clean && make my-fuzz-test"`)
 	cmd.Flags().StringArrayP("seed-corpus", "s", nil, "Directory containing sample inputs for the code under test.\nSee https://llvm.org/docs/LibFuzzer.html#corpus and\nhttps://aflplus.plus/docs/fuzzing_in_depth/#a-collecting-inputs.")
 	cmd.Flags().StringArray("fuzz-test-arg", nil, "Command-line argument to pass to the fuzz test.")
@@ -410,6 +413,10 @@ func (c *coverageCmd) runLlvmCov(args []string, fuzzTestExecutable string, runti
 
 func (c *coverageCmd) writeReportToFile(fuzzTestExecutable string, report string) (string, error) {
 	reportPath := c.defaultReportPath(fuzzTestExecutable, c.opts.OutputFormat)
+	if c.opts.OutputPath != "" {
+		reportPath = c.opts.OutputPath
+	}
+
 	err := os.WriteFile(reportPath, []byte(report), 0644)
 	if err != nil {
 		return "", err
