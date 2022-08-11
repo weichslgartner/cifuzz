@@ -293,6 +293,14 @@ func assembleArtifacts(fuzzTest string, buildResult *build.Result, projectDir st
 	buildArtifactsPrefix := filepath.Join(fuzzTestPrefix(fuzzTest, buildResult), "bin")
 
 	// Add the fuzz test executable.
+	ok, err := fileutil.IsBelow(fuzzTestExecutableAbsPath, buildResult.BuildDir)
+	if err != nil {
+		return
+	}
+	if !ok {
+		err = errors.Errorf("fuzz test executable (%s) is not below build directory (%s)", fuzzTestExecutableAbsPath, buildResult.BuildDir)
+		return
+	}
 	fuzzTestExecutableRelPath, err := filepath.Rel(buildResult.BuildDir, fuzzTestExecutableAbsPath)
 	if err != nil {
 		err = errors.WithStack(err)
