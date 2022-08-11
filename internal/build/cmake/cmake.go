@@ -151,12 +151,10 @@ func (b *Builder) Build(fuzzTests []string) (map[string]*build.Result, error) {
 		return nil, err
 	}
 
-	cmd := exec.Command(
-		"cmake",
+	cmd := exec.Command("cmake", append([]string{
 		"--build", buildDir,
 		"--config", cmakeBuildConfiguration,
-		"--target", strings.Join(fuzzTests, ","),
-	)
+		"--target"}, fuzzTests...)...)
 	// Redirect the build command's stdout to stderr to only have
 	// reports printed to stdout
 	cmd.Stdout = b.Stderr
