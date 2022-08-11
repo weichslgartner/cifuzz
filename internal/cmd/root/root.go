@@ -88,7 +88,7 @@ func New() (*cobra.Command, error) {
 	rootCmd.AddCommand(initCmd.New())
 	rootCmd.AddCommand(createCmd.New(cmdConfig))
 	rootCmd.AddCommand(runCmd.New())
-	rootCmd.AddCommand(reloadCmd.New())
+	rootCmd.AddCommand(reloadCmd.New(cmdConfig))
 	rootCmd.AddCommand(bundleCmd.New(cmdConfig))
 	rootCmd.AddCommand(coverageCmd.New())
 
