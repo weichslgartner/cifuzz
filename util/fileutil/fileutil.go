@@ -100,3 +100,21 @@ func IsBelow(path string, root string) (bool, error) {
 	}
 	return rel != ".." && !strings.HasPrefix(rel, filepath.FromSlash("../")), nil
 }
+
+// CanonicalPath converts path to an absolute path and follows all symlinks (if any).
+// If path doesn't exist, no parent symlinks are followed.
+func CanonicalPath(path string) (string, error) {
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		return "", errors.WithStack(err)
+	}
+	canonicalPath, err := filepath.EvalSymlinks(absPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return absPath, nil
+		} else {
+			return "", errors.WithStack(err)
+		}
+	}
+	return canonicalPath, nil
+}

@@ -144,11 +144,16 @@ func (b *Builder) Configure() error {
 	return nil
 }
 
-// Build builds the specified fuzz test with CMake
+// Build builds the specified fuzz tests with CMake
 func (b *Builder) Build(fuzzTests []string) (map[string]*build.Result, error) {
+	buildDir, err := fileutil.CanonicalPath(b.BuildDir())
+	if err != nil {
+		return nil, err
+	}
+
 	cmd := exec.Command(
 		"cmake",
-		"--build", b.BuildDir(),
+		"--build", buildDir,
 		"--config", cmakeBuildConfiguration,
 		"--target", strings.Join(fuzzTests, ","),
 	)
@@ -158,7 +163,7 @@ func (b *Builder) Build(fuzzTests []string) (map[string]*build.Result, error) {
 	cmd.Stderr = b.Stderr
 	cmd.Env = b.env
 	log.Debugf("Command: %s", cmd.String())
-	err := cmd.Run()
+	err = cmd.Run()
 	if err != nil {
 		// It's expected that cmake might fail due to user configuration,
 		// so we print the error without the stack trace.
@@ -187,7 +192,7 @@ func (b *Builder) Build(fuzzTests []string) (map[string]*build.Result, error) {
 		results[fuzzTest] = &build.Result{
 			Executable:  executable,
 			SeedCorpus:  seedCorpus,
-			BuildDir:    b.BuildDir(),
+			BuildDir:    buildDir,
 			Engine:      b.Engine,
 			Sanitizers:  b.Sanitizers,
 			RuntimeDeps: runtimeDeps,
@@ -198,17 +203,17 @@ func (b *Builder) Build(fuzzTests []string) (map[string]*build.Result, error) {
 }
 
 // findFuzzTestExecutable uses the info files emitted by the CMake integration
-// in the configure step to look up the absolute path of a fuzz test's
+// in the configure step to look up the canonical path of a fuzz test's
 // executable.
 func (b *Builder) findFuzzTestExecutable(fuzzTest string) (string, error) {
-	return b.readInfoFile(fuzzTest, "executable")
+	return b.readInfoFileAsPath(fuzzTest, "executable")
 }
 
 // findFuzzTestSeedCorpus uses the info files emitted by the CMake integration
-// in the configure step to look up the absolute path of a fuzz test's
+// in the configure step to look up the canonical path of a fuzz test's
 // seed corpus directory.
 func (b *Builder) findFuzzTestSeedCorpus(fuzzTest string) (string, error) {
-	return b.readInfoFile(fuzzTest, "seed_corpus")
+	return b.readInfoFileAsPath(fuzzTest, "seed_corpus")
 }
 
 // ListFuzzTests lists all fuzz tests defined in the CMake project after
@@ -230,7 +235,7 @@ func (b *Builder) ListFuzzTests() ([]string, error) {
 	return fuzzTests, nil
 }
 
-// getRuntimeDeps returns the absolute paths of all (transitive) runtime
+// getRuntimeDeps returns the canonical paths of all (transitive) runtime
 // dependencies of the given fuzz test. It prints a warning if any dependency
 // couldn't be resolved or resolves to more than one file.
 func (b *Builder) getRuntimeDeps(fuzzTest string) ([]string, error) {
@@ -274,6 +279,10 @@ func (b *Builder) getRuntimeDeps(fuzzTest string) ([]string, error) {
 		}
 		status := statusAndDep[:endOfStatus]
 		dep := statusAndDep[endOfStatus+1:]
+		dep, err = fileutil.CanonicalPath(dep)
+		if err != nil {
+			return nil, err
+		}
 
 		switch status {
 		case "UNRESOLVED":
@@ -310,8 +319,9 @@ func (b *Builder) getRuntimeDeps(fuzzTest string) ([]string, error) {
 	return resolvedDeps, nil
 }
 
-// readInfoFile returns the contents of the CMake-generated info file of type kind for the given fuzz test.
-func (b *Builder) readInfoFile(fuzzTest string, kind string) (string, error) {
+// readInfoFileAsPath returns the contents of the CMake-generated info file of type kind for the given fuzz test,
+// interpreted as a path. All symlinks are followed.
+func (b *Builder) readInfoFileAsPath(fuzzTest string, kind string) (string, error) {
 	fuzzTestsInfoDir, err := b.fuzzTestsInfoDir()
 	if err != nil {
 		return "", err
@@ -321,7 +331,7 @@ func (b *Builder) readInfoFile(fuzzTest string, kind string) (string, error) {
 	if err != nil {
 		return "", errors.WithStack(err)
 	}
-	return string(content), nil
+	return fileutil.CanonicalPath(string(content))
 }
 
 func (b *Builder) fuzzTestsInfoDir() (string, error) {

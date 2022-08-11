@@ -9,17 +9,17 @@ import (
 )
 
 type Result struct {
-	// Absolute path of the fuzz test executable
+	// Canonical path of the fuzz test executable
 	Executable string
-	// Absolute path of the fuzz test's default seed corpus directory
+	// Canonical path of the fuzz test's default seed corpus directory
 	SeedCorpus string
-	// Absolute path of the build directory
+	// Canonical path of the build directory
 	BuildDir string
 	// The engine for which the fuzz test was built
 	Engine string
 	// The sanitizers with which the fuzz test was built
 	Sanitizers []string
-	// The absolute paths of the fuzz test's runtime dependencies.
+	// The canonical paths of the fuzz test's runtime dependencies
 	RuntimeDeps []string
 }
 

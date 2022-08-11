@@ -121,14 +121,21 @@ func (b *Builder) Build(fuzzTest string) (*build.Result, error) {
 	if err != nil {
 		return nil, err
 	}
-	// For the build system type "other", we expect the  the default
-	// seed corpus next to the fuzzer executable.
-	seedCorpus := executable + "_seed_corpus"
+	// For the build system type "other", we expect the default seed corpus next
+	// to the fuzzer executable.
+	seedCorpus, err := fileutil.CanonicalPath(executable + "_seed_corpus")
+	if err != nil {
+		return nil, err
+	}
 	runtimeDeps, err := b.findSharedLibraries(fuzzTest)
 	if err != nil {
 		return nil, err
 	}
-	buildDir, err := os.Getwd()
+	wd, err := os.Getwd()
+	if err != nil {
+		return nil, err
+	}
+	buildDir, err := fileutil.CanonicalPath(wd)
 	if err != nil {
 		return nil, err
 	}
@@ -260,11 +267,7 @@ func (b *Builder) setCoverageEnv() error {
 
 func (b *Builder) findFuzzTestExecutable(fuzzTest string) (string, error) {
 	if exists, _ := fileutil.Exists(fuzzTest); exists {
-		executable, err := filepath.Abs(fuzzTest)
-		if err != nil {
-			return "", errors.WithStack(err)
-		}
-		return executable, nil
+		return fileutil.CanonicalPath(fuzzTest)
 	}
 
 	var executable string
@@ -295,11 +298,7 @@ func (b *Builder) findFuzzTestExecutable(fuzzTest string) (string, error) {
 	if executable == "" {
 		return "", errors.Errorf("Could not find executable for fuzz test %s", fuzzTest)
 	}
-	executable, err = filepath.Abs(executable)
-	if err != nil {
-		return "", errors.WithStack(err)
-	}
-	return executable, nil
+	return fileutil.CanonicalPath(executable)
 }
 
 var sharedLibraryRegex = regexp.MustCompile(`^.+\.((so)|(dylib))(\.\d\w*)*$`)
@@ -326,7 +325,11 @@ func (b *Builder) findSharedLibraries(fuzzTest string) ([]string, error) {
 			return nil
 		}
 		if sharedLibraryRegex.MatchString(info.Name()) {
-			sharedObjects = append(sharedObjects, path)
+			canonicalPath, err := fileutil.CanonicalPath(path)
+			if err != nil {
+				return err
+			}
+			sharedObjects = append(sharedObjects, canonicalPath)
 		}
 		return nil
 	})
