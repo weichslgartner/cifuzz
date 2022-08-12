@@ -1,3 +1,9 @@
+// Based on:
+// https://github.com/llvm/llvm-project/blob/f3547fd541cac91c5ee281052584b05275ddc915/compiler-rt/include/fuzzer/FuzzedDataProvider.h
+
+// Modified by Fabian Meumertzheim:
+//   - added preprocessor check for C++11
+//
 //===- FuzzedDataProvider.h - Utility header for fuzz targets ---*- C++ -* ===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -12,6 +18,12 @@
 
 #ifndef LLVM_FUZZER_FUZZED_DATA_PROVIDER_H_
 #define LLVM_FUZZER_FUZZED_DATA_PROVIDER_H_
+
+// MSVC doesn't report C++11 compliance, see:
+// https://developercommunity.visualstudio.com/t/msvc-incorrectly-defines-cplusplus/139261
+#if __cplusplus < 201103L && !defined(_MSVC_LANG)
+#error "FuzzedDataProvider.h requires C++11 or higher"
+#endif
 
 #include <algorithm>
 #include <array>
