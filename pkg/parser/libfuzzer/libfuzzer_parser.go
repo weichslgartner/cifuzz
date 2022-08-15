@@ -358,15 +358,20 @@ func (p *parser) parseAsJazzerFinding(line string) *finding.Finding {
 	if found {
 		issueSeverity := matches["type"]
 		severityScore := 0.0
+		var severityLevel finding.SeverityLevel
 		switch issueSeverity {
 		case "Critical":
 			severityScore = 9.0
+			severityLevel = finding.SeverityLevel_CRITICAL
 		case "High":
 			severityScore = 7.0
+			severityLevel = finding.SeverityLevel_HIGH
 		case "Medium":
 			severityScore = 5.0
+			severityLevel = finding.SeverityLevel_MEDIUM
 		case "Low":
 			severityScore = 1.0
+			severityLevel = finding.SeverityLevel_LOW
 		}
 		exceptionMessage := strings.TrimSpace(matches["message"])
 		description := "Security Issue: " + exceptionMessage
@@ -381,8 +386,8 @@ func (p *parser) parseAsJazzerFinding(line string) *finding.Finding {
 			MoreDetails: &finding.ErrorDetails{
 				Name: uiDescription, // This field is shown in the UI
 				Severity: &finding.Severity{
-					Description: issueSeverity,
-					Score:       float32(severityScore),
+					Level: severityLevel,
+					Score: float32(severityScore),
 				},
 			},
 			Logs: []string{line},
@@ -488,8 +493,8 @@ func parseAsSlowInput(log string) *finding.Finding {
 				Id:   "Slow Input Detected",
 				Name: "Slow Input Detected",
 				Severity: &finding.Severity{
-					Description: "Low",
-					Score:       2,
+					Level: finding.SeverityLevel_LOW,
+					Score: 2,
 				},
 			},
 		}

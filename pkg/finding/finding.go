@@ -63,9 +63,18 @@ type ErrorDetails struct {
 	Severity *Severity `json:"severity,omitempty"`
 }
 
+type SeverityLevel string
+
+const (
+	SeverityLevel_CRITICAL SeverityLevel = "CRITICAL"
+	SeverityLevel_HIGH     SeverityLevel = "HIGH"
+	SeverityLevel_MEDIUM   SeverityLevel = "MEDIUM"
+	SeverityLevel_LOW      SeverityLevel = "LOW"
+)
+
 type Severity struct {
-	Description string  `json:"description,omitempty"`
-	Score       float32 `json:"score,omitempty"`
+	Level SeverityLevel `json:"description,omitempty"`
+	Score float32       `json:"score,omitempty"`
 }
 
 func (f *Finding) GetDetails() string {
