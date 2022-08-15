@@ -19,6 +19,10 @@ import (
 	"code-intelligence.com/cifuzz/util/fileutil"
 )
 
+var Deps = []string{
+	"cmd", "internal", "pkg", "util", "third-party/minijail",
+}
+
 type InstallationBundler struct {
 	Options
 

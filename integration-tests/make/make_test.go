@@ -17,6 +17,7 @@ import (
 	"code-intelligence.com/cifuzz/util/executil"
 	"code-intelligence.com/cifuzz/util/fileutil"
 	"code-intelligence.com/cifuzz/util/stringutil"
+	"code-intelligence.com/cifuzz/util/testutil"
 )
 
 var expectedFinding = regexp.MustCompile(`^==\d*==ERROR: AddressSanitizer: heap-buffer-overflow`)
@@ -29,6 +30,7 @@ func TestIntegration_Make_RunCoverage(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("Make support is only available on Unix")
 	}
+	testutil.RegisterTestDepOnCIFuzz()
 
 	// Create installation bundle
 	projectDir, err := install.FindProjectDir()

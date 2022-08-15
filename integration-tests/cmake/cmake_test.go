@@ -23,12 +23,14 @@ import (
 	"code-intelligence.com/cifuzz/pkg/install"
 	"code-intelligence.com/cifuzz/util/executil"
 	"code-intelligence.com/cifuzz/util/fileutil"
+	"code-intelligence.com/cifuzz/util/testutil"
 )
 
 func TestIntegration_CMake_InitCreateRunCoverageBundle(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
+	testutil.RegisterTestDepOnCIFuzz()
 
 	// Create installation bundle
 	projectDir, err := install.FindProjectDir()

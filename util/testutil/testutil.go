@@ -5,7 +5,9 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime"
 
+	"code-intelligence.com/cifuzz/pkg/install"
 	"code-intelligence.com/cifuzz/util/fileutil"
 )
 
@@ -28,6 +30,22 @@ func RegisterTestDeps(path ...string) {
 			panic(err)
 		}
 	}
+}
+
+// RegisterTestDepOnCIFuzz registers test dependencies on the cifuzz
+// executable and all its dependencies. Go doesn't recognize those
+// dependencies on its own in tests which build and execute cifuzz as an
+// external command.
+func RegisterTestDepOnCIFuzz() {
+	var deps []string
+	_, b, _, _ := runtime.Caller(0)
+	// Note: The number of levels we go up here has to be adjusted if
+	// this source file is moved.
+	basepath := filepath.Dir(filepath.Dir(filepath.Dir(b)))
+	for _, dep := range install.Deps {
+		deps = append(deps, filepath.Join(basepath, dep))
+	}
+	RegisterTestDeps(deps...)
 }
 
 // ChdirToTempDir creates and changes the working directory to new tmp dir
