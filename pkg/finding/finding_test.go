@@ -73,3 +73,23 @@ func TestFinding_MoveInputFile(t *testing.T) {
 	// check if the log was updated
 	assert.Contains(t, finding.Logs[2], newFilename)
 }
+
+func TestListFindings(t *testing.T) {
+	// Create a finding
+	finding := &Finding{
+		Name: "test-name",
+		Logs: []string{
+			"Oops",
+			"The application crashed",
+		},
+	}
+
+	err := finding.Save(testDir)
+	require.NoError(t, err)
+
+	// Check that the finding is listed
+	findings, err := ListFindings(testDir)
+	require.NoError(t, err)
+	require.Len(t, findings, 1)
+	require.Equal(t, finding, findings[0])
+}

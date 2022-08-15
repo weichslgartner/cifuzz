@@ -148,3 +148,31 @@ func (f *Finding) moveInputFile(projectDir, findingDir string) error {
 	f.InputFile = pathRelativeToProjectDir
 	return nil
 }
+
+func ListFindings(projectDir string) ([]*Finding, error) {
+	findingsDir := filepath.Join(projectDir, nameFindingDir)
+	entries, err := os.ReadDir(findingsDir)
+	if os.IsNotExist(err) {
+		return []*Finding{}, nil
+	}
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	var res []*Finding
+	for _, e := range entries {
+		jsonPath := filepath.Join(findingsDir, e.Name(), nameJsonFile)
+		bytes, err := os.ReadFile(jsonPath)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+		var f Finding
+		err = json.Unmarshal(bytes, &f)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+		res = append(res, &f)
+	}
+
+	return res, nil
+}
