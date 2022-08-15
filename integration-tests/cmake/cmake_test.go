@@ -229,7 +229,9 @@ func runFuzzer(t *testing.T, cifuzz string, dir string, expectedOutput *regexp.R
 func createCoverageReport(t *testing.T, cifuzz string, dir string) {
 	t.Helper()
 
-	cmd := executil.Command(cifuzz, "coverage", "-v", "parser_fuzz_test")
+	cmd := executil.Command(cifuzz, "coverage", "-v",
+		"--output", "parser_fuzz_test.coverage.html",
+		"parser_fuzz_test")
 	cmd.Dir = dir
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

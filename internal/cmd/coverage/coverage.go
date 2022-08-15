@@ -32,7 +32,7 @@ import (
 
 type coverageOptions struct {
 	OutputFormat   string   `mapstructure:"format"`
-	OutputPath     string   `mapstructure:"out"`
+	OutputPath     string   `mapstructure:"output"`
 	BuildSystem    string   `mapstructure:"build-system"`
 	BuildCommand   string   `mapstructure:"build-command"`
 	SeedCorpusDirs []string `mapstructure:"seed-corpus-dirs"`
@@ -94,8 +94,22 @@ func New() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "coverage [flags] <fuzz test>",
 		Short: "Generate a coverage report for a fuzz test",
-		// TODO: Write long description
-		Long:              "",
+		Long: `Generate a coverage report for a fuzz test
+
+Open a browser displaying the source code with coverage information:
+
+    cifuzz coverage <fuzz test>
+
+Write out an HTML file instead of launching a browser:
+
+    cifuzz coverage --output coverage.html <fuzz test>
+
+Write out an lcov trace file:
+
+    cifuzz coverage --format=lcov <fuzz test>
+
+
+`,
 		ValidArgsFunction: completion.ValidFuzzTests,
 		Args:              cobra.ExactArgs(1),
 		PreRunE: func(cmd *cobra.Command, args []string) error {
@@ -103,7 +117,7 @@ func New() *cobra.Command {
 			// function, because that would re-bind viper keys which
 			// were bound to the flags of other commands before.
 			cmdutils.ViperMustBindPFlag("format", cmd.Flags().Lookup("format"))
-			cmdutils.ViperMustBindPFlag("out", cmd.Flags().Lookup("out"))
+			cmdutils.ViperMustBindPFlag("output", cmd.Flags().Lookup("output"))
 			cmdutils.ViperMustBindPFlag("build-command", cmd.Flags().Lookup("build-command"))
 			cmdutils.ViperMustBindPFlag("seed-corpus-dirs", cmd.Flags().Lookup("seed-corpus"))
 			cmdutils.ViperMustBindPFlag("fuzz-test-args", cmd.Flags().Lookup("fuzz-test-arg"))
@@ -127,7 +141,7 @@ func New() *cobra.Command {
 	// Note: If a flag should be configurable via cifuzz.yaml as well,
 	// bind it to viper in the PreRunE function.
 	cmd.Flags().StringP("format", "f", "html", "Output format of the coverage report (html/lcov).")
-	cmd.Flags().StringP("out", "o", "", "Output path of the coverage report.")
+	cmd.Flags().StringP("output", "o", "", "Output path of the coverage report.")
 	cmd.Flags().String("build-command", "", `The command to build the fuzz test. Example: "make clean && make my-fuzz-test"`)
 	cmd.Flags().StringArrayP("seed-corpus", "s", nil, "Directory containing sample inputs for the code under test.\nSee https://llvm.org/docs/LibFuzzer.html#corpus and\nhttps://aflplus.plus/docs/fuzzing_in_depth/#a-collecting-inputs.")
 	cmd.Flags().StringArray("fuzz-test-arg", nil, "Command-line argument to pass to the fuzz test.")
@@ -173,35 +187,22 @@ func (c *coverageCmd) run() error {
 		return err
 	}
 
-	lcovReportSummary, err := c.generateLcovReport(buildResult.Executable, buildResult.RuntimeDeps, true)
+	lcovReportSummary, err := c.lcovReportSummary(buildResult.Executable, buildResult.RuntimeDeps)
 	if err != nil {
 		return err
 	}
 	coverage.ParseLcov(lcovReportSummary).PrintTable(c.OutOrStderr())
 
-	var report string
 	switch c.opts.OutputFormat {
 	case "html":
-		report, err = c.generateHTMLReport(buildResult.Executable, buildResult.RuntimeDeps)
+		err = c.generateHTMLReport(buildResult.Executable, buildResult.RuntimeDeps)
 		if err != nil {
 			return err
 		}
 
 	case "lcov":
-		report, err = c.generateLcovReport(buildResult.Executable, buildResult.RuntimeDeps, false)
+		err = c.generateLcovReport(buildResult.Executable, buildResult.RuntimeDeps)
 		if err != nil {
-			return err
-		}
-	}
-
-	reportPath, err := c.writeReportToFile(buildResult.Executable, report)
-	if err != nil {
-		return err
-	}
-	log.Successf("Created coverage %s report: %s", strings.ToUpper(c.opts.OutputFormat), reportPath)
-
-	if c.opts.OutputFormat == "html" {
-		if err := c.openReport(reportPath); err != nil {
 			return err
 		}
 	}
@@ -387,6 +388,51 @@ func (c *coverageCmd) indexRawProfile(fuzzTestExecutable string) error {
 	return nil
 }
 
+func (c *coverageCmd) generateHTMLReport(executable string, runtimeDeps []string) error {
+	report, err := c.runLlvmCov([]string{"show", "-format=html"}, executable, runtimeDeps)
+	if err != nil {
+		return err
+	}
+
+	outputPath := c.opts.OutputPath
+	if c.opts.OutputPath == "" {
+		// If no output path is specified, we create the output in a
+		// temporary directory.
+		outputDir, err := os.MkdirTemp("", "coverage-")
+		if err != nil {
+			return errors.WithStack(err)
+		}
+		outputPath = filepath.Join(outputDir, c.defaultReportName(executable, c.opts.OutputFormat))
+	}
+
+	err = os.WriteFile(outputPath, []byte(report), 0644)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	// Open the browser if no output path was specified
+	if c.opts.OutputPath == "" {
+		// try to open the report in the browser ...
+		err := c.openReport(outputPath)
+		if err != nil {
+			//... if this fails print the file URI
+			log.Debug(err)
+			err = c.printReportURI(outputPath)
+			if err != nil {
+				return err
+			}
+		}
+	} else {
+		log.Successf("Created coverage HTML report: %s", outputPath)
+		err = c.printReportURI(outputPath)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (c *coverageCmd) runLlvmCov(args []string, fuzzTestExecutable string, runtimeDeps []string) (string, error) {
 	llvmCov, err := runfiles.Finder.LLVMCovPath()
 	if err != nil {
@@ -411,36 +457,35 @@ func (c *coverageCmd) runLlvmCov(args []string, fuzzTestExecutable string, runti
 	return string(output), nil
 }
 
-func (c *coverageCmd) writeReportToFile(fuzzTestExecutable string, report string) (string, error) {
-	reportPath := c.defaultReportPath(fuzzTestExecutable, c.opts.OutputFormat)
-	if c.opts.OutputPath != "" {
-		reportPath = c.opts.OutputPath
-	}
-
-	err := os.WriteFile(reportPath, []byte(report), 0644)
-	if err != nil {
-		return "", err
-	}
-
-	return reportPath, nil
-}
-
-func (c *coverageCmd) generateLcovReport(fuzzTestExecutable string, runtimeDeps []string, summaryOnly bool) (string, error) {
+func (c *coverageCmd) generateLcovReport(executable string, runtimeDeps []string) error {
 	args := []string{"export", "-format=lcov"}
-	if summaryOnly {
-		args = append(args, "-summary-only")
-	}
-
-	output, err := c.runLlvmCov(args, fuzzTestExecutable, runtimeDeps)
+	report, err := c.runLlvmCov(args, executable, runtimeDeps)
 	if err != nil {
-		return "", err
+		return err
 	}
 
-	return output, nil
+	outputPath := c.opts.OutputPath
+	if c.opts.OutputPath == "" {
+		// If no output path is specified, we create the output in the
+		// current working directory. We don't create it in a temporary
+		// directory like we do for HTML reports, because we can't open
+		// the lcov report in a browser, so the command is only useful
+		// if the lcov report is accessible after it was created.
+		outputPath = c.defaultReportName(executable, c.opts.OutputFormat)
+	}
+
+	err = os.WriteFile(outputPath, []byte(report), 0644)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	log.Successf("Created lcov trace file: %s", outputPath)
+	return nil
 }
 
-func (c *coverageCmd) generateHTMLReport(fuzzTestExecutable string, runtimeDeps []string) (string, error) {
-	output, err := c.runLlvmCov([]string{"show", "-format=html"}, fuzzTestExecutable, runtimeDeps)
+func (c *coverageCmd) lcovReportSummary(fuzzTestExecutable string, runtimeDeps []string) (string, error) {
+	args := []string{"export", "-format=lcov", "-summary-only"}
+	output, err := c.runLlvmCov(args, fuzzTestExecutable, runtimeDeps)
 	if err != nil {
 		return "", err
 	}
@@ -465,7 +510,7 @@ func (c *coverageCmd) indexedProfilePath(fuzzTestExecutable string) string {
 	return filepath.Join(c.tmpDir, filepath.Base(fuzzTestExecutable)+".profdata")
 }
 
-func (c *coverageCmd) defaultReportPath(fuzzTestExecutable string, outputFormat string) string {
+func (c *coverageCmd) defaultReportName(fuzzTestExecutable string, outputFormat string) string {
 	return filepath.Base(fuzzTestExecutable) + ".coverage." + outputFormat
 }
 
@@ -473,17 +518,16 @@ func (c *coverageCmd) openReport(reportPath string) error {
 	// ignore output of browser package
 	browser.Stdout = io.Discard
 	browser.Stderr = io.Discard
-	// try to open the report in the browser...
-	if err := browser.OpenFile(reportPath); err != nil {
+	err := browser.OpenFile(reportPath)
+	return errors.WithStack(err)
+}
 
-		//... if this fails print the file uri
-		absReportPath, err := filepath.Abs(reportPath)
-		if err != nil {
-			return errors.WithStack(err)
-		}
-		reportUri := fmt.Sprintf("file://%s", filepath.ToSlash(absReportPath))
-		log.Infof("You can open the report by copying this uri into your browser:\n   %s", reportUri)
+func (c *coverageCmd) printReportURI(reportPath string) error {
+	absReportPath, err := filepath.Abs(reportPath)
+	if err != nil {
+		return errors.WithStack(err)
 	}
-
+	reportUri := fmt.Sprintf("file://%s", filepath.ToSlash(absReportPath))
+	log.Infof("To view the report, open this URI in a browser:\n\n   %s\n\n", reportUri)
 	return nil
 }

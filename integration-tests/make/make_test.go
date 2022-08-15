@@ -131,6 +131,7 @@ func createCoverageReport(t *testing.T, cifuzz string, dir string) {
 	t.Helper()
 
 	cmd := executil.Command(cifuzz, "coverage", "-v",
+		"--output", "my_fuzz_test_1.coverage.html",
 		"--build-command=make clean && make my_fuzz_test_1",
 		"my_fuzz_test_1")
 	cmd.Dir = dir
