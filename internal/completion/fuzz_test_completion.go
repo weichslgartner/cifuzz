@@ -34,7 +34,7 @@ func ValidFuzzTests(cmd *cobra.Command, args []string, toComplete string) ([]str
 	}
 
 	if conf.BuildSystem == config.BuildSystemCMake {
-		return validCMakeFuzzTests(cmd, args, toComplete)
+		return validCMakeFuzzTests(projectDir)
 	} else if conf.BuildSystem == config.BuildSystemOther {
 		// For other build systems, the <fuzz test> argument must be
 		// the path to the fuzz test executable, so we use file
@@ -49,8 +49,8 @@ func ValidFuzzTests(cmd *cobra.Command, args []string, toComplete string) ([]str
 	}
 }
 
-func validCMakeFuzzTests(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-	matches, err := zglob.Glob(".cifuzz-build/**/.cifuzz/fuzz_tests/*")
+func validCMakeFuzzTests(projectDir string) ([]string, cobra.ShellCompDirective) {
+	matches, err := zglob.Glob(projectDir + "/.cifuzz-build/**/.cifuzz/fuzz_tests/*")
 	if err != nil {
 		log.Error(err, err.Error())
 		return nil, cobra.ShellCompDirectiveError
