@@ -26,6 +26,7 @@ import (
 )
 
 type ReportHandlerOptions struct {
+	ProjectDir    string
 	SeedCorpusDir string
 	PrintJSON     bool
 	Verbose       bool
@@ -94,7 +95,8 @@ func (h *ReportHandler) Handle(r *report.Report) error {
 			r.Finding.Name = names.GetDeterministicName(h.Sum(nil))
 		}
 
-		if err := r.Finding.Save(); err != nil {
+		err := r.Finding.Save(h.ProjectDir)
+		if err != nil {
 			return err
 		}
 
@@ -104,7 +106,7 @@ func (h *ReportHandler) Handle(r *report.Report) error {
 			if err != nil {
 				return errors.WithStack(err)
 			}
-			err = copy.Copy(r.Finding.InputFile, filepath.Join(h.SeedCorpusDir, r.Finding.Name))
+			err = copy.Copy(r.Finding.GetInputFile(h.ProjectDir), filepath.Join(h.SeedCorpusDir, r.Finding.Name))
 			if err != nil {
 				return errors.WithStack(err)
 			}

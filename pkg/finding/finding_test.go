@@ -13,9 +13,11 @@ import (
 	"code-intelligence.com/cifuzz/util/testutil"
 )
 
+var testDir string
+
 func TestMain(m *testing.M) {
-	testTempDir := testutil.ChdirToTempDir("finding-test-")
-	defer fileutil.Cleanup(testTempDir)
+	testDir = testutil.ChdirToTempDir("finding-test-")
+	defer fileutil.Cleanup(testDir)
 
 	m.Run()
 }
@@ -29,7 +31,7 @@ func TestFinding_Save(t *testing.T) {
 		},
 	}
 
-	err := finding.Save()
+	err := finding.Save(testDir)
 	require.NoError(t, err)
 
 	findingDir := filepath.Join(nameFindingDir, finding.Name)
@@ -63,7 +65,7 @@ func TestFinding_MoveInputFile(t *testing.T) {
 		},
 	}
 
-	err = finding.Save()
+	err = finding.Save(testDir)
 	require.NoError(t, err)
 
 	newFilename := filepath.Join(nameFindingDir, finding.Name, nameCrashingInput)

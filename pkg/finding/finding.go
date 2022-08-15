@@ -60,15 +60,27 @@ func (f *Finding) GetDetails() string {
 	return ""
 }
 
-func (f *Finding) Save() error {
-	findingDir := filepath.Join(nameFindingDir, f.Name)
+// GetInputFile returns the path where the finding's input file can be
+// found. Note that the InputFile field contains the path to the input
+// file relative to the project directory. The GetInputFile therefore
+// receives the project directory as an argument and returns the
+// absolute path to the input file.
+func (f *Finding) GetInputFile(projectDir string) string {
+	if f != nil {
+		return filepath.Join(projectDir, f.InputFile)
+	}
+	return ""
+}
+
+func (f *Finding) Save(projectDir string) error {
+	findingDir := filepath.Join(projectDir, nameFindingDir, f.Name)
 
 	if err := os.MkdirAll(findingDir, 0755); err != nil {
 		return errors.WithStack(err)
 	}
 
 	if f.InputFile != "" {
-		if err := f.moveInputFile(findingDir); err != nil {
+		if err := f.moveInputFile(projectDir, findingDir); err != nil {
 			return err
 		}
 	}
@@ -96,11 +108,14 @@ func (f *Finding) saveJson(findingDir string) error {
 
 // move the input file to a new location and update
 // the finding and the logs
-func (f *Finding) moveInputFile(findingDir string) error {
+func (f *Finding) moveInputFile(projectDir, findingDir string) error {
 	newPath := filepath.Join(findingDir, nameCrashingInput)
 
 	// We don't use os.Rename to avoid errors when source and target
 	// are not on the same mounted filesystem.
+	// We don't use f.GetInputFile because before moveInputFile is
+	// called, the InputFile field might not actually contain a path
+	// relative to the project directory.
 	if err := copy.Copy(f.InputFile, newPath); err != nil {
 		return errors.WithStack(err)
 	}
@@ -108,10 +123,28 @@ func (f *Finding) moveInputFile(findingDir string) error {
 		return errors.WithStack(err)
 	}
 
+	// Replace the old filename in the finding logs. Replace it with the
+	// relative path to not leak the directory structure of the current
+	// user in the finding logs (which might be shared with others).
+	cwd, err := os.Getwd()
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	relPath, err := filepath.Rel(cwd, newPath)
+	if err != nil {
+		return errors.WithStack(err)
+	}
 	for i, line := range f.Logs {
-		f.Logs[i] = strings.ReplaceAll(line, f.InputFile, newPath)
+		f.Logs[i] = strings.ReplaceAll(line, f.InputFile, relPath)
 	}
 	log.Debugf("moved input file from %s to %s", f.InputFile, newPath)
-	f.InputFile = newPath
+
+	// The path in the InputFile field is expected to be relative to the
+	// project directory
+	pathRelativeToProjectDir, err := filepath.Rel(projectDir, newPath)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	f.InputFile = pathRelativeToProjectDir
 	return nil
 }

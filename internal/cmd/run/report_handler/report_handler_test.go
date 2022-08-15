@@ -21,6 +21,7 @@ import (
 )
 
 var logOutput io.ReadWriter
+var testDir string
 
 func TestMain(m *testing.M) {
 	// Disable color for this test to allow comparing strings without
@@ -30,14 +31,14 @@ func TestMain(m *testing.M) {
 	logOutput = bytes.NewBuffer([]byte{})
 	log.Output = logOutput
 
-	testTempDir := testutil.ChdirToTempDir("report-handler-test-")
-	defer fileutil.Cleanup(testTempDir)
+	testDir = testutil.ChdirToTempDir("report-handler-test-")
+	defer fileutil.Cleanup(testDir)
 
 	m.Run()
 }
 
 func TestReportHandler_EmptyCorpus(t *testing.T) {
-	h, err := NewReportHandler(&ReportHandlerOptions{})
+	h, err := NewReportHandler(&ReportHandlerOptions{ProjectDir: testDir})
 	require.NoError(t, err)
 
 	initStartedReport := &report.Report{
@@ -51,7 +52,7 @@ func TestReportHandler_EmptyCorpus(t *testing.T) {
 }
 
 func TestReportHandler_NonEmptyCorpus(t *testing.T) {
-	h, err := NewReportHandler(&ReportHandlerOptions{})
+	h, err := NewReportHandler(&ReportHandlerOptions{ProjectDir: testDir})
 	require.NoError(t, err)
 
 	initStartedReport := &report.Report{
@@ -69,7 +70,7 @@ func TestReportHandler_NonEmptyCorpus(t *testing.T) {
 }
 
 func TestReportHandler_Metrics(t *testing.T) {
-	h, err := NewReportHandler(&ReportHandlerOptions{})
+	h, err := NewReportHandler(&ReportHandlerOptions{ProjectDir: testDir})
 	require.NoError(t, err)
 
 	printerOut := bytes.NewBuffer([]byte{})
@@ -89,7 +90,7 @@ func TestReportHandler_Metrics(t *testing.T) {
 }
 
 func TestReportHandler_Finding(t *testing.T) {
-	h, err := NewReportHandler(&ReportHandlerOptions{SeedCorpusDir: "seed_corpus"})
+	h, err := NewReportHandler(&ReportHandlerOptions{ProjectDir: testDir, SeedCorpusDir: "seed_corpus"})
 	require.NoError(t, err)
 
 	// create an input file
@@ -114,7 +115,7 @@ func TestReportHandler_Finding(t *testing.T) {
 }
 
 func TestReportHandler_PrintJSON(t *testing.T) {
-	h, err := NewReportHandler(&ReportHandlerOptions{PrintJSON: true})
+	h, err := NewReportHandler(&ReportHandlerOptions{ProjectDir: testDir, PrintJSON: true})
 	require.NoError(t, err)
 
 	jsonOut := bytes.NewBuffer([]byte{})
@@ -133,7 +134,7 @@ func TestReportHandler_PrintJSON(t *testing.T) {
 }
 
 func TestReportHandler_GenerateName(t *testing.T) {
-	h, err := NewReportHandler(&ReportHandlerOptions{PrintJSON: true})
+	h, err := NewReportHandler(&ReportHandlerOptions{ProjectDir: testDir, PrintJSON: true})
 	require.NoError(t, err)
 
 	findingLogs := []string{"Oops", "The program crashed"}
@@ -150,7 +151,7 @@ func TestReportHandler_GenerateName(t *testing.T) {
 }
 
 func TestReportHandler_NotOverrideName(t *testing.T) {
-	h, err := NewReportHandler(&ReportHandlerOptions{PrintJSON: true})
+	h, err := NewReportHandler(&ReportHandlerOptions{ProjectDir: testDir, PrintJSON: true})
 	require.NoError(t, err)
 
 	findingLogs := []string{"Oops", "The program crashed"}
