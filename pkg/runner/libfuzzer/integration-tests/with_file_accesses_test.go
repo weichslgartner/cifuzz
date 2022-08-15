@@ -3,7 +3,7 @@ package integration_tests
 import (
 	"testing"
 
-	"code-intelligence.com/cifuzz/pkg/report"
+	"code-intelligence.com/cifuzz/pkg/finding"
 )
 
 func TestIntegration_WithFileAccesses(t *testing.T) {
@@ -20,7 +20,7 @@ func TestIntegration_WithFileAccesses(t *testing.T) {
 		_, reports := test.Run(t)
 
 		CheckReports(t, reports, &CheckReportOptions{
-			ErrorType:   report.ErrorType_CRASH,
+			ErrorType:   finding.ErrorType_CRASH,
 			SourceFile:  "trigger_asan_with_file_accesses.c",
 			Details:     "heap-buffer-overflow",
 			NumFindings: 1,

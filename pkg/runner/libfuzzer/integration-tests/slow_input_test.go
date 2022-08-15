@@ -3,7 +3,7 @@ package integration_tests
 import (
 	"testing"
 
-	"code-intelligence.com/cifuzz/pkg/report"
+	"code-intelligence.com/cifuzz/pkg/finding"
 )
 
 func TestIntegration_SlowInput(t *testing.T) {
@@ -23,7 +23,7 @@ func TestIntegration_SlowInput(t *testing.T) {
 		_, reports := test.Run(t)
 
 		CheckReports(t, reports, &CheckReportOptions{
-			ErrorType:   report.ErrorType_WARNING,
+			ErrorType:   finding.ErrorType_WARNING,
 			Details:     "Slow input detected",
 			NumFindings: 1,
 		})

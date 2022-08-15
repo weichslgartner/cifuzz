@@ -3,7 +3,7 @@ package integration_tests
 import (
 	"testing"
 
-	"code-intelligence.com/cifuzz/pkg/report"
+	"code-intelligence.com/cifuzz/pkg/finding"
 )
 
 func TestIntegration_OOM(t *testing.T) {
@@ -21,7 +21,7 @@ func TestIntegration_OOM(t *testing.T) {
 		_, reports := test.Run(t)
 
 		CheckReports(t, reports, &CheckReportOptions{
-			ErrorType:   report.ErrorType_CRASH,
+			ErrorType:   finding.ErrorType_CRASH,
 			SourceFile:  "trigger_oom.cpp",
 			Details:     "out-of-memory",
 			NumFindings: 1,

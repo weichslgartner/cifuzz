@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"code-intelligence.com/cifuzz/internal/cmd/run/report_handler/metrics"
+	"code-intelligence.com/cifuzz/pkg/finding"
 	"code-intelligence.com/cifuzz/pkg/log"
 	"code-intelligence.com/cifuzz/pkg/report"
 	"code-intelligence.com/cifuzz/util/fileutil"
@@ -99,7 +100,7 @@ func TestReportHandler_Finding(t *testing.T) {
 	findingLogs := []string{"Oops", "The application crashed"}
 	findingReport := &report.Report{
 		Status: report.RunStatus_RUNNING,
-		Finding: &report.Finding{
+		Finding: &finding.Finding{
 			Logs:      findingLogs,
 			InputFile: testfile,
 		},
@@ -122,7 +123,7 @@ func TestReportHandler_PrintJSON(t *testing.T) {
 	findingLogs := []string{"Oops", "The program crashed"}
 	findingReport := &report.Report{
 		Status: report.RunStatus_RUNNING,
-		Finding: &report.Finding{
+		Finding: &finding.Finding{
 			Logs: findingLogs,
 		},
 	}
@@ -138,7 +139,7 @@ func TestReportHandler_GenerateName(t *testing.T) {
 	findingLogs := []string{"Oops", "The program crashed"}
 	findingReport := &report.Report{
 		Status: report.RunStatus_RUNNING,
-		Finding: &report.Finding{
+		Finding: &finding.Finding{
 			Logs:      findingLogs,
 			InputData: []byte("123"),
 		},
@@ -155,7 +156,7 @@ func TestReportHandler_NotOverrideName(t *testing.T) {
 	findingLogs := []string{"Oops", "The program crashed"}
 	findingReport := &report.Report{
 		Status: report.RunStatus_RUNNING,
-		Finding: &report.Finding{
+		Finding: &finding.Finding{
 			Logs: findingLogs,
 			Name: "MyName",
 		},

@@ -2,6 +2,8 @@ package report
 
 import (
 	"time"
+
+	"code-intelligence.com/cifuzz/pkg/finding"
 )
 
 type Handler interface {
@@ -9,13 +11,13 @@ type Handler interface {
 }
 
 type Report struct {
-	Status   RunStatus      `json:"status,omitempty"`
-	Metric   *FuzzingMetric `json:"metric,omitempty"`
-	Finding  *Finding       `json:"finding,omitempty"`
-	NumSeeds uint           `json:"num_seeds,omitempty"`
+	Status   RunStatus        `json:"status,omitempty"`
+	Metric   *FuzzingMetric   `json:"metric,omitempty"`
+	Finding  *finding.Finding `json:"finding,omitempty"`
+	NumSeeds uint             `json:"num_seeds,omitempty"`
 }
 
-func (x *Report) GetFinding() *Finding {
+func (x *Report) GetFinding() *finding.Finding {
 	if x != nil {
 		return x.Finding
 	}
@@ -50,28 +52,4 @@ type FuzzingMetric struct {
 	TotalExecutions         uint64    `json:"total_executions,omitempty"`
 	Edges                   int32     `json:"edges,omitempty"`
 	SecondsSinceLastEdge    uint64    `json:"seconds_since_last_edge,omitempty"`
-}
-
-type ErrorType string
-
-// These constants must have this exact value (in uppercase) to be able
-// to parse JSON-marshalled reports as protobuf reports which use an
-// enum for this field.
-const (
-	ErrorType_UNKNOWN_ERROR     ErrorType = "UNKNOWN_ERROR"
-	ErrorType_COMPILATION_ERROR ErrorType = "COMPILATION_ERROR"
-	ErrorType_CRASH             ErrorType = "CRASH"
-	ErrorType_WARNING           ErrorType = "WARNING"
-	ErrorType_RUNTIME_ERROR     ErrorType = "RUNTIME_ERROR"
-)
-
-type ErrorDetails struct {
-	Id       string    `json:"id,omitempty"`
-	Name     string    `json:"name,omitempty"`
-	Severity *Severity `json:"severity,omitempty"`
-}
-
-type Severity struct {
-	Description string  `json:"description,omitempty"`
-	Score       float32 `json:"score,omitempty"`
 }

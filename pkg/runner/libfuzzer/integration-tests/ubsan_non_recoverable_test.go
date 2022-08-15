@@ -4,7 +4,7 @@ import (
 	"runtime"
 	"testing"
 
-	"code-intelligence.com/cifuzz/pkg/report"
+	"code-intelligence.com/cifuzz/pkg/finding"
 )
 
 func TestIntegration_UBSANNonRecoverable(t *testing.T) {
@@ -22,7 +22,7 @@ func TestIntegration_UBSANNonRecoverable(t *testing.T) {
 		_, reports := test.Run(t)
 
 		CheckReports(t, reports, &CheckReportOptions{
-			ErrorType:   report.ErrorType_RUNTIME_ERROR,
+			ErrorType:   finding.ErrorType_RUNTIME_ERROR,
 			Details:     "undefined behaviour",
 			SourceFile:  "trigger_ubsan.cpp",
 			NumFindings: 1,

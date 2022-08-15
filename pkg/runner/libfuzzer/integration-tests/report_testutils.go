@@ -6,11 +6,12 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"code-intelligence.com/cifuzz/pkg/finding"
 	"code-intelligence.com/cifuzz/pkg/report"
 )
 
 type CheckReportOptions struct {
-	ErrorType           report.ErrorType
+	ErrorType           finding.ErrorType
 	SourceFile          string
 	Details             string
 	AllowEmptyInputData bool

@@ -4,7 +4,7 @@ import (
 	"runtime"
 	"testing"
 
-	"code-intelligence.com/cifuzz/pkg/report"
+	"code-intelligence.com/cifuzz/pkg/finding"
 )
 
 // Regression test: When crashing on an empty input the runner was not reporting a finding
@@ -28,7 +28,7 @@ func TestIntegration_CrashOnEmptyInput(t *testing.T) {
 		}
 
 		CheckReports(t, reports, &CheckReportOptions{
-			ErrorType:           report.ErrorType_CRASH,
+			ErrorType:           finding.ErrorType_CRASH,
 			SourceFile:          "trigger_asan_on_empty_input.c",
 			Details:             errMsg,
 			NumFindings:         1,

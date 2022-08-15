@@ -4,7 +4,7 @@ import (
 	"runtime"
 	"testing"
 
-	"code-intelligence.com/cifuzz/pkg/report"
+	"code-intelligence.com/cifuzz/pkg/finding"
 )
 
 func TestIntegration_InputTimeout(t *testing.T) {
@@ -24,7 +24,7 @@ func TestIntegration_InputTimeout(t *testing.T) {
 		_, reports := test.Run(t)
 
 		options := &CheckReportOptions{
-			ErrorType:   report.ErrorType_CRASH,
+			ErrorType:   finding.ErrorType_CRASH,
 			Details:     "timeout",
 			NumFindings: 1,
 		}

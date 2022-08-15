@@ -1,4 +1,4 @@
-package report
+package finding
 
 import (
 	"encoding/json"
@@ -27,6 +27,30 @@ type Finding struct {
 	Tag                uint64        `json:"tag,omitempty"`
 	ShortDescription   string        `json:"short_description,omitempty"`
 	InputFile          string
+}
+
+type ErrorType string
+
+// These constants must have this exact value (in uppercase) to be able
+// to parse JSON-marshalled reports as protobuf reports which use an
+// enum for this field.
+const (
+	ErrorType_UNKNOWN_ERROR     ErrorType = "UNKNOWN_ERROR"
+	ErrorType_COMPILATION_ERROR ErrorType = "COMPILATION_ERROR"
+	ErrorType_CRASH             ErrorType = "CRASH"
+	ErrorType_WARNING           ErrorType = "WARNING"
+	ErrorType_RUNTIME_ERROR     ErrorType = "RUNTIME_ERROR"
+)
+
+type ErrorDetails struct {
+	Id       string    `json:"id,omitempty"`
+	Name     string    `json:"name,omitempty"`
+	Severity *Severity `json:"severity,omitempty"`
+}
+
+type Severity struct {
+	Description string  `json:"description,omitempty"`
+	Score       float32 `json:"score,omitempty"`
 }
 
 func (f *Finding) GetDetails() string {

@@ -14,6 +14,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/pterm/pterm"
 
+	"code-intelligence.com/cifuzz/pkg/finding"
 	"code-intelligence.com/cifuzz/pkg/parser/sanitizer"
 	"code-intelligence.com/cifuzz/pkg/report"
 	"code-intelligence.com/cifuzz/util/regexutil"
@@ -71,7 +72,7 @@ type parser struct {
 	// A finding that was found in the libfuzzer output but wasn't sent
 	// yet, because we keep reading more output lines for some time and
 	// attach them to the finding if they seem to belong to it
-	pendingFinding                       *report.Finding
+	pendingFinding                       *finding.Finding
 	numMetricsLinesSinceFindingIsPending int
 
 	lastNewFeatureTime time.Time // Timestamp representing the point when the last new feature was reported
@@ -253,7 +254,7 @@ func (p *parser) parseLine(ctx context.Context, line string) error {
 	return nil
 }
 
-func (p *parser) parseAsNewFinding(line string) *report.Finding {
+func (p *parser) parseAsNewFinding(line string) *finding.Finding {
 	if p.SupportJazzer {
 		finding := p.parseAsJazzerFinding(line)
 		if finding != nil {
@@ -292,10 +293,10 @@ func parseAsTestInputFilePath(logLine string) (string, bool) {
 	return "", false
 }
 
-func (p *parser) parseAsGoFinding(line string) *report.Finding {
+func (p *parser) parseAsGoFinding(line string) *finding.Finding {
 	if _, found := regexutil.FindNamedGroupsMatch(goPanicPattern, line); found {
-		return &report.Finding{
-			Type:    report.ErrorType_CRASH,
+		return &finding.Finding{
+			Type:    finding.ErrorType_CRASH,
 			Details: "Go Panic",
 			Logs:    []string{line},
 		}
@@ -303,18 +304,18 @@ func (p *parser) parseAsGoFinding(line string) *report.Finding {
 	return nil
 }
 
-func (p *parser) libFuzzerErrorFollowingGoPanic(report *report.Finding) bool {
+func (p *parser) libFuzzerErrorFollowingGoPanic(report *finding.Finding) bool {
 	return p.pendingFinding.GetDetails() == "Go Panic" && report.GetDetails() != "Go Panic"
 }
 
-func (p *parser) parseAsLibfuzzerFinding(line string) *report.Finding {
+func (p *parser) parseAsLibfuzzerFinding(line string) *finding.Finding {
 	// For timeout errors, the first output line belonging to the error
 	// report is *not* the "ERROR:" line, but the "ALARM:" line, so we
 	// match that pattern first
 	result, found := regexutil.FindNamedGroupsMatch(libfuzzerTimeoutErrorPattern, line)
 	if found {
-		return &report.Finding{
-			Type:    report.ErrorType_CRASH, // aka Vulnerability
+		return &finding.Finding{
+			Type:    finding.ErrorType_CRASH, // aka Vulnerability
 			Details: fmt.Sprintf("timeout after %s seconds", result["timeout_seconds"]),
 			Logs:    []string{line},
 		}
@@ -339,8 +340,8 @@ func (p *parser) parseAsLibfuzzerFinding(line string) *report.Finding {
 			return nil
 		}
 
-		return &report.Finding{
-			Type:    report.ErrorType_CRASH, // aka Vulnerability
+		return &finding.Finding{
+			Type:    finding.ErrorType_CRASH, // aka Vulnerability
 			Details: result["error_type"],
 			Logs:    []string{line},
 		}
@@ -349,7 +350,7 @@ func (p *parser) parseAsLibfuzzerFinding(line string) *report.Finding {
 	return nil
 }
 
-func (p *parser) parseAsJazzerFinding(line string) *report.Finding {
+func (p *parser) parseAsJazzerFinding(line string) *finding.Finding {
 	matches, found := regexutil.FindNamedGroupsMatch(jazzerSecurityIssuePattern, line)
 	if found {
 		issueSeverity := matches["type"]
@@ -371,12 +372,12 @@ func (p *parser) parseAsJazzerFinding(line string) *report.Finding {
 			uiDescription = exceptionMessage
 		}
 
-		return &report.Finding{
-			Type:    report.ErrorType_CRASH, // aka Vulnerability
+		return &finding.Finding{
+			Type:    finding.ErrorType_CRASH, // aka Vulnerability
 			Details: description,
-			MoreDetails: &report.ErrorDetails{
+			MoreDetails: &finding.ErrorDetails{
 				Name: uiDescription, // This field is shown in the UI
-				Severity: &report.Severity{
+				Severity: &finding.Severity{
 					Description: issueSeverity,
 					Score:       float32(severityScore),
 				},
@@ -387,8 +388,8 @@ func (p *parser) parseAsJazzerFinding(line string) *report.Finding {
 
 	_, found = regexutil.FindNamedGroupsMatch(javaAssertionErrorPattern, line)
 	if found {
-		return &report.Finding{
-			Type:    report.ErrorType_WARNING, // aka Bug
+		return &finding.Finding{
+			Type:    finding.ErrorType_WARNING, // aka Bug
 			Details: "Java Assertion Error",
 			Logs:    []string{line},
 		}
@@ -396,8 +397,8 @@ func (p *parser) parseAsJazzerFinding(line string) *report.Finding {
 
 	matches, found = regexutil.FindNamedGroupsMatch(javaExceptionErrorPattern, line)
 	if found {
-		return &report.Finding{
-			Type:    report.ErrorType_WARNING, // aka Bug
+		return &finding.Finding{
+			Type:    finding.ErrorType_WARNING, // aka Bug
 			Details: matches["error_type"],
 			Logs:    []string{line},
 		}
@@ -474,16 +475,16 @@ func (p *parser) parseAsFuzzingMetric(line string) *report.FuzzingMetric {
 	return nil
 }
 
-func parseAsSlowInput(log string) *report.Finding {
+func parseAsSlowInput(log string) *finding.Finding {
 	if res, ok := regexutil.FindNamedGroupsMatch(slowInputPattern, log); ok {
-		return &report.Finding{
-			Type:    report.ErrorType_WARNING,
+		return &finding.Finding{
+			Type:    finding.ErrorType_WARNING,
 			Details: fmt.Sprintf("Slow input detected. Processing time: %s s", res["duration"]),
 			Logs:    []string{fmt.Sprintf("Slow input: %s seconds for processing", res["duration"])},
-			MoreDetails: &report.ErrorDetails{
+			MoreDetails: &finding.ErrorDetails{
 				Id:   "Slow Input Detected",
 				Name: "Slow Input Detected",
-				Severity: &report.Severity{
+				Severity: &finding.Severity{
 					Description: "Low",
 					Score:       2,
 				},
@@ -543,7 +544,7 @@ func (p *parser) sendPendingFinding(ctx context.Context) error {
 	return nil
 }
 
-func (p *parser) sendFinding(ctx context.Context, finding *report.Finding) error {
+func (p *parser) sendFinding(ctx context.Context, finding *finding.Finding) error {
 	p.FindingReported = true
 
 	return p.sendReport(ctx, &report.Report{

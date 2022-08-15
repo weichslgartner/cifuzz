@@ -3,7 +3,7 @@ package sanitizer
 import (
 	"regexp"
 
-	"code-intelligence.com/cifuzz/pkg/report"
+	"code-intelligence.com/cifuzz/pkg/finding"
 	"code-intelligence.com/cifuzz/util/regexutil"
 )
 
@@ -16,7 +16,7 @@ var (
 	)
 )
 
-func ParseAsFinding(line string) *report.Finding {
+func ParseAsFinding(line string) *finding.Finding {
 	finding := parseAsRuntimeReport(line)
 	if finding != nil {
 		return finding
@@ -30,11 +30,11 @@ func ParseAsFinding(line string) *report.Finding {
 	return nil
 }
 
-func parseAsErrorReport(log string) *report.Finding {
+func parseAsErrorReport(log string) *finding.Finding {
 	result, found := regexutil.FindNamedGroupsMatch(errorPattern, log)
 	if found {
-		return &report.Finding{
-			Type:    report.ErrorType_CRASH, // aka Vulnerability
+		return &finding.Finding{
+			Type:    finding.ErrorType_CRASH, // aka Vulnerability
 			Details: result["error_type"],
 			Logs:    []string{log},
 		}
@@ -43,13 +43,13 @@ func parseAsErrorReport(log string) *report.Finding {
 	return nil
 }
 
-func parseAsRuntimeReport(log string) *report.Finding {
+func parseAsRuntimeReport(log string) *finding.Finding {
 	result, found := regexutil.FindNamedGroupsMatch(runtimeErrorStartPattern, log)
 	if !found {
 		return nil
 	}
-	return &report.Finding{
-		Type:    report.ErrorType_RUNTIME_ERROR,
+	return &finding.Finding{
+		Type:    finding.ErrorType_RUNTIME_ERROR,
 		Details: "undefined behaviour: " + result["error_type"],
 		Logs:    []string{log},
 	}

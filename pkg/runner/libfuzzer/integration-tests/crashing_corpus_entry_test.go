@@ -8,7 +8,7 @@ import (
 	"github.com/otiai10/copy"
 	"github.com/stretchr/testify/require"
 
-	"code-intelligence.com/cifuzz/pkg/report"
+	"code-intelligence.com/cifuzz/pkg/finding"
 )
 
 func TestIntegration_CrashingCorpusEntry(t *testing.T) {
@@ -27,7 +27,7 @@ func TestIntegration_CrashingCorpusEntry(t *testing.T) {
 		_, reports := test.Run(t)
 
 		CheckReports(t, reports, &CheckReportOptions{
-			ErrorType:   report.ErrorType_CRASH,
+			ErrorType:   finding.ErrorType_CRASH,
 			SourceFile:  "trigger_asan.c",
 			Details:     "heap-buffer-overflow",
 			NumFindings: 1,
