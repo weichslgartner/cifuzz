@@ -25,9 +25,14 @@ import (
 	"code-intelligence.com/cifuzz/util/stringutil"
 )
 
+type ReportHandlerOptions struct {
+	SeedCorpusDir string
+	PrintJSON     bool
+	Verbose       bool
+}
+
 type ReportHandler struct {
-	printJSON            bool
-	verbose              bool
+	*ReportHandlerOptions
 	usingUpdatingPrinter bool
 
 	printer      metrics.Printer
@@ -40,25 +45,22 @@ type ReportHandler struct {
 
 	numFindings    uint
 	numSeedsAtInit uint
-	seedCorpusDir  string
 
 	jsonOutput io.Writer
 }
 
-func NewReportHandler(seedCorpusDir string, printJSON, verbose bool) (*ReportHandler, error) {
+func NewReportHandler(options *ReportHandlerOptions) (*ReportHandler, error) {
 	var err error
 	h := &ReportHandler{
-		seedCorpusDir: seedCorpusDir,
-		printJSON:     printJSON,
-		verbose:       verbose,
-		startedAt:     time.Now(),
-		jsonOutput:    os.Stdout,
+		ReportHandlerOptions: options,
+		startedAt:            time.Now(),
+		jsonOutput:           os.Stdout,
 	}
 
 	// When --json was used, we don't want anything but JSON output on
 	// stdout, so we make the printer use stderr.
 	var printerOutput *os.File
-	if printJSON {
+	if h.PrintJSON {
 		printerOutput = os.Stderr
 	} else {
 		printerOutput = os.Stdout
@@ -98,11 +100,11 @@ func (h *ReportHandler) Handle(r *report.Report) error {
 
 		// Copy the input file to the seed corpus dir
 		if r.Finding.InputFile != "" {
-			err = os.MkdirAll(h.seedCorpusDir, 0755)
+			err = os.MkdirAll(h.SeedCorpusDir, 0755)
 			if err != nil {
 				return errors.WithStack(err)
 			}
-			err = copy.Copy(r.Finding.InputFile, filepath.Join(h.seedCorpusDir, r.Finding.Name))
+			err = copy.Copy(r.Finding.InputFile, filepath.Join(h.SeedCorpusDir, r.Finding.Name))
 			if err != nil {
 				return errors.WithStack(err)
 			}
@@ -110,7 +112,7 @@ func (h *ReportHandler) Handle(r *report.Report) error {
 	}
 
 	// Print report as JSON if the --json flag was specified
-	if h.printJSON {
+	if h.PrintJSON {
 		var jsonString string
 		// Print with color if the output stream is a TTY
 		if file, ok := h.jsonOutput.(*os.File); !ok || !term.IsTerminal(int(file.Fd())) {
@@ -149,13 +151,13 @@ func (h *ReportHandler) Handle(r *report.Report) error {
 		h.initFinished = true
 	}
 
-	if r.Finding != nil && !h.verbose {
+	if r.Finding != nil && !h.Verbose {
 		log.Print("\n")
 		log.Printf("=========================== Finding %d ===========================", h.numFindings)
 		log.Print(strings.Join(r.Finding.Logs, "\n"))
 
 		if r.Finding.InputFile != "" {
-			seedPath := fileutil.PrettifyPath(filepath.Join(h.seedCorpusDir, r.Finding.Name))
+			seedPath := fileutil.PrettifyPath(filepath.Join(h.SeedCorpusDir, r.Finding.Name))
 			log.Notef(`
 Note: The crashing input has been copied to the seed corpus at:
 

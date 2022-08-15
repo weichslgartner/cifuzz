@@ -37,7 +37,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestReportHandler_EmptyCorpus(t *testing.T) {
-	h, err := NewReportHandler("", false, false)
+	h, err := NewReportHandler(&ReportHandlerOptions{})
 	require.NoError(t, err)
 
 	initStartedReport := &report.Report{
@@ -51,7 +51,7 @@ func TestReportHandler_EmptyCorpus(t *testing.T) {
 }
 
 func TestReportHandler_NonEmptyCorpus(t *testing.T) {
-	h, err := NewReportHandler("", false, false)
+	h, err := NewReportHandler(&ReportHandlerOptions{})
 	require.NoError(t, err)
 
 	initStartedReport := &report.Report{
@@ -69,7 +69,7 @@ func TestReportHandler_NonEmptyCorpus(t *testing.T) {
 }
 
 func TestReportHandler_Metrics(t *testing.T) {
-	h, err := NewReportHandler("", false, false)
+	h, err := NewReportHandler(&ReportHandlerOptions{})
 	require.NoError(t, err)
 
 	printerOut := bytes.NewBuffer([]byte{})
@@ -89,7 +89,7 @@ func TestReportHandler_Metrics(t *testing.T) {
 }
 
 func TestReportHandler_Finding(t *testing.T) {
-	h, err := NewReportHandler("seed_corpus", false, false)
+	h, err := NewReportHandler(&ReportHandlerOptions{SeedCorpusDir: "seed_corpus"})
 	require.NoError(t, err)
 
 	// create an input file
@@ -109,12 +109,12 @@ func TestReportHandler_Finding(t *testing.T) {
 	require.NoError(t, err)
 
 	expectedOutputs := append([]string{"Finding 1"}, findingLogs...)
-	expectedOutputs = append(expectedOutputs, filepath.Join(h.seedCorpusDir, findingReport.Finding.Name))
+	expectedOutputs = append(expectedOutputs, filepath.Join(h.SeedCorpusDir, findingReport.Finding.Name))
 	checkOutput(t, logOutput, expectedOutputs...)
 }
 
 func TestReportHandler_PrintJSON(t *testing.T) {
-	h, err := NewReportHandler("", true, false)
+	h, err := NewReportHandler(&ReportHandlerOptions{PrintJSON: true})
 	require.NoError(t, err)
 
 	jsonOut := bytes.NewBuffer([]byte{})
@@ -133,7 +133,7 @@ func TestReportHandler_PrintJSON(t *testing.T) {
 }
 
 func TestReportHandler_GenerateName(t *testing.T) {
-	h, err := NewReportHandler("", true, false)
+	h, err := NewReportHandler(&ReportHandlerOptions{PrintJSON: true})
 	require.NoError(t, err)
 
 	findingLogs := []string{"Oops", "The program crashed"}
@@ -150,7 +150,7 @@ func TestReportHandler_GenerateName(t *testing.T) {
 }
 
 func TestReportHandler_NotOverrideName(t *testing.T) {
-	h, err := NewReportHandler("", true, false)
+	h, err := NewReportHandler(&ReportHandlerOptions{PrintJSON: true})
 	require.NoError(t, err)
 
 	findingLogs := []string{"Oops", "The program crashed"}
