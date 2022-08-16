@@ -3,10 +3,12 @@ package finding
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
+	"code-intelligence.com/cifuzz/internal/completion"
 	"code-intelligence.com/cifuzz/internal/config"
 	"code-intelligence.com/cifuzz/pkg/cmdutils"
 	"code-intelligence.com/cifuzz/pkg/finding"
@@ -19,10 +21,11 @@ type cmdOpts struct {
 func New() *cobra.Command {
 	opts := &cmdOpts{}
 	findingCmd := &cobra.Command{
-		Use:     "finding",
-		Aliases: []string{"findings"},
-		Short:   "List and show findings",
-		Args:    cobra.MaximumNArgs(1),
+		Use:               "finding",
+		Aliases:           []string{"findings"},
+		Short:             "List and show findings",
+		Args:              cobra.MaximumNArgs(1),
+		ValidArgsFunction: completion.ValidFindings,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return run(cmd, args, opts)
 		},
@@ -45,6 +48,8 @@ func run(cmd *cobra.Command, args []string, opts *cmdOpts) (err error) {
 	}
 
 	if len(args) == 0 {
+		// If called without arguments, `cifuzz findings` lists the
+		// findings
 		findings, err := finding.ListFindings(projectDir)
 		if err != nil {
 			return err
@@ -56,7 +61,21 @@ func run(cmd *cobra.Command, args []string, opts *cmdOpts) (err error) {
 		for _, f := range findings {
 			_, _ = fmt.Fprintln(cmd.OutOrStdout(), f.Name)
 		}
+		return nil
 	}
+
+	// If called with one argument, `cifuzz finding <finding name>`
+	// prints the information available for the specified finding
+	findingName := args[0]
+	f, err := finding.LoadFinding(projectDir, findingName)
+	if errors.Is(err, finding.ErrNotExist) {
+		log.Errorf(err, "Finding %s does not exist", findingName)
+		return cmdutils.WrapSilentError(err)
+	}
+	if err != nil {
+		return err
+	}
+	_, _ = fmt.Fprintln(cmd.OutOrStdout(), strings.Join(f.Logs, "\n"))
 
 	return nil
 }

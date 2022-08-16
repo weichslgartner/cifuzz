@@ -16,6 +16,26 @@ const nameCrashingInput = "crashing-input"
 const nameJsonFile = "finding.json"
 const nameFindingDir = ".cifuzz-findings"
 
+// A NotExistError indicates that the specified finding does not exist
+type NotExistError struct {
+	err error
+}
+
+func (e NotExistError) Error() string {
+	return e.err.Error()
+}
+
+func (e NotExistError) Unwrap() error {
+	return e.err
+}
+
+// WrapNotExistError wraps an existing error into a
+// NotExistError to hint on disabling the sandbox when the error
+// is handled.
+func WrapNotExistError(err error) error {
+	return &NotExistError{err}
+}
+
 type Finding struct {
 	Name               string        `json:"name,omitempty"`
 	Type               ErrorType     `json:"type,omitempty"`
@@ -149,6 +169,8 @@ func (f *Finding) moveInputFile(projectDir, findingDir string) error {
 	return nil
 }
 
+// ListFindings parses the JSON files of all findings and returns the
+// result.
 func ListFindings(projectDir string) ([]*Finding, error) {
 	findingsDir := filepath.Join(projectDir, nameFindingDir)
 	entries, err := os.ReadDir(findingsDir)
@@ -161,18 +183,33 @@ func ListFindings(projectDir string) ([]*Finding, error) {
 
 	var res []*Finding
 	for _, e := range entries {
-		jsonPath := filepath.Join(findingsDir, e.Name(), nameJsonFile)
-		bytes, err := os.ReadFile(jsonPath)
+		f, err := LoadFinding(projectDir, e.Name())
 		if err != nil {
-			return nil, errors.WithStack(err)
+			return nil, err
 		}
-		var f Finding
-		err = json.Unmarshal(bytes, &f)
-		if err != nil {
-			return nil, errors.WithStack(err)
-		}
-		res = append(res, &f)
+		res = append(res, f)
 	}
 
 	return res, nil
+}
+
+// LoadFinding parses the JSON file of the specified finding and returns
+// the result.
+// If the specified finding does not exist, a NotExistError is returned.
+func LoadFinding(projectDir, findingName string) (*Finding, error) {
+	findingDir := filepath.Join(projectDir, nameFindingDir, findingName)
+	jsonPath := filepath.Join(findingDir, nameJsonFile)
+	bytes, err := os.ReadFile(jsonPath)
+	if os.IsNotExist(err) {
+		return nil, WrapNotExistError(err)
+	}
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	var f Finding
+	err = json.Unmarshal(bytes, &f)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return &f, nil
 }
