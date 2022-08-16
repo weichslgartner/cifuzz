@@ -3,6 +3,7 @@ package cmake
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"io"
 	"os"
 	"os/exec"
@@ -20,6 +21,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"code-intelligence.com/cifuzz/pkg/artifact"
+	"code-intelligence.com/cifuzz/pkg/finding"
 	"code-intelligence.com/cifuzz/pkg/install"
 	"code-intelligence.com/cifuzz/util/executil"
 	"code-intelligence.com/cifuzz/util/fileutil"
@@ -104,6 +106,10 @@ func TestIntegration_CMake_InitCreateRunCoverageBundle(t *testing.T) {
 	err = stderrPipe.Close()
 	require.NoError(t, err)
 
+	// Check that the findings command doesn't list any findings yet
+	findings := getFindings(t, cifuzz, dir)
+	require.Empty(t, findings)
+
 	// Run the (empty) fuzz test
 	runFuzzer(t, cifuzz, dir, regexp.MustCompile(`^paths: \d+`), true)
 
@@ -115,6 +121,11 @@ func TestIntegration_CMake_InitCreateRunCoverageBundle(t *testing.T) {
 	modifyFuzzTestToCallFunction(t, fuzzTestPath)
 	// Run the fuzz test
 	runFuzzer(t, cifuzz, dir, regexp.MustCompile(`^==\d*==ERROR: AddressSanitizer: heap-use-after-free`), false)
+
+	// Check that the findings command lists the finding
+	findings = getFindings(t, cifuzz, dir)
+	require.Len(t, findings, 1)
+	require.Contains(t, findings[0].Details, "heap-use-after-free")
 
 	// Check that options set via the config file are respected
 	configFileContent := `engine-args:
@@ -443,4 +454,16 @@ func runArchivedFuzzer(t *testing.T, archiveDir string) {
 	err = cmd.Run()
 	require.NoError(t, err)
 	require.FileExists(t, coverageProfile)
+}
+
+func getFindings(t *testing.T, cifuzz string, dir string) []*finding.Finding {
+	cmd := executil.Command(cifuzz, "findings", "--json")
+	cmd.Dir = dir
+	output, err := cmd.Output()
+	require.NoError(t, err)
+
+	var findings []*finding.Finding
+	err = json.Unmarshal(output, &findings)
+	require.NoError(t, err)
+	return findings
 }
