@@ -20,6 +20,11 @@ type options struct {
 	PrintJSON bool `mapstructure:"print-json"`
 }
 
+type findingCmd struct {
+	*cobra.Command
+	opts *options
+}
+
 func New() *cobra.Command {
 	opts := &options{}
 	cmd := &cobra.Command{
@@ -34,8 +39,9 @@ func New() *cobra.Command {
 			// were bound to the flags of other commands before.
 			cmdutils.ViperMustBindPFlag("print-json", cmd.Flags().Lookup("json"))
 		},
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return run(cmd, args, opts)
+		RunE: func(c *cobra.Command, args []string) error {
+			cmd := findingCmd{Command: c, opts: opts}
+			return cmd.run(args)
 		},
 	}
 
@@ -46,7 +52,7 @@ func New() *cobra.Command {
 	return cmd
 }
 
-func run(cmd *cobra.Command, args []string, opts *options) error {
+func (cmd *findingCmd) run(args []string) error {
 	projectDir, err := config.FindProjectDir()
 	if errors.Is(err, os.ErrNotExist) {
 		// The project directory doesn't exist, this is an expected
@@ -67,7 +73,7 @@ func run(cmd *cobra.Command, args []string, opts *options) error {
 			return err
 		}
 
-		if opts.PrintJSON {
+		if cmd.opts.PrintJSON {
 			s, err := stringutil.ToJsonString(findings)
 			if err != nil {
 				return err
@@ -90,7 +96,7 @@ func run(cmd *cobra.Command, args []string, opts *options) error {
 	// prints the information available for the specified finding
 	findingName := args[0]
 	f, err := finding.LoadFinding(projectDir, findingName)
-	if errors.Is(err, finding.ErrNotExist) {
+	if finding.IsNotExistError(err) {
 		log.Errorf(err, "Finding %s does not exist", findingName)
 		return cmdutils.WrapSilentError(err)
 	}
@@ -98,7 +104,7 @@ func run(cmd *cobra.Command, args []string, opts *options) error {
 		return err
 	}
 
-	if opts.PrintJSON {
+	if cmd.opts.PrintJSON {
 		s, err := stringutil.ToJsonString(f)
 		if err != nil {
 			return err

@@ -36,6 +36,11 @@ func WrapNotExistError(err error) error {
 	return &NotExistError{err}
 }
 
+func IsNotExistError(err error) bool {
+	var notExistErr *NotExistError
+	return errors.As(err, &notExistErr)
+}
+
 type Finding struct {
 	Name               string        `json:"name,omitempty"`
 	Type               ErrorType     `json:"type,omitempty"`
