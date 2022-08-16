@@ -1,0 +1,12 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "cifuzz coverage (current test)",
+      "type": "shell",
+      "command": "cifuzz",
+      "args": ["coverage", "-f", "lcov", "-o", "lcov.info", "${fileBasenameNoExtension}"],
+      "problemMatcher": []
+    }
+  ]
+}

@@ -25,6 +25,7 @@ type RunfilesFinder interface {
 	Minijail0Path() (string, error)
 	ProcessWrapperPath() (string, error)
 	ReplayerSourcePath() (string, error)
+	VSCodeTasksPath() (string, error)
 }
 
 var Finder RunfilesFinder
