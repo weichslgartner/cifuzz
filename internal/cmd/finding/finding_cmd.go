@@ -13,28 +13,40 @@ import (
 	"code-intelligence.com/cifuzz/pkg/cmdutils"
 	"code-intelligence.com/cifuzz/pkg/finding"
 	"code-intelligence.com/cifuzz/pkg/log"
+	"code-intelligence.com/cifuzz/util/stringutil"
 )
 
-type cmdOpts struct {
+type options struct {
+	PrintJSON bool `mapstructure:"print-json"`
 }
 
 func New() *cobra.Command {
-	opts := &cmdOpts{}
-	findingCmd := &cobra.Command{
+	opts := &options{}
+	cmd := &cobra.Command{
 		Use:               "finding",
 		Aliases:           []string{"findings"},
 		Short:             "List and show findings",
 		Args:              cobra.MaximumNArgs(1),
 		ValidArgsFunction: completion.ValidFindings,
+		PreRun: func(cmd *cobra.Command, args []string) {
+			// Bind viper keys to flags. We can't do this in the New
+			// function, because that would re-bind viper keys which
+			// were bound to the flags of other commands before.
+			cmdutils.ViperMustBindPFlag("print-json", cmd.Flags().Lookup("json"))
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return run(cmd, args, opts)
 		},
 	}
 
-	return findingCmd
+	// Note: If a flag should be configurable via cifuzz.yaml as well,
+	//       bind it to viper in the PreRun function.
+	cmd.Flags().BoolVar(&opts.PrintJSON, "json", false, "Print output as JSON")
+
+	return cmd
 }
 
-func run(cmd *cobra.Command, args []string, opts *cmdOpts) (err error) {
+func run(cmd *cobra.Command, args []string, opts *options) error {
 	projectDir, err := config.FindProjectDir()
 	if errors.Is(err, os.ErrNotExist) {
 		// The project directory doesn't exist, this is an expected
@@ -54,6 +66,16 @@ func run(cmd *cobra.Command, args []string, opts *cmdOpts) (err error) {
 		if err != nil {
 			return err
 		}
+
+		if opts.PrintJSON {
+			s, err := stringutil.ToJsonString(findings)
+			if err != nil {
+				return err
+			}
+			_, _ = fmt.Fprintln(cmd.OutOrStdout(), s)
+			return nil
+		}
+
 		if len(findings) == 0 {
 			log.Print("This project doesn't have any findings yet")
 			return nil
@@ -75,7 +97,16 @@ func run(cmd *cobra.Command, args []string, opts *cmdOpts) (err error) {
 	if err != nil {
 		return err
 	}
-	_, _ = fmt.Fprintln(cmd.OutOrStdout(), strings.Join(f.Logs, "\n"))
+
+	if opts.PrintJSON {
+		s, err := stringutil.ToJsonString(f)
+		if err != nil {
+			return err
+		}
+		_, _ = fmt.Fprintln(cmd.OutOrStdout(), s)
+	} else {
+		_, _ = fmt.Fprintln(cmd.OutOrStdout(), strings.Join(f.Logs, "\n"))
+	}
 
 	return nil
 }
