@@ -1,6 +1,7 @@
 package cmdutils
 
 import (
+	stdErrors "errors"
 	"fmt"
 	"io"
 	"os/exec"
@@ -11,7 +12,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-var ErrSilent = WrapSilentError(errors.New("SilentError"))
+var ErrSilent = WrapSilentError(stdErrors.New("SilentError"))
 
 // SilentError indicates that the error message should not be printed
 // when the error is handled.
