@@ -18,6 +18,7 @@ import (
 	"golang.org/x/term"
 
 	"code-intelligence.com/cifuzz/internal/cmd/run/report_handler/metrics"
+	"code-intelligence.com/cifuzz/internal/cmd/run/report_handler/stacktrace"
 	"code-intelligence.com/cifuzz/internal/names"
 	"code-intelligence.com/cifuzz/pkg/log"
 	"code-intelligence.com/cifuzz/pkg/report"
@@ -87,6 +88,12 @@ func (h *ReportHandler) Handle(r *report.Report) error {
 	if r.Finding != nil {
 		// Count the number of findings for the final metrics
 		h.numFindings += 1
+
+		parser := stacktrace.NewParser(h.ProjectDir)
+		r.Finding.StackTrace, err = parser.Parse(r.Finding.Logs)
+		if err != nil {
+			return err
+		}
 
 		if r.Finding.Name == "" {
 			// create a name based on a hash of the crashing input

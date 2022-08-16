@@ -9,6 +9,7 @@ import (
 	"github.com/otiai10/copy"
 	"github.com/pkg/errors"
 
+	"code-intelligence.com/cifuzz/internal/cmd/run/report_handler/stacktrace"
 	"code-intelligence.com/cifuzz/pkg/log"
 )
 
@@ -52,6 +53,10 @@ type Finding struct {
 	Tag                uint64        `json:"tag,omitempty"`
 	ShortDescription   string        `json:"short_description,omitempty"`
 	InputFile          string
+
+	// Note: The following fields don't exist in the protobuf
+	// representation used in the Code Intelligence core repository.
+	StackTrace []*stacktrace.StackFrame `json:"stack_trace,omitempty"`
 }
 
 type ErrorType string
