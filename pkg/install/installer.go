@@ -182,6 +182,11 @@ func (i *InstallationBundler) BuildCIFuzzAndDeps() error {
 		return err
 	}
 
+	err = i.CopyVSCodeTasks()
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -354,6 +359,29 @@ func (i *InstallationBundler) CopyCMakeIntegration() error {
 		return errors.WithStack(err)
 	}
 	err = copy.Copy(launcherSrc, filepath.Join(destDir, "src", "launcher.cpp"))
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	return nil
+}
+
+func (i *InstallationBundler) CopyVSCodeTasks() error {
+	var err error
+	err = i.Lock()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		err = i.Unlock()
+		if err != nil {
+			log.Printf("error: %v", err)
+		}
+	}()
+
+	tasksSrc := filepath.Join(i.projectDir, "share", "tasks.json")
+	destDir := filepath.Join(i.shareDir(), "share", "tasks.json")
+	err = copy.Copy(tasksSrc, destDir)
 	if err != nil {
 		return errors.WithStack(err)
 	}
