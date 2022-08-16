@@ -145,6 +145,8 @@ func (h *ReportHandler) Handle(r *report.Report) error {
 func (h *ReportHandler) handleFinding(f *finding.Finding, print bool) error {
 	var err error
 
+	f.CreatedAt = time.Now()
+
 	// Count the number of findings for the final metrics
 	h.numFindings += 1
 

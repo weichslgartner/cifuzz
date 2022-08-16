@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/alexflint/go-filemutex"
 	"github.com/otiai10/copy"
@@ -36,6 +37,7 @@ type Finding struct {
 
 	// Note: The following fields don't exist in the protobuf
 	// representation used in the Code Intelligence core repository.
+	CreatedAt  time.Time                `json:"created_at,omitempty"`
 	StackTrace []*stacktrace.StackFrame `json:"stack_trace,omitempty"`
 
 	seedPath string
