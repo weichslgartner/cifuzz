@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -277,6 +278,11 @@ func ListFindings(projectDir string) ([]*Finding, error) {
 		}
 		res = append(res, f)
 	}
+
+	// Sort the findings by date, starting with the newest
+	sort.SliceStable(res, func(i, j int) bool {
+		return res[i].CreatedAt.After(res[j].CreatedAt)
+	})
 
 	return res, nil
 }
