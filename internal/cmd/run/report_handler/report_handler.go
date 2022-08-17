@@ -1,7 +1,6 @@
 package report_handler
 
 import (
-	"crypto/sha1"
 	"fmt"
 	"io"
 	"os"
@@ -97,9 +96,7 @@ func (h *ReportHandler) Handle(r *report.Report) error {
 
 		if r.Finding.Name == "" {
 			// create a name based on a hash of the crashing input
-			h := sha1.New()
-			h.Write(r.Finding.InputData)
-			r.Finding.Name = names.GetDeterministicName(h.Sum(nil))
+			r.Finding.Name = names.GetDeterministicName(r.Finding.InputData)
 		}
 
 		err := r.Finding.Save(h.ProjectDir)

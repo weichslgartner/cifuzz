@@ -1,6 +1,7 @@
 package names
 
 import (
+	"crypto/sha1"
 	"encoding/binary"
 	"math/rand"
 	_ "unsafe"
@@ -19,17 +20,13 @@ var (
 	right [237]string
 )
 
-// GetDeterministicName will return the same name when given the same
-// seed value. It also uses only the first 8 bytes of the seed value
-// so we recommend inserting a hash value
+// GetDeterministicName generates a name from the list of adjectives and
+// surnames from Docker's namesgenerator package, formatted as
+// "adjective_surname". For example 'focused_turing'.
+// The name is chosen deterministically based on the specified seed.
 func GetDeterministicName(seedValue []byte) string {
-	// make sure the seed is at least 8 bytes long
-	if len(seedValue) < 8 {
-		for i := len(seedValue); i < 8; i++ {
-			seedValue = append(seedValue, 0)
-		}
-	}
-	source := rand.NewSource(int64(binary.BigEndian.Uint64(seedValue)))
+	hash := sha1.Sum(seedValue)
+	source := rand.NewSource(int64(binary.BigEndian.Uint64(hash[:])))
 	r := rand.New(source)
 	return left[r.Intn(len(left))] + "_" + right[r.Intn(len(right))]
 }
