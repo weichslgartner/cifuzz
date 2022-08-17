@@ -79,6 +79,15 @@ func ParseProjectConfig(opts interface{}) (string, error) {
 		return "", errors.WithStack(err)
 	}
 
+	// viper.Unmarshal doesn't return an error if the timeout value is
+	// missing a unit, so we check that manually
+	if viper.GetString("timeout") != "" {
+		_, err = time.ParseDuration(viper.GetString("timeout"))
+		if err != nil {
+			return "", errors.WithStack(fmt.Errorf("error decoding 'timeout': %w", err))
+		}
+	}
+
 	err = viper.Unmarshal(opts)
 	if err != nil {
 		return "", errors.WithStack(err)
