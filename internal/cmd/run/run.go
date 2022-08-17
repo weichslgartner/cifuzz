@@ -135,7 +135,8 @@ depends on the build system configured for the project:
 
 			projectDir, err := config.ParseProjectConfig(opts)
 			if err != nil {
-				return err
+				log.Errorf(err, "Failed to parse cifuzz.yaml: %v", err.Error())
+				return cmdutils.WrapSilentError(err)
 			}
 			opts.ProjectDir = projectDir
 
