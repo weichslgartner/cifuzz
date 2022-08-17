@@ -1,6 +1,8 @@
 package report_handler
 
 import (
+	"bytes"
+	"encoding/gob"
 	"fmt"
 	"io"
 	"os"
@@ -95,8 +97,15 @@ func (h *ReportHandler) Handle(r *report.Report) error {
 		}
 
 		if r.Finding.Name == "" {
-			// create a name based on a hash of the crashing input
-			r.Finding.Name = names.GetDeterministicName(r.Finding.InputData)
+			// create a name based on a bytes representation of the
+			// information we store from the stack trace (function name,
+			// source file, line and column).
+			var b bytes.Buffer
+			err := gob.NewEncoder(&b).Encode(r.Finding.StackTrace)
+			if err != nil {
+				return errors.WithStack(err)
+			}
+			r.Finding.Name = names.GetDeterministicName(b.Bytes())
 		}
 
 		err := r.Finding.Save(h.ProjectDir)
