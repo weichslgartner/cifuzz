@@ -11,8 +11,8 @@ import (
 )
 
 // TODO: The reload command allows to reload the fuzz test names used
-//       for autocompletion from the cmake config. It's only meant as a
-//       temporary solution until we find a better solution.
+// for autocompletion from the cmake config. It's only meant as a
+// temporary solution until we find a better solution.
 type reloadCmd struct {
 	*cobra.Command
 

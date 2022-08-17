@@ -17,7 +17,7 @@ import (
 // The keys in manifest correspond to the path within the archive, the corresponding value is expected to be the
 // absolute path of the file or directory on disk.
 // Note: WriteArchive *does not* (recursively) traverse directories to add their contents to the archive. If this is
-//       desired, use AddDirToManifest to explicitly add the contents to the manifest before calling WriteArchive.
+// desired, use AddDirToManifest to explicitly add the contents to the manifest before calling WriteArchive.
 func WriteArchive(out io.Writer, manifest map[string]string) error {
 	gw := gzip.NewWriter(out)
 	defer gw.Close()

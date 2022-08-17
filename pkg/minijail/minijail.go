@@ -85,7 +85,7 @@ func BindingFromString(s string) (*Binding, error) {
 
 // Deprecated: Use AddMinijailBindingToEnv instead, which doesn't use os.Setenv.
 // TODO(adrian): AddMinijailBindingDeprecated will be removed once all adapters are
-//               rewritten (CIFUZZ-1289).
+// rewritten (CIFUZZ-1289).
 func AddMinijailBindingDeprecated(path string, writable WritableOption) error {
 	binding, err := getMinijailBinding(path, writable)
 	if err != nil {

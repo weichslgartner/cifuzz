@@ -25,30 +25,29 @@ const DeprecatedSanitizerErrorExitCode = 1
 
 // Exit code used by libFuzzer when libFuzzer itself reports a bug. See
 //
-//   https://github.com/llvm/llvm-project/blob/75e33f71c2dae584b13a7d1186ae0a038ba98838/compiler-rt/lib/fuzzer/FuzzerOptions.h#L26
+//	https://github.com/llvm/llvm-project/blob/75e33f71c2dae584b13a7d1186ae0a038ba98838/compiler-rt/lib/fuzzer/FuzzerOptions.h#L26
 //
 // This is configurable via the `-error_exitcode` libFuzzer flag, see
 //
-//   https://llvm.org/docs/LibFuzzer.html
+//	https://llvm.org/docs/LibFuzzer.html
 //
 // This is also used by jazzer to indicate that an issue was found.
 const LibFuzzerErrorExitCode = 77
 
 // Exit code used by libFuzzer on OOM errors. See
 //
-//   https://github.com/llvm/llvm-project/blob/75e33f71c2dae584b13a7d1186ae0a038ba98838/compiler-rt/lib/fuzzer/FuzzerOptions.h#L24
+//	https://github.com/llvm/llvm-project/blob/75e33f71c2dae584b13a7d1186ae0a038ba98838/compiler-rt/lib/fuzzer/FuzzerOptions.h#L24
 //
 // This is (currently) not configurable via any libFuzzer flag.
 const LibFuzzerOOMExitCode = 71
 
 // Exit code used by libFuzzer on timeout errors. See
 //
-//   https://github.com/llvm/llvm-project/blob/75e33f71c2dae584b13a7d1186ae0a038ba98838/compiler-rt/lib/fuzzer/FuzzerOptions.h#L23
+//	https://github.com/llvm/llvm-project/blob/75e33f71c2dae584b13a7d1186ae0a038ba98838/compiler-rt/lib/fuzzer/FuzzerOptions.h#L23
 //
 // This is configurable via the `-timeout_exitcode` libFuzzer flag, see
 //
-//   https://llvm.org/docs/LibFuzzer.html
-//
+//	https://llvm.org/docs/LibFuzzer.html
 const LibFuzzerTimeoutExitCode = 70
 
 var defaultSanitizerOptions = map[string]string{
