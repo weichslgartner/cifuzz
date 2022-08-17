@@ -31,9 +31,8 @@
 #fuzz-test-args:
 # - --config-file=path/to/config
 
-## Maximum time in seconds to run the fuzz tests. The default is to run
-## indefinitely.
-#timeout: 300
+## Maximum time to run fuzz tests. The default is to run indefinitely.
+#timeout: 30m
 
 ## By default, fuzz tests are executed in a sandbox to prevent accidental
 ## damage to the system. Set to false to run fuzz tests unsandboxed.

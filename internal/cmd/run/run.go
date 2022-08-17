@@ -159,7 +159,7 @@ depends on the build system configured for the project:
 	// TODO(afl): Also link to https://www.mankier.com/8/afl-fuzz
 	cmd.Flags().StringArray("engine-arg", nil, "Command-line `argument` to pass to the fuzzing engine.\nSee https://llvm.org/docs/LibFuzzer.html#options.")
 	cmd.Flags().StringArray("fuzz-test-arg", nil, "Command-line `argument` to pass to the fuzz test.")
-	cmd.Flags().Duration("timeout", 0, "Maximum time in seconds to run the fuzz test. The default is to run indefinitely.")
+	cmd.Flags().Duration("timeout", 0, "Maximum time to run the fuzz test, e.g. \"30m\", \"1h\". The default is to run indefinitely.")
 	cmd.Flags().Bool("use-sandbox", false, "By default, fuzz tests are executed in a sandbox to prevent accidental damage to the system.\nUse --use-sandbox=false to run the fuzz test unsandboxed.\nOnly supported on Linux.")
 	viper.SetDefault("use-sandbox", runtime.GOOS == "linux")
 	cmd.Flags().BoolVar(&opts.PrintJSON, "json", false, "Print output as JSON")
