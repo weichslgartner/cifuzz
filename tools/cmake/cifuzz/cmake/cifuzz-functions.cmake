@@ -2,7 +2,7 @@
 #       Explanations of these flags are provided in that file.
 function(enable_fuzz_testing)
   if(${CMAKE_MINIMUM_REQUIRED_VERSION} VERSION_LESS 3.16)
-    message(FATAL_ERROR "cifuzz: CMake minimum version 3.16 required, got ${CMAKE_MINIMUM_REQUIRED_VERSION}")
+    message(FATAL_ERROR "cifuzz: cmake_minimum_required(VERSION 3.16) or higher required, got ${CMAKE_MINIMUM_REQUIRED_VERSION}")
   endif()
 
   # Remove the metadata directory we populate with fuzz test target information at configuration time so that e.g.
