@@ -184,12 +184,10 @@ func (c *runCmd) run() error {
 	// Initialize the report handler. Only do this right before we start
 	// the fuzz test, because this is storing a timestamp which is used
 	// to figure out how long the fuzzing run is running.
-	verbose := viper.GetBool("verbose")
 	c.reportHandler, err = report_handler.NewReportHandler(&report_handler.ReportHandlerOptions{
 		ProjectDir:    c.opts.ProjectDir,
 		SeedCorpusDir: buildResult.SeedCorpus,
 		PrintJSON:     c.opts.PrintJSON,
-		Verbose:       verbose,
 	})
 	if err != nil {
 		return err

@@ -6,14 +6,12 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"strings"
 	"text/tabwriter"
 	"time"
 
 	"github.com/gookit/color"
 	"github.com/hokaccha/go-prettyjson"
-	"github.com/otiai10/copy"
 	"github.com/pkg/errors"
 	"github.com/pterm/pterm"
 	"golang.org/x/term"
@@ -21,6 +19,7 @@ import (
 	"code-intelligence.com/cifuzz/internal/cmd/run/report_handler/metrics"
 	"code-intelligence.com/cifuzz/internal/cmd/run/report_handler/stacktrace"
 	"code-intelligence.com/cifuzz/internal/names"
+	"code-intelligence.com/cifuzz/pkg/finding"
 	"code-intelligence.com/cifuzz/pkg/log"
 	"code-intelligence.com/cifuzz/pkg/report"
 	"code-intelligence.com/cifuzz/util/fileutil"
@@ -31,7 +30,6 @@ type ReportHandlerOptions struct {
 	ProjectDir    string
 	SeedCorpusDir string
 	PrintJSON     bool
-	Verbose       bool
 }
 
 type ReportHandler struct {
@@ -87,42 +85,9 @@ func (h *ReportHandler) Handle(r *report.Report) error {
 	var err error
 
 	if r.Finding != nil {
-		// Count the number of findings for the final metrics
-		h.numFindings += 1
-
-		parser := stacktrace.NewParser(h.ProjectDir)
-		r.Finding.StackTrace, err = parser.Parse(r.Finding.Logs)
+		err := h.handleFinding(r.Finding, !h.PrintJSON)
 		if err != nil {
 			return err
-		}
-
-		if r.Finding.Name == "" {
-			// create a name based on a bytes representation of the
-			// information we store from the stack trace (function name,
-			// source file, line and column).
-			var b bytes.Buffer
-			err := gob.NewEncoder(&b).Encode(r.Finding.StackTrace)
-			if err != nil {
-				return errors.WithStack(err)
-			}
-			r.Finding.Name = names.GetDeterministicName(b.Bytes())
-		}
-
-		err := r.Finding.Save(h.ProjectDir)
-		if err != nil {
-			return err
-		}
-
-		// Copy the input file to the seed corpus dir
-		if r.Finding.InputFile != "" {
-			err = os.MkdirAll(h.SeedCorpusDir, 0755)
-			if err != nil {
-				return errors.WithStack(err)
-			}
-			err = copy.Copy(r.Finding.GetInputFile(h.ProjectDir), filepath.Join(h.SeedCorpusDir, r.Finding.Name))
-			if err != nil {
-				return errors.WithStack(err)
-			}
 		}
 	}
 
@@ -166,14 +131,81 @@ func (h *ReportHandler) Handle(r *report.Report) error {
 		h.initFinished = true
 	}
 
-	if r.Finding != nil && !h.Verbose {
-		log.Print("\n")
-		log.Printf("=========================== Finding %d ===========================", h.numFindings)
-		log.Print(strings.Join(r.Finding.Logs, "\n"))
+	if r.Metric != nil {
+		h.lastMetrics = r.Metric
+		if h.firstMetrics == nil {
+			h.firstMetrics = r.Metric
+		}
+		h.printer.PrintMetrics(r.Metric)
+	}
 
-		if r.Finding.InputFile != "" {
-			seedPath := fileutil.PrettifyPath(filepath.Join(h.SeedCorpusDir, r.Finding.Name))
-			log.Notef(`
+	return nil
+}
+
+func (h *ReportHandler) handleFinding(f *finding.Finding, print bool) error {
+	var err error
+
+	// Count the number of findings for the final metrics
+	h.numFindings += 1
+
+	// Parse the stack trace
+	f.StackTrace, err = stacktrace.NewParser(h.ProjectDir).Parse(f.Logs)
+	if err != nil {
+		return err
+	}
+
+	// create a name based on a bytes representation of the
+	// information we store from the stack trace (function name,
+	// source file, line and column).
+	var b bytes.Buffer
+	err = gob.NewEncoder(&b).Encode(f.StackTrace)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	f.Name = names.GetDeterministicName(b.Bytes())
+
+	var isDuplicate bool
+	err = f.Save(h.ProjectDir)
+	if finding.IsAlreadyExistsError(err) {
+		isDuplicate = true
+	} else if err != nil {
+		return err
+	}
+
+	if f.InputFile != "" {
+		err = f.MoveInputFile(h.ProjectDir, h.SeedCorpusDir)
+		if err != nil {
+			return err
+		}
+	}
+
+	if !print {
+		return nil
+	}
+
+	log.Print("\n")
+	log.Printf("=========================== Finding %d ===========================", h.numFindings)
+	log.Print(strings.Join(f.Logs, "\n"))
+
+	switch {
+	case isDuplicate && f.GetSeedPath() == "":
+		// The finding is a duplicate and the input is also already known
+		log.Notef(`
+Note: This seems to be a duplicate of finding %s.
+`, f.Name)
+
+	case isDuplicate && f.GetSeedPath() != "":
+		// The finding is a duplicate but the input is new
+		log.Notef(`
+Note: This seems to be a duplicate of finding %s with a
+new crashing input. The input has been copied to the seed corpus at:
+
+    %s
+
+`, f.Name, fileutil.PrettifyPath(f.GetSeedPath()))
+
+	case f.GetSeedPath() != "":
+		log.Notef(`
 Note: The crashing input has been copied to the seed corpus at:
 
     %s
@@ -184,19 +216,10 @@ regression tests. For more information on regression tests, see:
 
     https://github.com/CodeIntelligenceTesting/cifuzz#regression-testing
 
-`, seedPath)
-		}
-
-		log.Print("=================================================================")
+`, fileutil.PrettifyPath(f.GetSeedPath()))
 	}
 
-	if r.Metric != nil {
-		h.lastMetrics = r.Metric
-		if h.firstMetrics == nil {
-			h.firstMetrics = r.Metric
-		}
-		h.printer.PrintMetrics(r.Metric)
-	}
+	log.Print("=================================================================")
 
 	return nil
 }

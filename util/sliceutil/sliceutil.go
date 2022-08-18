@@ -52,3 +52,15 @@ func objectsAreEqual(expected, actual interface{}) bool {
 	}
 	return bytes.Equal(exp, act)
 }
+
+func Equal[T comparable](a, b []T) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
+}
