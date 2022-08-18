@@ -328,6 +328,19 @@ func assembleArtifacts(fuzzTest string, buildResult *build.Result, projectDir st
 	fuzzTestArchivePath := filepath.Join(buildArtifactsPrefix, fuzzTestExecutableRelPath)
 	archiveManifest[fuzzTestArchivePath] = fuzzTestExecutableAbsPath
 
+	// On macOS, debug information is collected in a separate .dSYM file. We bundle it in to get source locations
+	// resolved in stack traces.
+	fuzzTestDsymAbsPath := fuzzTestExecutableAbsPath + ".dSYM"
+	dsymExists, err := fileutil.Exists(fuzzTestDsymAbsPath)
+	if err != nil {
+		err = errors.WithStack(err)
+		return
+	}
+	if dsymExists {
+		fuzzTestDsymArchivePath := fuzzTestArchivePath + ".dSYM"
+		archiveManifest[fuzzTestDsymArchivePath] = fuzzTestDsymAbsPath
+	}
+
 	// Add the runtime dependencies of the fuzz test executable.
 	externalLibrariesPrefix := ""
 depsLoop:

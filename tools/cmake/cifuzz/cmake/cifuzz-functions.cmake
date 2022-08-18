@@ -191,6 +191,16 @@ function(add_fuzz_test name)
     message(FATAL_ERROR "cifuzz: Unsupported value for CIFUZZ_ENGINE: ${CIFUZZ_ENGINE}")
   endif()
 
+  # On macOS, debug information is only contained in the object files by default. llvm-symbolizer, which we use to
+  # resolve addresses in stack traces to source location, doesn't read the object files. We thus need to invoked
+  # dsymutil to link the debug information into <name>.dSYM explicitly.
+  if(APPLE)
+    add_custom_command(TARGET "${name}"
+                       POST_BUILD
+                       COMMAND dsymutil ARGS $<TARGET_FILE:${name}>
+                       BYPRODUCTS "${name}.dSYM")
+  endif()
+
   set(_seed_corpus_suffix _seed_corpus)
   set(_source_seed_corpus "${CMAKE_CURRENT_SOURCE_DIR}/${name}${_seed_corpus_suffix}")
   # Convert path separators to '\' (Windows only) and escape all backslashes for a C string literal.
