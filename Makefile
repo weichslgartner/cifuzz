@@ -11,6 +11,7 @@ else
 	endif
 	ifeq ($(UNAME_S),Darwin)
 		current_os = darwin
+		UNAME_P := $(shell uname -p)
 	endif
 endif
 
@@ -74,7 +75,11 @@ build/windows: deps
 
 .PHONY: build/darwin
 build/darwin: deps
+ifeq ($(UNAME_P), arm)
+	env GOOS=darwin GOARCH=arm64 go build -o $(binary_base_path)_darwin cmd/cifuzz/main.go
+else
 	env GOOS=darwin GOARCH=amd64 go build -o $(binary_base_path)_darwin cmd/cifuzz/main.go
+endif
 
 .PHONY: lint
 lint: deps/dev
