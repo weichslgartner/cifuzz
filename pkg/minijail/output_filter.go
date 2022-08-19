@@ -43,3 +43,7 @@ func (w *OutputFilter) Write(p []byte) (n int, err error) {
 	numBytesNotWritten := len(toPrint) - written
 	return len(p) - numBytesNotWritten, err
 }
+
+func IsIgnoredLine(line string) bool {
+	return ignoredPattern.MatchString(line)
+}

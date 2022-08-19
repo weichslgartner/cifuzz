@@ -15,6 +15,7 @@ import (
 	"github.com/pterm/pterm"
 
 	"code-intelligence.com/cifuzz/pkg/finding"
+	"code-intelligence.com/cifuzz/pkg/minijail"
 	"code-intelligence.com/cifuzz/pkg/parser/sanitizer"
 	"code-intelligence.com/cifuzz/pkg/report"
 	"code-intelligence.com/cifuzz/util/regexutil"
@@ -228,8 +229,10 @@ func (p *parser) parseLine(ctx context.Context, line string) error {
 
 	if p.pendingFinding != nil {
 		// The line is not a metrics line and doesn't mark a new finding,
-		// so we append it to the pending finding
-		p.pendingFinding.Logs = append(p.pendingFinding.Logs, line)
+		// so we append it to the pending finding (unless it's filtered)
+		if !minijail.IsIgnoredLine(line) {
+			p.pendingFinding.Logs = append(p.pendingFinding.Logs, line)
+		}
 	}
 
 	// Check if the line contains the path to the test input file (which
