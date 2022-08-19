@@ -18,7 +18,7 @@ const (
 	// before we send a SIGKILL. When a use case arises for configuring
 	// the grace period, we can make this a configurable attribute of
 	// Cmd.
-	processGroupTerminationGracePeriod = 3 * time.Second
+	processGroupTerminationGracePeriod = 5 * time.Second
 )
 
 // Cmd provides the same functionality as exec.Cmd plus some utility
