@@ -1,11 +1,15 @@
 package testutil
 
 import (
+	"io"
 	"io/fs"
 	"log"
 	"os"
 	"path/filepath"
 	"runtime"
+	"testing"
+
+	"github.com/stretchr/testify/require"
 
 	"code-intelligence.com/cifuzz/pkg/install"
 	"code-intelligence.com/cifuzz/util/fileutil"
@@ -64,4 +68,13 @@ func ChdirToTempDir(prefix string) string {
 	}
 
 	return testTempDir
+}
+
+// CheckOutput checks that the strings are contained in the reader output
+func CheckOutput(t *testing.T, r io.Reader, s ...string) {
+	output, err := io.ReadAll(r)
+	require.NoError(t, err)
+	for _, str := range s {
+		require.Contains(t, string(output), str)
+	}
 }

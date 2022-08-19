@@ -36,7 +36,7 @@ func TestListFindings(t *testing.T) {
 	// called below a cifuzz project directory.
 	_, err := cmdutils.ExecuteCommand(t, New(), os.Stdin)
 	require.Error(t, err)
-	checkOutput(t, logOutput, "set up a project for use with cifuzz")
+	testutil.CheckOutput(t, logOutput, "set up a project for use with cifuzz")
 
 	// Initialize a cifuzz project
 	_, err = cmdutils.ExecuteCommand(t, initCmd.New(), os.Stdin)
@@ -71,7 +71,7 @@ func TestPrintFinding(t *testing.T) {
 	// called below a cifuzz project directory.
 	_, err := cmdutils.ExecuteCommand(t, New(), os.Stdin, f.Name, "--json")
 	require.Error(t, err)
-	checkOutput(t, logOutput, "set up a project for use with cifuzz")
+	testutil.CheckOutput(t, logOutput, "set up a project for use with cifuzz")
 
 	// Initialize a cifuzz project
 	_, err = cmdutils.ExecuteCommand(t, initCmd.New(), os.Stdin)
@@ -81,7 +81,7 @@ func TestPrintFinding(t *testing.T) {
 	// specified finding does not exist
 	_, err = cmdutils.ExecuteCommand(t, New(), os.Stdin, f.Name, "--json")
 	require.Error(t, err)
-	checkOutput(t, logOutput, fmt.Sprintf("Finding %s does not exist", f.Name))
+	testutil.CheckOutput(t, logOutput, fmt.Sprintf("Finding %s does not exist", f.Name))
 
 	// Create the finding
 	err = f.Save(projectDir)
@@ -93,12 +93,4 @@ func TestPrintFinding(t *testing.T) {
 	jsonString, err := stringutil.ToJsonString(f)
 	require.NoError(t, err)
 	require.Equal(t, jsonString, output)
-}
-
-func checkOutput(t *testing.T, r io.Reader, s ...string) {
-	output, err := io.ReadAll(r)
-	require.NoError(t, err)
-	for _, str := range s {
-		require.Contains(t, string(output), str)
-	}
 }
