@@ -127,30 +127,35 @@ func TestIntegration_CMake_InitCreateRunCoverageBundle(t *testing.T) {
 	findings = getFindings(t, cifuzz, dir)
 	require.Len(t, findings, 1)
 	require.Contains(t, findings[0].Details, "heap-use-after-free")
-	expectedStackTrace := []*stacktrace.StackFrame{
-		{
-			SourceFile:  "src/parser/parser.cpp",
-			Line:        19,
-			Column:      14,
-			FrameNumber: 0,
-			Function:    "parse",
-		},
-		{
-			SourceFile:  "src/parser/parser_fuzz_test.cpp",
-			Line:        20,
-			Column:      3,
-			FrameNumber: 1,
-			Function:    "LLVMFuzzerTestOneInputNoReturn",
-		},
-	}
-	if runtime.GOOS == "windows" {
-		// On Windows, the column is not printed
-		for i := range expectedStackTrace {
-			expectedStackTrace[i].Column = 0
+	// TODO: This check currently fails on macOS because there
+	// llvm-symbolizer doesn't read debug info from object files.
+	// See https://github.com/google/sanitizers/issues/207#issuecomment-136495556
+	if runtime.GOOS != "darwin" {
+		expectedStackTrace := []*stacktrace.StackFrame{
+			{
+				SourceFile:  "src/parser/parser.cpp",
+				Line:        19,
+				Column:      14,
+				FrameNumber: 0,
+				Function:    "parse",
+			},
+			{
+				SourceFile:  "src/parser/parser_fuzz_test.cpp",
+				Line:        20,
+				Column:      3,
+				FrameNumber: 1,
+				Function:    "LLVMFuzzerTestOneInputNoReturn",
+			},
 		}
-	}
+		if runtime.GOOS == "windows" {
+			// On Windows, the column is not printed
+			for i := range expectedStackTrace {
+				expectedStackTrace[i].Column = 0
+			}
+		}
 
-	require.Equal(t, expectedStackTrace, findings[0].StackTrace)
+		require.Equal(t, expectedStackTrace, findings[0].StackTrace)
+	}
 
 	// Check that options set via the config file are respected
 	configFileContent := `engine-args:
