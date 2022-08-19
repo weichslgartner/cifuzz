@@ -170,7 +170,7 @@ func FindProjectDir() (string, error) {
 		}
 	}
 
-	dir, err = filepath.Abs(dir)
+	dir, err = fileutil.CanonicalPath(dir)
 	if err != nil {
 		return "", errors.WithStack(err)
 	}
