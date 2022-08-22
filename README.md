@@ -97,6 +97,9 @@ shows the line by line coverage of the fuzzed code:
 
     cifuzz coverage my_fuzz_test
 
+See [here](docs/Coverage-ide-integrations.md) for instructions on how to
+generate and visualize coverage reports right from your IDE.
+
 ### Regression testing
 
 **Important:** In general there are two ways to run your fuzz test:
