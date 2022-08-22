@@ -1,5 +1,3 @@
-* @CodeIntelligenceTesting/cifuzz-devs
-
 /cmd/installer @adombeck
 /githooks @adombeck
 /internal/cmd/run @adombeck
