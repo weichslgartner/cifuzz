@@ -8,13 +8,33 @@ on:
   workflow_dispatch:
 
 jobs:
+  linting:
+    name: lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Go environment
+        uses: actions/setup-go@v3
+        with:
+          go-version: "^1.18"
+
+      - name: Check file formatting
+        run: make fmt/check
+
+      - name: Check go mod tidy
+        run: make tidy/check
+
+      - name: Run linting check
+        run: make lint
+
   unit_tests:
     name: unit tests (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        # ubuntu-latest is already covered by the push pipeline
-        os: [macos-latest, windows-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
       - uses: actions/checkout@v3
 
