@@ -401,13 +401,13 @@ func PrintPathInstructions(binDir string) {
 	if runtime.GOOS == "windows" {
 		// TODO: On Windows, users generally don't expect having to fiddle with their PATH. We should update it for
 		//       them, but that requires asking for admin access.
-		_, _ = fmt.Fprintf(os.Stderr, `Please add the following directory to your PATH:
+		_, _ = fmt.Fprintf(os.Stderr, `Installation successful. Please add the following directory to your PATH:
     %s
-`, binDir)
+If you haven't already done so.`, binDir)
 	} else {
-		_, _ = fmt.Fprintf(os.Stderr, `Please add the following to ~/.profile or ~/.bash_profile:
+		_, _ = fmt.Fprintf(os.Stderr, `Installation successful. Please add the following to ~/.profile or ~/.bash_profile:
     export PATH="$PATH:%s"
-`, binDir)
+If you haven't already done so.`, binDir)
 	}
 }
 
