@@ -211,7 +211,7 @@ func (f *Finding) moveInputFile(projectDir, seedCorpusDir string) error {
 
 	// Copy the input file to the seed corpus dir. We reuse the number
 	// from the filename in the finding dir to make it more obvious that
-	// those this input file in the seed corpus is the same as the input
+	// the input file in the seed corpus is the same as the input
 	// file in the finding dir.
 	err = os.MkdirAll(seedCorpusDir, 0755)
 	if err != nil {
