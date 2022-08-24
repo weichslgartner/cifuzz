@@ -69,6 +69,9 @@
  * be executed. */
 static const char *SEED_CORPUS_SUFFIX = "_seed_corpus";
 
+/* A nonzero value indicates that replayer was launched as a Doctest target by the CLion test framework integration. */
+static int launched_as_clion_doctest = 0;
+
 static const char *argv0;
 static int all_inputs_passed = 0;
 static int num_passing_inputs = 0;
@@ -364,6 +367,21 @@ static void run_file_or_dir(const char *path) {
   }
 }
 
+static void print_clion_doctest_xml() {
+  /*
+   * Output Doctest xml, which enables the CLion test framework integration
+   * to indicate the test success status.
+   */
+  printf("<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+      "<doctest>"
+      "<TestSuite>"
+      "<TestCase name=\"my_fuzz_test\">"
+      "<OverallResultsAsserts successes=\"%d\" failures=\"%d\"/>"
+      "</TestCase>"
+      "</TestSuite>"
+      "</doctest>\n", all_inputs_passed, !all_inputs_passed);
+}
+
 #define COLOR_RED "\x1b[31m"
 #define COLOR_YELLOW "\x1b[93m"
 #define COLOR_RESET "\x1b[0m"
@@ -401,6 +419,9 @@ static void print_summary(const char *failure_reason) {
                       "    gdb -ex 'break LLVMFuzzerTestOneInput' -ex run --args '%s'\n\n", argv0);
 #endif
     }
+  }
+  if (launched_as_clion_doctest) {
+    print_clion_doctest_xml();
   }
 }
 
@@ -494,6 +515,7 @@ int main(int argc, char **argv) {
    * modifying argc. */
   for (i = 1; i < argc; i++) {
     if (is_clion_doctest_arg(argv[i])) {
+      launched_as_clion_doctest = 1;
       argc = i;
       break;
     }
