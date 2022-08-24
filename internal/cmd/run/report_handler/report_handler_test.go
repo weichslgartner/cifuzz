@@ -98,18 +98,16 @@ func TestReportHandler_Finding(t *testing.T) {
 	err = os.WriteFile(testfile, []byte("TEST"), 0644)
 	require.NoError(t, err)
 
-	findingLogs := []string{"Oops", "The application crashed"}
 	findingReport := &report.Report{
 		Status: report.RunStatus_RUNNING,
 		Finding: &finding.Finding{
-			Logs:      findingLogs,
 			InputFile: testfile,
 		},
 	}
 	err = h.Handle(findingReport)
 	require.NoError(t, err)
 
-	expectedOutputs := append([]string{"Finding 1"}, findingLogs...)
+	expectedOutputs := []string{"Finding 1"}
 	expectedOutputs = append(expectedOutputs, filepath.Join(h.SeedCorpusDir, findingReport.Finding.Name))
 	checkOutput(t, logOutput, expectedOutputs...)
 }

@@ -185,15 +185,29 @@ func (h *ReportHandler) handleFinding(f *finding.Finding, print bool) error {
 		return nil
 	}
 
-	log.Print("\n")
-	log.Printf("=========================== Finding %d ===========================", h.numFindings)
-	log.Print(strings.Join(f.Logs, "\n"))
+	// Print some information about the finding
+	var title string
+	if isDuplicate {
+		title = fmt.Sprintf(" Finding %d ", h.numFindings)
+	} else {
+		title = fmt.Sprintf(" Finding %d [%s] ", h.numFindings, f.Name)
+	}
+
+	lenLeftBar := (65 - len(title)) / 2
+	lenRightBar := (65 - len(title) + 1) / 2
+	log.Print("\n", strings.Repeat("=", lenLeftBar), title, strings.Repeat("=", lenRightBar))
+	// TODO: Print short summary instead
+	log.Print(f.Details)
+	if len(f.StackTrace) > 0 {
+		st := f.StackTrace[0]
+		log.Printf("in %s (%s:%d:%d)", st.Function, st.SourceFile, st.Line, st.Column)
+	}
 
 	switch {
 	case isDuplicate && f.GetSeedPath() == "":
 		// The finding is a duplicate and the input is also already known
 		log.Notef(`
-Note: This seems to be a duplicate of finding %s.
+Note: This seems to be a duplicate of finding [%s].
 `, f.Name)
 
 	case isDuplicate && f.GetSeedPath() != "":
@@ -205,6 +219,14 @@ new crashing input. The input has been copied to the seed corpus at:
     %s
 
 `, f.Name, fileutil.PrettifyPath(f.GetSeedPath()))
+
+	case !isDuplicate:
+		log.Printf(`
+Further details:
+
+    cifuzz finding %s
+`, f.Name)
+		fallthrough
 
 	case f.GetSeedPath() != "":
 		log.Notef(`
