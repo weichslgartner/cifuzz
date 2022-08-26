@@ -410,6 +410,10 @@ func countSeeds(seedCorpusDirs []string) (numSeeds uint, err error) {
 			}
 			return nil
 		})
+		// Don't fail if the seed corpus dir doesn't exist
+		if os.IsNotExist(err) {
+			return 0, nil
+		}
 		if err != nil {
 			return 0, errors.WithStack(err)
 		}
