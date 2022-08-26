@@ -25,7 +25,7 @@ var buildSystemTypes = []string{BuildSystemCMake, BuildSystemOther}
 
 type ProjectConfig struct {
 	LastUpdated string
-	BuildSystem string `yaml:"build_system"`
+	BuildSystem string `yaml:"build-system"`
 }
 
 const projectConfigFile = "cifuzz.yaml"
