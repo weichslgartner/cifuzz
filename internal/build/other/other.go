@@ -121,6 +121,12 @@ func (b *Builder) Build(fuzzTest string) (*build.Result, error) {
 	if err != nil {
 		return nil, err
 	}
+	if executable == "" {
+		err := errors.Errorf("Could not find executable for fuzz test %q", fuzzTest)
+		log.Error(err)
+		return nil, cmdutils.WrapSilentError(err)
+	}
+
 	// For the build system type "other", we expect the default seed corpus next
 	// to the fuzzer executable.
 	seedCorpus, err := fileutil.CanonicalPath(executable + "_seed_corpus")
@@ -295,8 +301,9 @@ func (b *Builder) findFuzzTestExecutable(fuzzTest string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	// No executable was found, we handle this error in the caller
 	if executable == "" {
-		return "", errors.Errorf("Could not find executable for fuzz test %s", fuzzTest)
+		return "", nil
 	}
 	return fileutil.CanonicalPath(executable)
 }
