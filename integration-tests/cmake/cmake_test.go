@@ -292,6 +292,11 @@ func runFuzzer(t *testing.T, cifuzz string, dir string, expectedOutput *regexp.R
 		require.NoError(t, runCtx.Err())
 	}
 
+	err = stdoutPipe.Close()
+	require.NoError(t, err)
+	err = stderrPipe.Close()
+	require.NoError(t, err)
+
 	require.True(t, seenExpectedOutput, "Did not see %q in fuzzer output", expectedOutput.String())
 }
 
