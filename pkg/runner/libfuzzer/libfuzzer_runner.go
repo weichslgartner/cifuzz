@@ -285,6 +285,11 @@ func (r *Runner) RunLibfuzzerAndReport(ctx context.Context, args []string, env [
 
 		select {
 		case err := <-waitErrCh:
+			closeErr := stderrPipe.Close()
+			if closeErr != nil {
+				return errors.WithStack(closeErr)
+			}
+
 			if r.cmd.TerminatedAfterContextDone() {
 				// The command was terminated because the timeout exceeded. We
 				// don't return an error in that case.
