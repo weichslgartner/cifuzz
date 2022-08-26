@@ -24,10 +24,16 @@ import (
 // build type.
 const cmakeBuildConfiguration = "RelWithDebInfo"
 
+type ParallelOptions struct {
+	Enabled bool
+	NumJobs uint
+}
+
 type BuilderOptions struct {
 	ProjectDir string
 	Engine     string
 	Sanitizers []string
+	Parallel   ParallelOptions
 	Stdout     io.Writer
 	Stderr     io.Writer
 
@@ -151,10 +157,19 @@ func (b *Builder) Build(fuzzTests []string) (map[string]*build.Result, error) {
 		return nil, err
 	}
 
-	cmd := exec.Command("cmake", append([]string{
+	flags := append([]string{
 		"--build", buildDir,
 		"--config", cmakeBuildConfiguration,
-		"--target"}, fuzzTests...)...)
+		"--target"}, fuzzTests...)
+
+	if b.Parallel.Enabled {
+		flags = append(flags, "--parallel")
+		if b.Parallel.NumJobs != 0 {
+			flags = append(flags, fmt.Sprint(b.Parallel.NumJobs))
+		}
+	}
+
+	cmd := exec.Command("cmake", flags...)
 	// Redirect the build command's stdout to stderr to only have
 	// reports printed to stdout
 	cmd.Stdout = b.Stderr
