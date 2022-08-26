@@ -100,13 +100,19 @@ func (b *Builder) Build(fuzzTest string) (*build.Result, error) {
 		}
 	}
 
+	// Let the build command reference the fuzz test (base)name.
+	buildCommandEnv, err := envutil.Setenv(b.env, "FUZZ_TEST", fuzzTest)
+	if err != nil {
+		return nil, err
+	}
+
 	// Run the build command
 	cmd := exec.Command("/bin/sh", "-c", b.BuildCommand)
 	// Redirect the build command's stdout to stderr to only have
 	// reports printed to stdout
 	cmd.Stdout = b.Stdout
 	cmd.Stderr = b.Stderr
-	cmd.Env = b.env
+	cmd.Env = buildCommandEnv
 	log.Debugf("Command: %s", cmd.String())
 	err = cmd.Run()
 	if err != nil {

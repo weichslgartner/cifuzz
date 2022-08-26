@@ -5,3 +5,5 @@
 ## default), cifuzz tries to detect the build system automatically.
 ## Valid values: "auto", "cmake", "other".
 #build-system: auto
+
+build-command: make clean && make $FUZZ_TEST

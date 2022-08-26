@@ -92,7 +92,6 @@ func runFuzzer(t *testing.T, cifuzz string, dir string, fuzzTest string, expecte
 	cmd := executil.Command(
 		cifuzz,
 		"run", "-v", fuzzTest,
-		"--build-command", "make clean && make "+filepath.Base(fuzzTest),
 		// The crashes are expected to be found quickly.
 		"--engine-arg=-runs=1000000",
 		"--engine-arg=-seed=1",
@@ -134,7 +133,6 @@ func createCoverageReport(t *testing.T, cifuzz string, dir string) {
 
 	cmd := executil.Command(cifuzz, "coverage", "-v",
 		"--output", "my_fuzz_test_1.coverage.html",
-		"--build-command=make clean && make my_fuzz_test_1",
 		"my_fuzz_test_1")
 	cmd.Dir = dir
 	cmd.Stdout = os.Stdout

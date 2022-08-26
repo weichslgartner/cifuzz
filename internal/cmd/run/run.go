@@ -99,9 +99,6 @@ func New() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "run [flags] <fuzz test>",
 		Short: "Build and run a fuzz test",
-		// TODO: Write long description (easier once we support more
-		//       than just the fallback mode). In particular, explain how a
-		//       "fuzz test" is identified on the CLI.
 		Long: `This command builds and executes a fuzz test. The usage of this command
 depends on the build system configured for the project:
 
@@ -111,10 +108,14 @@ depends on the build system configured for the project:
    or after running 'cifuzz reload'. The '--build-command' flag is ignored.
 
  * For other build systems, a command which builds the fuzz test executable
-   must be provided via '--build-command' and <fuzz test> is the path to
-   the fuzz test executable created by the build command. Example:
+   must be provided via the '--build-command' argument or the 'build-command'
+   setting in cifuzz.yaml. In this case, <fuzz test> is the path to the fuzz
+   test executable created by the build command. The value specified for
+   <fuzz test> is available to the build command in the FUZZ_TEST environment
+   variable. Example:
 
-       cifuzz run --build-command="make clean && make my_fuzz_test" my_fuzz_test
+       echo "build-command: make clean && make \$FUZZ_TEST" >> cifuzz.yaml
+       cifuzz run my_fuzz_test
 
    Alternatively, <fuzz test> can be the name of the fuzz test executable,
    which will then be searched for recursively in the current directory.`,
