@@ -12,6 +12,7 @@ import (
 	"regexp"
 	"runtime"
 	"strings"
+	"sync/atomic"
 	"syscall"
 	"testing"
 	"time"
@@ -19,6 +20,7 @@ import (
 	"github.com/otiai10/copy"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/sync/errgroup"
 
 	"code-intelligence.com/cifuzz/internal/cmd/run/report_handler/stacktrace"
 	"code-intelligence.com/cifuzz/pkg/artifact"
@@ -245,32 +247,49 @@ func runFuzzer(t *testing.T, cifuzz string, dir string, expectedOutput *regexp.R
 	}()
 
 	// Check that the output contains the expected output
-	var seenExpectedOutput bool
-	// cifuzz progress messages go to stdout.
-	scanner := bufio.NewScanner(stdoutPipe)
-	for scanner.Scan() {
-		if expectedOutput.MatchString(scanner.Text()) {
-			seenExpectedOutput = true
-			if terminate {
-				err = cmd.TerminateProcessGroup()
-				require.NoError(t, err)
+	seenExpectedOutput := &atomic.Value{}
+	seenExpectedOutput.Store(false)
+
+	routines := errgroup.Group{}
+	routines.Go(func() error {
+		// cifuzz progress messages go to stdout.
+		scanner := bufio.NewScanner(stdoutPipe)
+		for scanner.Scan() {
+			if expectedOutput.MatchString(scanner.Text()) {
+				seenExpectedOutput.Store(true)
+				if terminate {
+					err = cmd.TerminateProcessGroup()
+					require.NoError(t, err)
+				}
 			}
 		}
-	}
-	// Fuzzer output goes to stderr.
-	scanner = bufio.NewScanner(stderrPipe)
-	for scanner.Scan() {
-		if expectedOutput.MatchString(scanner.Text()) {
-			seenExpectedOutput = true
-			if terminate {
-				err = cmd.TerminateProcessGroup()
-				require.NoError(t, err)
+		err = stdoutPipe.Close()
+		require.NoError(t, err)
+		return nil
+	})
+
+	routines.Go(func() error {
+		// Fuzzer output goes to stderr.
+		scanner := bufio.NewScanner(stderrPipe)
+		for scanner.Scan() {
+			if expectedOutput.MatchString(scanner.Text()) {
+				seenExpectedOutput.Store(true)
+				if terminate {
+					err = cmd.TerminateProcessGroup()
+					require.NoError(t, err)
+				}
 			}
 		}
-	}
+		err = stderrPipe.Close()
+		require.NoError(t, err)
+		return nil
+	})
 
 	select {
-	case err := <-waitErrCh:
+	case waitErr := <-waitErrCh:
+		err = routines.Wait()
+		require.NoError(t, err)
+
 		var exitErr *exec.ExitError
 		var expectedExitCode int
 		if runtime.GOOS == "windows" {
@@ -283,21 +302,17 @@ func runFuzzer(t *testing.T, cifuzz string, dir string, expectedOutput *regexp.R
 			// expected exit code is 128 + 15 = 143
 			expectedExitCode = 143
 		}
-
-		if seenExpectedOutput && terminate && errors.As(err, &exitErr) && exitErr.ExitCode() == expectedExitCode {
+		seen := seenExpectedOutput.Load().(bool)
+		if seen && terminate && errors.As(waitErr, &exitErr) && exitErr.ExitCode() == expectedExitCode {
 			return
 		}
-		require.NoError(t, err)
+		require.NoError(t, waitErr)
 	case <-runCtx.Done():
 		require.NoError(t, runCtx.Err())
 	}
 
-	err = stdoutPipe.Close()
-	require.NoError(t, err)
-	err = stderrPipe.Close()
-	require.NoError(t, err)
-
-	require.True(t, seenExpectedOutput, "Did not see %q in fuzzer output", expectedOutput.String())
+	seen := seenExpectedOutput.Load().(bool)
+	require.True(t, seen, "Did not see %q in fuzzer output", expectedOutput.String())
 }
 
 func createCoverageReport(t *testing.T, cifuzz string, dir string) {
