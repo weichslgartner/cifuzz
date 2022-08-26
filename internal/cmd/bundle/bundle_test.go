@@ -98,7 +98,7 @@ func TestAssembleArtifacts(t *testing.T) {
 		ProjectDir:    projectDir,
 		Seeds:         filepath.Join("libfuzzer", "address", "some_fuzz_test", "seeds"),
 		LibraryPaths:  []string{filepath.Join("libfuzzer", "address", "some_fuzz_test", "external_libs")},
-		EngineOptions: artifact.EngineOptions{Env: []string{"CIFUZZ_IN_CIFUZZ=1"}},
+		EngineOptions: artifact.EngineOptions{Env: []string{"NO_CIFUZZ=1"}},
 	}, *fuzzers[0])
 
 	assert.Equal(t, map[string]string{

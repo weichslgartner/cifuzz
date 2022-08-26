@@ -429,7 +429,7 @@ depsLoop:
 		LibraryPaths: []string{externalLibrariesPrefix},
 		// Let all remotely executed fuzz tests run as if they were executed within cifuzz (e.g., don't let them start
 		// cifuzz themselves).
-		EngineOptions: artifact.EngineOptions{Env: []string{"CIFUZZ_IN_CIFUZZ=1"}},
+		EngineOptions: artifact.EngineOptions{Env: []string{"NO_CIFUZZ=1"}},
 	}
 
 	if buildResult.Engine == "replayer" {

@@ -307,7 +307,7 @@ func (c *coverageCmd) runFuzzTest(buildResult *build.Result) error {
 	if err != nil {
 		return err
 	}
-	binaryEnv, err = envutil.Setenv(binaryEnv, "CIFUZZ_IN_CIFUZZ", "1")
+	binaryEnv, err = envutil.Setenv(binaryEnv, "NO_CIFUZZ", "1")
 	if err != nil {
 		return err
 	}
