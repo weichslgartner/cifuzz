@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/gookit/color"
@@ -26,6 +27,7 @@ func NewUpdatingPrinter(output io.Writer) (*UpdatingPrinter, error) {
 		SpinnerPrinter: pterm.DefaultSpinner.WithShowTimer(false),
 		startedAt:      time.Now(),
 		output:         output,
+		lastMetrics:    &atomic.Value{},
 	}
 	log.ActiveUpdatingPrinter = p
 
@@ -50,18 +52,20 @@ type UpdatingPrinter struct {
 	startedAt time.Time
 	output    io.Writer
 
-	lastMetrics *report.FuzzingMetric
+	lastMetrics *atomic.Value
 }
 
 func (p *UpdatingPrinter) Update() {
-	if p.lastMetrics != nil {
-		p.lastMetrics.SecondsSinceLastFeature += 1
+	lastMetrics, ok := p.lastMetrics.Load().(*report.FuzzingMetric)
+	if ok {
+		lastMetrics.SecondsSinceLastFeature += 1
+		p.lastMetrics.Store(p.lastMetrics)
 	}
-	p.printMetrics(p.lastMetrics)
+	p.printMetrics(lastMetrics)
 }
 
 func (p *UpdatingPrinter) PrintMetrics(metrics *report.FuzzingMetric) {
-	p.lastMetrics = metrics
+	p.lastMetrics.Store(metrics)
 	p.ticker.Reset(time.Second)
 	p.printMetrics(metrics)
 }
