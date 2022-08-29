@@ -59,7 +59,7 @@ func (p *UpdatingPrinter) Update() {
 	lastMetrics, ok := p.lastMetrics.Load().(*report.FuzzingMetric)
 	if ok {
 		lastMetrics.SecondsSinceLastFeature += 1
-		p.lastMetrics.Store(p.lastMetrics)
+		p.lastMetrics.Store(lastMetrics)
 	}
 	p.printMetrics(lastMetrics)
 }
