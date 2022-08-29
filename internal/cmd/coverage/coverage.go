@@ -1,6 +1,7 @@
 package coverage
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -27,6 +28,7 @@ import (
 	"code-intelligence.com/cifuzz/pkg/minijail"
 	"code-intelligence.com/cifuzz/pkg/runfiles"
 	"code-intelligence.com/cifuzz/util/envutil"
+	"code-intelligence.com/cifuzz/util/executil"
 	"code-intelligence.com/cifuzz/util/fileutil"
 	"code-intelligence.com/cifuzz/util/stringutil"
 )
@@ -354,20 +356,30 @@ func (c *coverageCmd) runFuzzTest(buildResult *build.Result) error {
 		}
 	}
 
-	cmd := exec.Command(args[0], args[1:]...)
+	cmd := executil.Command(args[0], args[1:]...)
 	cmd.Env = wrapperEnv
 
+	errStream := &bytes.Buffer{}
 	if viper.GetBool("verbose") {
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
+	} else if c.opts.UseSandbox {
+		cmd.Stderr = minijail.NewOutputFilter(errStream)
+	} else {
+		cmd.Stderr = errStream
 	}
 
 	log.Debugf("Command: %s", strings.Join(stringutil.QuotedStrings(cmd.Args), " "))
 	err = cmd.Run()
 	if err != nil {
+		// Print the stderr output of the fuzzer to provide users with
+		// the context of this error even without verbose mode.
+		if !viper.GetBool("verbose") {
+			log.Print(errStream.String())
+		}
 		// It's expected that the fuzz test executable might fail, so we
 		// print the error without the stack trace.
-		err = cmdutils.WrapExecError(err, cmd)
+		err = cmdutils.WrapExecError(err, cmd.Cmd)
 		log.Error(err)
 		return cmdutils.ErrSilent
 	}
