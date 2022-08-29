@@ -15,6 +15,7 @@ import (
 
 	"code-intelligence.com/cifuzz/internal/build"
 	"code-intelligence.com/cifuzz/internal/config"
+	"code-intelligence.com/cifuzz/internal/testutil"
 	"code-intelligence.com/cifuzz/pkg/artifact"
 	"code-intelligence.com/cifuzz/pkg/cmdutils"
 	"code-intelligence.com/cifuzz/pkg/dependencies"
@@ -123,7 +124,13 @@ func TestClangMissing(t *testing.T) {
 	conf := config.NewConfig()
 	conf.BuildSystem = config.BuildSystemCMake
 
-	_, err := cmdutils.ExecuteCommand(t, New(conf), os.Stdin)
+	// clone the example project because this command needs to parse an actual
+	// project config... if there is none it will fail before the dependency check
+	testDir, err := testutil.ChdirToClonedCmakeExampleProject("run-cmd-test")
+	require.NoError(t, err)
+	defer fileutil.Cleanup(testDir)
+
+	_, err = cmdutils.ExecuteCommand(t, New(conf), os.Stdin)
 	require.Error(t, err)
 
 	output, err := io.ReadAll(testOut)
@@ -142,7 +149,13 @@ func TestClangVersion(t *testing.T) {
 	conf := config.NewConfig()
 	conf.BuildSystem = config.BuildSystemCMake
 
-	_, err := cmdutils.ExecuteCommand(t, New(conf), os.Stdin)
+	// clone the example project because this command needs to parse an actual
+	// project config... if there is none it will fail before the dependency check
+	testDir, err := testutil.ChdirToClonedCmakeExampleProject("run-cmd-test")
+	require.NoError(t, err)
+	defer fileutil.Cleanup(testDir)
+
+	_, err = cmdutils.ExecuteCommand(t, New(conf), os.Stdin)
 	require.Error(t, err)
 
 	output, err := io.ReadAll(testOut)
@@ -160,7 +173,13 @@ func TestCMakeMissing(t *testing.T) {
 	conf := config.NewConfig()
 	conf.BuildSystem = config.BuildSystemCMake
 
-	_, err := cmdutils.ExecuteCommand(t, New(conf), os.Stdin)
+	// clone the example project because this command needs to parse an actual
+	// project config... if there is none it will fail before the dependency check
+	testDir, err := testutil.ChdirToClonedCmakeExampleProject("run-cmd-test")
+	require.NoError(t, err)
+	defer fileutil.Cleanup(testDir)
+
+	_, err = cmdutils.ExecuteCommand(t, New(conf), os.Stdin)
 	require.Error(t, err)
 
 	output, err := io.ReadAll(testOut)

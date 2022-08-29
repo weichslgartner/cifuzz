@@ -33,6 +33,7 @@ import (
 type runOptions struct {
 	BuildSystem    string        `mapstructure:"build-system"`
 	BuildCommand   string        `mapstructure:"build-command"`
+	NumBuildJobs   uint          `mapstructure:"build-jobs"`
 	SeedCorpusDirs []string      `mapstructure:"seed-corpus-dirs"`
 	Dictionary     string        `mapstructure:"dict"`
 	EngineArgs     []string      `mapstructure:"engine-args"`
@@ -126,6 +127,7 @@ depends on the build system configured for the project:
 			// function, because that would re-bind viper keys which
 			// were bound to the flags of other commands before.
 			cmdutils.ViperMustBindPFlag("build-command", cmd.Flags().Lookup("build-command"))
+			cmdutils.ViperMustBindPFlag("build-jobs", cmd.Flags().Lookup("build-jobs"))
 			cmdutils.ViperMustBindPFlag("seed-corpus-dirs", cmd.Flags().Lookup("seed-corpus"))
 			cmdutils.ViperMustBindPFlag("dict", cmd.Flags().Lookup("dict"))
 			cmdutils.ViperMustBindPFlag("engine-args", cmd.Flags().Lookup("engine-arg"))
@@ -153,6 +155,8 @@ depends on the build system configured for the project:
 	// Note: If a flag should be configurable via cifuzz.yaml as well,
 	// bind it to viper in the PreRunE function.
 	cmd.Flags().String("build-command", "", "The `command` to build the fuzz test. Ignored when the build system is CMake.")
+	cmd.Flags().Uint("build-jobs", 0, "Maximum number of concurrent processes to use when building.\nIf argument is omitted the native build tool's default number is used.\nOnly available when the build system is CMake.")
+	cmd.Flags().Lookup("build-jobs").NoOptDefVal = "0"
 	// TODO(afl): Also link to https://aflplus.plus/docs/fuzzing_in_depth/#a-collecting-inputs
 	cmd.Flags().StringArrayP("seed-corpus", "s", nil, "A `directory` containing sample inputs for the code under test.\nSee https://llvm.org/docs/LibFuzzer.html#corpus.")
 	// TODO(afl): Also link to https://github.com/AFLplusplus/AFLplusplus/blob/stable/dictionaries/README.md
@@ -228,8 +232,12 @@ func (c *runCmd) buildFuzzTest() (*build.Result, error) {
 			// TODO: Do not hardcode this value.
 			Engine:     "libfuzzer",
 			Sanitizers: sanitizers,
-			Stdout:     c.OutOrStdout(),
-			Stderr:     c.ErrOrStderr(),
+			Parallel: cmake.ParallelOptions{
+				Enabled: viper.IsSet("build-jobs"),
+				NumJobs: c.opts.NumBuildJobs,
+			},
+			Stdout: c.OutOrStdout(),
+			Stderr: c.ErrOrStderr(),
 		})
 		if err != nil {
 			return nil, err

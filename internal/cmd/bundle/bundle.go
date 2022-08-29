@@ -11,6 +11,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 	"golang.org/x/exp/maps"
 
 	"code-intelligence.com/cifuzz/internal/build"
@@ -18,6 +19,7 @@ import (
 	"code-intelligence.com/cifuzz/internal/completion"
 	"code-intelligence.com/cifuzz/internal/config"
 	"code-intelligence.com/cifuzz/pkg/artifact"
+	"code-intelligence.com/cifuzz/pkg/cmdutils"
 	"code-intelligence.com/cifuzz/pkg/dependencies"
 	"code-intelligence.com/cifuzz/pkg/log"
 	"code-intelligence.com/cifuzz/pkg/runfiles"
@@ -65,6 +67,8 @@ type bundleCmd struct {
 }
 
 type bundleOpts struct {
+	NumBuildJobs uint `mapstructure:"build-jobs"`
+
 	fuzzTests  []string
 	outputPath string
 }
@@ -83,6 +87,17 @@ func New(conf *config.Config) *cobra.Command {
 		ValidArgsFunction: completion.ValidFuzzTests,
 		Args:              cobra.ArbitraryArgs,
 		PreRunE: func(cmd *cobra.Command, args []string) error {
+			// Bind viper keys to flags. We can't do this in the New
+			// function, because that would re-bind viper keys which
+			// were bound to the flags of other commands before.
+			cmdutils.ViperMustBindPFlag("build-jobs", cmd.Flags().Lookup("build-jobs"))
+
+			_, err := config.ParseProjectConfig(opts)
+			if err != nil {
+				log.Errorf(err, "Failed to parse cifuzz.yaml: %v", err.Error())
+				return cmdutils.WrapSilentError(err)
+			}
+
 			if conf.BuildSystem != config.BuildSystemCMake {
 				return errors.New("cifuzz bundle currently only supports CMake projects")
 			}
@@ -99,6 +114,8 @@ func New(conf *config.Config) *cobra.Command {
 		},
 	}
 
+	cmd.Flags().Uint("build-jobs", 0, "Maximum number of concurrent processes to use when building.\nIf argument is omitted the native build tool's default number is used.\nOnly available when the build system is CMake.")
+	cmd.Flags().Lookup("build-jobs").NoOptDefVal = "0"
 	cmd.Flags().StringVarP(&opts.outputPath, "output", "o", "", "Output path of the artifact (.tar.gz)")
 
 	return cmd
@@ -246,9 +263,13 @@ func (c *bundleCmd) buildAllVariants() ([]map[string]*build.Result, error) {
 	var allVariantBuildResults []map[string]*build.Result
 	for _, variant := range configureVariants {
 		builder, err := cmake.NewBuilder(&cmake.BuilderOptions{
-			ProjectDir:      c.config.ProjectDir,
-			Engine:          variant.Engine,
-			Sanitizers:      variant.Sanitizers,
+			ProjectDir: c.config.ProjectDir,
+			Engine:     variant.Engine,
+			Sanitizers: variant.Sanitizers,
+			Parallel: cmake.ParallelOptions{
+				Enabled: viper.IsSet("build-jobs"),
+				NumJobs: c.opts.NumBuildJobs,
+			},
 			Stdout:          c.OutOrStdout(),
 			Stderr:          c.ErrOrStderr(),
 			FindRuntimeDeps: true,

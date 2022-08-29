@@ -38,6 +38,7 @@ type coverageOptions struct {
 	OutputPath     string   `mapstructure:"output"`
 	BuildSystem    string   `mapstructure:"build-system"`
 	BuildCommand   string   `mapstructure:"build-command"`
+	NumBuildJobs   uint     `mapstructure:"build-jobs"`
 	SeedCorpusDirs []string `mapstructure:"seed-corpus-dirs"`
 	FuzzTestArgs   []string `mapstructure:"fuzz-test-args"`
 	UseSandbox     bool     `mapstructure:"use-sandbox"`
@@ -122,6 +123,7 @@ Write out an lcov trace file:
 			cmdutils.ViperMustBindPFlag("format", cmd.Flags().Lookup("format"))
 			cmdutils.ViperMustBindPFlag("output", cmd.Flags().Lookup("output"))
 			cmdutils.ViperMustBindPFlag("build-command", cmd.Flags().Lookup("build-command"))
+			cmdutils.ViperMustBindPFlag("build-jobs", cmd.Flags().Lookup("build-jobs"))
 			cmdutils.ViperMustBindPFlag("seed-corpus-dirs", cmd.Flags().Lookup("seed-corpus"))
 			cmdutils.ViperMustBindPFlag("fuzz-test-args", cmd.Flags().Lookup("fuzz-test-arg"))
 			cmdutils.ViperMustBindPFlag("use-sandbox", cmd.Flags().Lookup("use-sandbox"))
@@ -147,6 +149,8 @@ Write out an lcov trace file:
 	cmd.Flags().StringP("format", "f", "html", "Output format of the coverage report (html/lcov).")
 	cmd.Flags().StringP("output", "o", "", "Output path of the coverage report.")
 	cmd.Flags().String("build-command", "", "The `command` to build the fuzz test. Ignored when the build system is CMake.")
+	cmd.Flags().Uint("build-jobs", 0, "Maximum number of concurrent processes to use when building.\nIf argument is omitted the native build tool's default number is used.\nOnly available when the build system is CMake.")
+	cmd.Flags().Lookup("build-jobs").NoOptDefVal = "0"
 	// TODO(afl): Also link to https://aflplus.plus/docs/fuzzing_in_depth/#a-collecting-inputs
 	cmd.Flags().StringArrayP("seed-corpus", "s", nil, "A `directory` containing sample inputs for the code under test.\nSee https://llvm.org/docs/LibFuzzer.html#corpus.")
 	cmd.Flags().StringArray("fuzz-test-arg", nil, "Command-line `argument` to pass to the fuzz test.")
@@ -229,8 +233,12 @@ func (c *coverageCmd) buildFuzzTest() (*build.Result, error) {
 			ProjectDir: c.opts.ProjectDir,
 			Engine:     "replayer",
 			Sanitizers: []string{"coverage"},
-			Stdout:     c.OutOrStdout(),
-			Stderr:     c.ErrOrStderr(),
+			Parallel: cmake.ParallelOptions{
+				Enabled: viper.IsSet("build-jobs"),
+				NumJobs: c.opts.NumBuildJobs,
+			},
+			Stdout: c.OutOrStdout(),
+			Stderr: c.ErrOrStderr(),
 			// We want the runtime deps in the build result because we
 			// pass them to the llvm-cov command.
 			FindRuntimeDeps: true,
