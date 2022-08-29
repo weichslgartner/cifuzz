@@ -85,11 +85,16 @@ type Runner struct {
 	*RunnerOptions
 	SupportJazzer bool
 
-	cmd *executil.Cmd
+	started chan struct{}
+	cmd     *executil.Cmd
 }
 
 func NewRunner(options *RunnerOptions) *Runner {
-	return &Runner{RunnerOptions: options, SupportJazzer: false}
+	return &Runner{
+		RunnerOptions: options,
+		SupportJazzer: false,
+		started:       make(chan struct{}, 1),
+	}
 }
 
 func (r *Runner) Run(ctx context.Context) error {
@@ -243,6 +248,7 @@ func (r *Runner) RunLibfuzzerAndReport(ctx context.Context, args []string, env [
 	if err != nil {
 		return err
 	}
+	r.started <- struct{}{}
 
 	var startupOutput bytes.Buffer
 	var startupOutputWriter io.Writer
@@ -388,8 +394,12 @@ func (r *Runner) FuzzerEnvironment() ([]string, error) {
 	return env, nil
 }
 
-func (r *Runner) Cleanup() {
-	if r.cmd != nil {
+func (r *Runner) Cleanup(ctx context.Context) {
+	// Wait until the command has been started, else we can't terminate it
+	select {
+	case <-ctx.Done():
+		return
+	case <-r.started:
 		err := r.cmd.TerminateProcessGroup()
 		if err != nil {
 			log.Error(err, err.Error())

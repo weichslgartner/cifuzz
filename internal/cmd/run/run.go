@@ -329,12 +329,12 @@ func (c *runCmd) runFuzzTest(buildResult *build.Result) error {
 	var signalErr error
 	routines.Go(func() error {
 		select {
-		case <-signalHandlerCtx.Done():
+		case <-routinesCtx.Done():
 			return nil
 		case s := <-sigs:
 			log.Warnf("Received %s", s.String())
 			signalErr = cmdutils.NewSignalError(s.(syscall.Signal))
-			runner.Cleanup()
+			runner.Cleanup(routinesCtx)
 			return signalErr
 		}
 	})
