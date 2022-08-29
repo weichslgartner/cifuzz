@@ -5,6 +5,7 @@ linters:
     - govet
     - gocritic
     - errcheck
+    - nonamedreturns
 
 linters-settings:
   staticcheck:

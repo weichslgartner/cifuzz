@@ -17,7 +17,7 @@ func NewOutputFilter(nextWriter io.Writer) *OutputFilter {
 	return &OutputFilter{nextWriter: nextWriter, buf: bytes.NewBuffer([]byte{})}
 }
 
-func (w *OutputFilter) Write(p []byte) (n int, err error) {
+func (w *OutputFilter) Write(p []byte) (int, error) {
 	// To be able to match lines, we only print up to the last newline
 	// and store everything not printed in the buffer
 	index := bytes.LastIndexByte(p, '\n')

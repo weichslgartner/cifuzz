@@ -121,7 +121,7 @@ func New(conf *config.Config) *cobra.Command {
 	return cmd
 }
 
-func (c *bundleCmd) run() (err error) {
+func (c *bundleCmd) run() error {
 
 	depsOk, err := c.checkDependencies()
 	if err != nil {
@@ -319,6 +319,7 @@ func (c *bundleCmd) checkDependencies() (bool, error) {
 	return dependencies.Check(deps, dependencies.Default, runfiles.Finder)
 }
 
+//nolint:nonamedreturns
 func assembleArtifacts(fuzzTest string, buildResult *build.Result, projectDir string) (
 	fuzzers []*artifact.Fuzzer,
 	archiveManifest map[string]string,
@@ -485,28 +486,27 @@ func fuzzTestPrefix(fuzzTest string, buildResult *build.Result) string {
 	return filepath.Join(buildResult.Engine, sanitizerSegment, fuzzTest)
 }
 
-func getCodeRevision() (codeRevision *artifact.CodeRevision) {
+func getCodeRevision() *artifact.CodeRevision {
 	gitCommit, err := vcs.GitCommit()
 	if err != nil {
 		log.Debugf("failed to get Git commit: %+v", err)
-		return
+		return nil
 	}
 
 	gitBranch, err := vcs.GitBranch()
 	if err != nil {
 		log.Debugf("failed to get Git branch: %+v", err)
-		return
+		return nil
 	}
 
 	if vcs.GitIsDirty() {
 		log.Warnf("The Git repository has uncommitted changes. Archive metadata may be inaccurate.")
 	}
 
-	codeRevision = &artifact.CodeRevision{
+	return &artifact.CodeRevision{
 		Git: &artifact.GitRevision{
 			Commit: gitCommit,
 			Branch: gitBranch,
 		},
 	}
-	return
 }

@@ -398,10 +398,11 @@ func (c *runCmd) checkDependencies() (bool, error) {
 	return dependencies.Check(deps, dependencies.Default, runfiles.Finder)
 }
 
-func countSeeds(seedCorpusDirs []string) (numSeeds uint, err error) {
+func countSeeds(seedCorpusDirs []string) (uint, error) {
+	var numSeeds uint
 	for _, dir := range seedCorpusDirs {
 		var seedsInDir uint
-		err = filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
+		err := filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
 			if err != nil {
 				return err
 			}

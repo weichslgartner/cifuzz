@@ -28,7 +28,7 @@ func New() *cobra.Command {
 	return initCmd
 }
 
-func run() (err error) {
+func run() error {
 	cwd, err := os.Getwd()
 	if err != nil {
 		return errors.WithStack(err)
@@ -51,7 +51,7 @@ func run() (err error) {
 
 	log.Print(`
 Use 'cifuzz create' to create your first fuzz test.`)
-	return
+	return nil
 }
 
 func setUpAndMentionBuildSystemIntegrations(cwd string) {

@@ -521,7 +521,7 @@ func runReplayer(t *testing.T, baseTempDir string, replayerPath string, inputs .
 }
 
 // outputWithStderr behaves like cmd.Output, but additionally always returns stderr.
-func outputWithStderr(cmd *exec.Cmd) (stdout []byte, stderr []byte, err error) {
+func outputWithStderr(cmd *exec.Cmd) (stdout []byte, stderr []byte, err error) { //nolint:nonamedreturns
 	stderrBuf := &bytes.Buffer{}
 	cmd.Stderr = stderrBuf
 	stdout, err = cmd.Output()

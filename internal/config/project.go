@@ -34,10 +34,10 @@ const projectConfigFile = "cifuzz.yaml"
 var projectConfigTemplate string
 
 // CreateProjectConfig creates a new project config in the given directory
-func CreateProjectConfig(projectDir string) (configpath string, err error) {
+func CreateProjectConfig(projectDir string) (string, error) {
 
 	// try to open the target file, returns error if already exists
-	configpath = filepath.Join(projectDir, projectConfigFile)
+	configpath := filepath.Join(projectDir, projectConfigFile)
 	f, err := os.OpenFile(configpath, os.O_CREATE|os.O_WRONLY|os.O_EXCL, 0644)
 	if err != nil {
 		if errors.Is(err, os.ErrExist) {
@@ -56,11 +56,13 @@ func CreateProjectConfig(projectDir string) (configpath string, err error) {
 	if err != nil {
 		return "", errors.WithStack(err)
 	}
-	if err = t.Execute(f, config); err != nil {
+
+	err = t.Execute(f, config)
+	if err != nil {
 		return "", errors.WithStack(err)
 	}
 
-	return
+	return configpath, nil
 }
 
 func ParseProjectConfig(opts interface{}) (string, error) {

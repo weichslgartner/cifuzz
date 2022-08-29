@@ -67,7 +67,8 @@ fuzz test via 'cifuzz run'.`,
 	return createCmd
 }
 
-func (c *createCmd) run() (err error) {
+func (c *createCmd) run() error {
+	var err error
 	// get test type
 	if c.opts.testType == "" {
 		c.opts.testType, err = c.getTestType()
@@ -107,7 +108,7 @@ to keep them close to the tested code - just like regular unit tests.`)
 
 	c.printBuildSystemInstructions()
 
-	return
+	return nil
 }
 
 // getTestType returns the test type (selected by argument or input dialog)

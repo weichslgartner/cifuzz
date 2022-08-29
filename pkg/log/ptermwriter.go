@@ -27,7 +27,7 @@ func NewPTermWriter(out io.Writer) *ptermWriter {
 	return &ptermWriter{out: out}
 }
 
-func (w *ptermWriter) Write(p []byte) (n int, err error) {
+func (w *ptermWriter) Write(p []byte) (int, error) {
 	// To avoid races, only one write is executed at a time
 	writeLock.Lock()
 	defer writeLock.Unlock()
@@ -52,7 +52,7 @@ func (w *ptermWriter) Write(p []byte) (n int, err error) {
 	}
 
 	// Write the buffer
-	n, err = fmt.Fprint(w.out, string(w.buf))
+	n, err := fmt.Fprint(w.out, string(w.buf))
 
 	// Clear the buffer now that it was written
 	w.buf = []byte{}

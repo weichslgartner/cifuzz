@@ -94,13 +94,15 @@ func Equal(a, b []string) bool {
 	return true
 }
 
-func SubtractSlices(a, b []string) (diff []string) {
+func SubtractSlices(a, b []string) []string {
 	// Based on https://stackoverflow.com/a/45428032
 	// Original author: https://stackoverflow.com/users/604260/peterwilliams97
 	mb := make(map[string]struct{}, len(b))
 	for _, x := range b {
 		mb[x] = struct{}{}
 	}
+
+	var diff []string
 	for _, x := range a {
 		if _, found := mb[x]; !found {
 			diff = append(diff, x)

@@ -497,7 +497,7 @@ func parseAsSlowInput(log string) *finding.Finding {
 	return nil
 }
 
-func parseAsSeedCorpusMessage(line string) (numSeeds uint, err error) {
+func parseAsSeedCorpusMessage(line string) (numSeeds uint, err error) { //nolint:nonamedreturns
 	numSeeds, err = parseAsNonEmptyCorpusMessage(line)
 	if err == nil {
 		return numSeeds, nil
@@ -513,7 +513,7 @@ func parseAsSeedCorpusMessage(line string) (numSeeds uint, err error) {
 	return 0, errNotFound
 }
 
-func parseAsNonEmptyCorpusMessage(line string) (numSeeds uint, err error) {
+func parseAsNonEmptyCorpusMessage(line string) (numSeeds uint, err error) { //nolint:nonamedreturns
 	result, found := regexutil.FindNamedGroupsMatch(nonEmptyCorpusPattern, line)
 	if !found {
 		return 0, errNotFound
@@ -525,7 +525,7 @@ func parseAsNonEmptyCorpusMessage(line string) (numSeeds uint, err error) {
 	return uint(numSeedsUInt64), nil
 }
 
-func parseAsEmptyCorpusMessage(line string) (found bool) {
+func parseAsEmptyCorpusMessage(line string) bool {
 	matches := emptyCorpusPattern.FindStringSubmatch(line)
 	return matches != nil
 }

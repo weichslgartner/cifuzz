@@ -14,7 +14,7 @@ import (
 // return (false, false) if impossible.
 // return (true, false) if element was not found.
 // return (true, true) if element was found.
-func Contains(slice interface{}, element interface{}) (found bool) {
+func Contains(slice interface{}, element interface{}) (found bool) { //nolint:nonamedreturns
 	listValue := reflect.ValueOf(slice)
 	defer func() {
 		if e := recover(); e != nil {
