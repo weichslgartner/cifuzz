@@ -265,6 +265,17 @@ func (b *Builder) setCoverageEnv() error {
 		return err
 	}
 
+	// Users should pass the environment variable FUZZ_TEST_CFLAGS to the
+	// compiler command building the fuzz test.
+	cifuzzIncludePath, err := runfiles.Finder.CIFuzzIncludePath()
+	if err != nil {
+		return err
+	}
+	b.env, err = envutil.Setenv(b.env, "FUZZ_TEST_CFLAGS", "-I"+cifuzzIncludePath)
+	if err != nil {
+		return err
+	}
+
 	// Users should pass the environment variable FUZZ_TEST_LDFLAGS to
 	// the linker command building the fuzz test. When building for
 	// coverage, we set it to the replayer object file which we built

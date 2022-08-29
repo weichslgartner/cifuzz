@@ -67,7 +67,8 @@ func TestIntegration_Make_RunCoverage(t *testing.T) {
 	runFuzzer(t, cifuzz, dir, "my_fuzz_test_1", expectedFinding)
 	runFuzzer(t, cifuzz, dir, filepath.Join(dir, "my_fuzz_test_2"), expectedFinding)
 
-	createCoverageReport(t, cifuzz, dir)
+	createCoverageReport(t, cifuzz, dir, "my_fuzz_test_1")
+	createCoverageReport(t, cifuzz, dir, "my_fuzz_test_2")
 }
 
 func copyMakeExampleDir(t *testing.T) string {
@@ -128,12 +129,12 @@ func runFuzzer(t *testing.T, cifuzz string, dir string, fuzzTest string, expecte
 	require.True(t, seenExpectedOutput, "Did not see %q in fuzzer output", expectedOutput.String())
 }
 
-func createCoverageReport(t *testing.T, cifuzz string, dir string) {
+func createCoverageReport(t *testing.T, cifuzz string, dir string, fuzzTest string) {
 	t.Helper()
 
 	cmd := executil.Command(cifuzz, "coverage", "-v",
-		"--output", "my_fuzz_test_1.coverage.html",
-		"my_fuzz_test_1")
+		"--output", fuzzTest+".coverage.html",
+		fuzzTest)
 	cmd.Dir = dir
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -142,7 +143,7 @@ func createCoverageReport(t *testing.T, cifuzz string, dir string) {
 	require.NoError(t, err)
 
 	// Check that the coverage report was created
-	reportPath := filepath.Join(dir, "my_fuzz_test_1.coverage.html")
+	reportPath := filepath.Join(dir, fuzzTest+".coverage.html")
 	require.FileExists(t, reportPath)
 
 	// Check that the coverage report contains coverage for the api.cpp
