@@ -3,3 +3,4 @@ build/
 .cifuzz-corpus/
 .cifuzz-findings/
 *_seed_corpus
+crash-*
