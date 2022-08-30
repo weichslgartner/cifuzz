@@ -55,6 +55,7 @@ func TestIntegration_CMake_InitCreateRunCoverageBundle(t *testing.T) {
 	installDir = filepath.Join(installDir, "cifuzz")
 	installer := filepath.Join("tools", "install", "installer", "installer.go")
 	installCmd := exec.Command("go", "run", "-tags", "installer", installer, "-i", installDir)
+	installCmd.Stderr = os.Stderr
 	installCmd.Dir = projectDir
 	t.Logf("Command: %s", installCmd.String())
 	err = installCmd.Run()
