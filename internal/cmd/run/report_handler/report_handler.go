@@ -85,9 +85,37 @@ func NewReportHandler(options *ReportHandlerOptions) (*ReportHandler, error) {
 func (h *ReportHandler) Handle(r *report.Report) error {
 	var err error
 
+	if r.Status == report.RunStatus_INITIALIZING && !h.initStarted {
+		h.initStarted = true
+		h.numSeedsAtInit = r.NumSeeds
+		if r.NumSeeds == 0 {
+			log.Info("Starting from an empty corpus")
+			h.initFinished = true
+		} else {
+			log.Info("Initializing fuzzer with ", pterm.FgLightCyan.Sprintf("%d", r.NumSeeds), " seed inputs")
+		}
+	}
+
+	if r.Status == report.RunStatus_RUNNING && !h.initFinished {
+		log.Info("Successfully initialized fuzzer with seed inputs")
+		h.initFinished = true
+	}
+
+	if r.Metric != nil {
+		h.lastMetrics = r.Metric
+		if h.firstMetrics == nil {
+			h.firstMetrics = r.Metric
+		}
+		h.printer.PrintMetrics(r.Metric)
+	}
+
 	if r.Finding != nil {
 		// save finding
 		h.Findings = append(h.Findings, r.Finding)
+
+		if len(h.Findings) == 1 {
+			h.PrintFindingInstruction()
+		}
 
 		err := h.handleFinding(r.Finding, !h.PrintJSON)
 		if err != nil {
@@ -117,30 +145,6 @@ func (h *ReportHandler) Handle(r *report.Report) error {
 		}
 		_, _ = fmt.Fprintln(h.jsonOutput, jsonString)
 		return nil
-	}
-
-	if r.Status == report.RunStatus_INITIALIZING && !h.initStarted {
-		h.initStarted = true
-		h.numSeedsAtInit = r.NumSeeds
-		if r.NumSeeds == 0 {
-			log.Info("Starting from an empty corpus")
-			h.initFinished = true
-		} else {
-			log.Info("Initializing fuzzer with ", pterm.FgLightCyan.Sprintf("%d", r.NumSeeds), " seed inputs")
-		}
-	}
-
-	if r.Status == report.RunStatus_RUNNING && !h.initFinished {
-		log.Info("Successfully initialized fuzzer with seed inputs")
-		h.initFinished = true
-	}
-
-	if r.Metric != nil {
-		h.lastMetrics = r.Metric
-		if h.firstMetrics == nil {
-			h.firstMetrics = r.Metric
-		}
-		h.printer.PrintMetrics(r.Metric)
 	}
 
 	return nil
@@ -186,52 +190,43 @@ func (h *ReportHandler) handleFinding(f *finding.Finding, print bool) error {
 		return nil
 	}
 
-	// Print some information about the finding
-	var title string
-	numFindings := len(h.Findings)
-	if isDuplicate {
-		title = fmt.Sprintf(" Finding %d ", numFindings)
-	} else {
-		title = fmt.Sprintf(" Finding %d [%s] ", numFindings, f.Name)
-	}
-
-	lenLeftBar := (65 - len(title)) / 2
-	lenRightBar := (65 - len(title) + 1) / 2
-	log.Print("\n", strings.Repeat("=", lenLeftBar), title, strings.Repeat("=", lenRightBar))
-	// TODO: Print short summary instead
-	log.Print(f.Details)
-	if len(f.StackTrace) > 0 {
-		st := f.StackTrace[0]
-		log.Printf("in %s (%s:%d:%d)", st.Function, st.SourceFile, st.Line, st.Column)
-	}
-
 	switch {
+	case !isDuplicate:
+		log.Printf("💥 NEW %s", f.ShortDescription())
+
 	case isDuplicate && f.GetSeedPath() == "":
 		// The finding is a duplicate and the input is also already known
-		log.Notef(`
-Note: This seems to be a duplicate of finding [%s].
-`, f.Name)
+		log.Printf("💥 REGRESSION [%s]", f.Name)
 
 	case isDuplicate && f.GetSeedPath() != "":
 		// The finding is a duplicate but the input is new
-		log.Notef(`
-Note: This seems to be a duplicate of finding %s with a
-new crashing input. The input has been copied to the seed corpus at:
+		log.Printf("💥 UPDATE [%s] new crashing input", f.Name)
+	}
 
-    %s
+	return nil
+}
 
-`, f.Name, fileutil.PrettifyPath(f.GetSeedPath()))
+func (h *ReportHandler) PrintFindingInstruction() {
+	log.Note(`
+Use 'cifuzz finding <finding name>' for details on a finding.
 
-	case !isDuplicate:
-		log.Printf(`
-Further details:
+`)
+}
 
-    cifuzz finding %s
-`, f.Name)
-		fallthrough
+func (h *ReportHandler) PrintCrashingInputNote() {
+	var crashingInputs []string
 
-	case f.GetSeedPath() != "":
-		log.Notef(`
+	for _, f := range h.Findings {
+		if f.GetSeedPath() != "" {
+			crashingInputs = append(crashingInputs, fileutil.PrettifyPath(f.GetSeedPath()))
+		}
+	}
+
+	if len(crashingInputs) == 0 {
+		return
+	}
+
+	log.Notef(`
 Note: The crashing input has been copied to the seed corpus at:
 
     %s
@@ -241,13 +236,7 @@ including remote runs with artifacts created via 'cifuzz bundle' and
 regression tests. For more information on regression tests, see:
 
     https://github.com/CodeIntelligenceTesting/cifuzz#regression-testing
-
-`, fileutil.PrettifyPath(f.GetSeedPath()))
-	}
-
-	log.Print("=================================================================")
-
-	return nil
+`, strings.Join(crashingInputs, "\n    "))
 }
 
 func (h *ReportHandler) PrintFinalMetrics(numSeeds uint) error {

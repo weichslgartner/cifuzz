@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"io"
 	"os"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -107,8 +106,7 @@ func TestReportHandler_Finding(t *testing.T) {
 	err = h.Handle(findingReport)
 	require.NoError(t, err)
 
-	expectedOutputs := []string{"Finding 1"}
-	expectedOutputs = append(expectedOutputs, filepath.Join(h.SeedCorpusDir, findingReport.Finding.Name))
+	expectedOutputs := []string{"NEW", findingReport.Finding.Name}
 	checkOutput(t, logOutput, expectedOutputs...)
 }
 

@@ -207,6 +207,8 @@ func (c *runCmd) run() error {
 		return err
 	}
 
+	c.reportHandler.PrintCrashingInputNote()
+
 	err = c.printFinalMetrics(buildResult.SeedCorpus)
 	if err != nil {
 		return err

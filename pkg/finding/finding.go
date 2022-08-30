@@ -2,6 +2,7 @@ package finding
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
@@ -33,7 +34,6 @@ type Finding struct {
 	HumanReadableInput string        `json:"human_readable_input,omitempty"`
 	MoreDetails        *ErrorDetails `json:"more_details,omitempty"`
 	Tag                uint64        `json:"tag,omitempty"`
-	ShortDescription   string        `json:"short_description,omitempty"`
 	InputFile          string
 
 	// Note: The following fields don't exist in the protobuf
@@ -265,6 +265,36 @@ func (f *Finding) moveInputFile(projectDir, seedCorpusDir string) error {
 	}
 	f.InputFile = pathRelativeToProjectDir
 	return nil
+}
+
+func (f *Finding) ShortDescription() string {
+	// TODO this is just a naive approach to get some error types.
+	// This should be replace as soon as we have a list of the different error types.
+	var errorType string
+	switch f.Type {
+	case ErrorType_CRASH:
+		errorType = strings.ReplaceAll(strings.Split(f.Details, " ")[0], "-", " ")
+	case ErrorType_RUNTIME_ERROR:
+		errorType = strings.Split(f.Details, ":")[0]
+	default:
+		errorType = f.Details
+	}
+
+	output := fmt.Sprintf("[%s] %s", f.Name, errorType)
+
+	// add location (file, function, line)
+	if len(f.StackTrace) > 0 {
+		f := f.StackTrace[0]
+		var location string
+		// in some cases ASan/Libfuzzer do not include the column in the stack trace
+		if f.Column != 0 {
+			location = fmt.Sprintf("%s:%d:%d", f.SourceFile, f.Line, f.Column)
+		} else {
+			location = fmt.Sprintf("%s:%d", f.SourceFile, f.Line)
+		}
+		output = fmt.Sprintf("%s in %s (%s)", output, f.Function, location)
+	}
+	return output
 }
 
 // ListFindings parses the JSON files of all findings and returns the
