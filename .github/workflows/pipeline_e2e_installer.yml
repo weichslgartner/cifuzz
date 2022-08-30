@@ -68,9 +68,22 @@ jobs:
         shell: bash
 
       - name: Run CMake Example
+        if: contains(matrix.os, 'macos') || contains(matrix.os, 'ubuntu')
         run: |
           cd examples/cmake
           ~/cifuzz/bin/cifuzz run my_fuzz_test 2>&1 | tee fuzzing.log
-          cat fuzzing.log | grep "Finding 1"
+          cat fuzzing.log | grep "heap buffer overflow"
+          cat fuzzing.log | grep "undefined behaviour"
+          cat fuzzing.log | grep -E "Findings:\s+2"
+        shell: bash
+
+      - name: Run CMake Example (Windows)
+        if: contains(matrix.os, 'windows')
+        run: |
+          cd examples/cmake
+          ~/cifuzz/bin/cifuzz run my_fuzz_test 2>&1 | tee fuzzing.log
+          cat fuzzing.log | grep "unknown crash"
+          # we are not testing for the ubsan finding 
+          # as we currently do not support ubsan on windows
           cat fuzzing.log | grep -E "Findings:\s+1"
         shell: bash

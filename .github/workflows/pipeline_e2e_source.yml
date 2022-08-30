@@ -44,8 +44,9 @@ jobs:
         run: |
           cd examples/cmake
           ~/cifuzz/bin/cifuzz run my_fuzz_test 2>&1 | tee fuzzing.log
-          cat fuzzing.log | grep "Finding 1"
-          cat fuzzing.log | grep -E "Findings:\s+1"
+          cat fuzzing.log | grep "heap buffer overflow"
+          cat fuzzing.log | grep "undefined behaviour"
+          cat fuzzing.log | grep -E "Findings:\s+2"
 
   # In general it would be nice to use windows container for testing this,
   # but by now they are not available for windows based github runner
@@ -66,10 +67,23 @@ jobs:
       - name: Install cifuzz
         run: make install 
 
-      - name: Run CMake Example
+      - name: Run CMake Example (MacOS)
+        if: contains(matrix.os, 'macos')
         run: |
           cd examples/cmake
           ~/cifuzz/bin/cifuzz run my_fuzz_test 2>&1 | tee fuzzing.log
-          cat fuzzing.log | grep "Finding 1"
+          cat fuzzing.log | grep "heap buffer overflow"
+          cat fuzzing.log | grep "undefined behaviour"
+          cat fuzzing.log | grep -E "Findings:\s+2"
+        shell: bash
+
+      - name: Run CMake Example (Windows)
+        if: contains(matrix.os, 'windows')
+        run: |
+          cd examples/cmake
+          ~/cifuzz/bin/cifuzz run my_fuzz_test 2>&1 | tee fuzzing.log
+          # we are not testing for the ubsan finding 
+          # as we currently do not support ubsan on windows
+          cat fuzzing.log | grep "unknown crash"
           cat fuzzing.log | grep -E "Findings:\s+1"
         shell: bash

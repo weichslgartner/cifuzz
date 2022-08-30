@@ -16,6 +16,10 @@ void exploreMe(int a, int b, string c) {
       if (b - a < 100000) {
         printf("branch 3\n");
 
+        // Trigger the undefined behavior sanitizer
+        int n = 23;
+        n <<= 32;
+
         if (c == "FUZZING") {
           printf("branch 4\n");
 
