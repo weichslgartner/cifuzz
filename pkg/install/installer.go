@@ -472,6 +472,21 @@ func ExtractBundle(targetDir string, bundle *embed.FS) error {
 		return err
 	}
 
+	// Install the autocompletion script for the current shell (if the
+	// shell is supported)
+	cifuzzPath := filepath.Join(targetDir, "bin", "cifuzz")
+	switch filepath.Base(os.Getenv("SHELL")) {
+	case "bash":
+		err = installBashCompletionScript(cifuzzPath)
+	case "zsh":
+		err = installZshCompletionScript(cifuzzPath)
+	case "fish":
+		err = installFishCompletionScript(cifuzzPath)
+	}
+	if err != nil {
+		return err
+	}
+
 	if runtime.GOOS != "windows" && os.Getuid() == 0 {
 		// On non-Windows systems, CMake doesn't have the concept of a system
 		// package registry. Instead, install the package into the well-known
@@ -550,4 +565,90 @@ func validateTargetDir(installDir string) (string, error) {
 	}
 
 	return installDir, nil
+}
+
+func installBashCompletionScript(cifuzzPath string) error {
+	var cmd *exec.Cmd
+	switch runtime.GOOS {
+	case "linux":
+		var dir string
+		if os.Getuid() == 0 {
+			// We run as root, so we put the completion script into the
+			// system-wide completions directory
+			dir = "/etc/bash_completion.d"
+		} else {
+			// We run as non-root, so install the script to the user's
+			// completions directory
+			// See https://github.com/scop/bash-completion/tree/2.9#installation
+			if os.Getenv("XDG_DATA_HOME") != "" {
+				dir = os.Getenv("XDG_DATA_HOME") + "/bash-completion/completions"
+			} else {
+				dir = os.Getenv("HOME") + "/.local/share/bash-completion/completions"
+			}
+		}
+		err := os.MkdirAll(dir, 0755)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+		cmd = exec.Command("bash", "-c", cifuzzPath+" completion bash > \""+dir+"/cifuzz\"")
+	case "darwin":
+		cmd = exec.Command("bash", "-c", cifuzzPath+" completion bash > \"$(brew --prefix)/etc/bash_completion.d/cifuzz\"")
+	}
+	cmd.Stderr = os.Stderr
+	log.Printf("Command: %s", cmd.String())
+	err := cmd.Run()
+	return errors.WithStack(err)
+}
+
+func installZshCompletionScript(cifuzzPath string) error {
+	var cmd *exec.Cmd
+	switch runtime.GOOS {
+	case "linux":
+		// We try to read $ZDOTDIR/.zshrc or ~/.zshrc here in order to
+		// store the completion script in the correct directory.
+		// When run as non-root, it's expected that ~/.zshrc sets
+		// $fpath[1] to a directory in the user's home directory, which
+		// allows us to write to it.
+		// When run as root, it's expected that /root/.zshrc doesn't
+		// exist, which leaves $fpath[1] at the default which is below
+		// /etc.
+		cmd = exec.Command("zsh", "-c", ". ${ZDOTDIR:-${HOME}}/.zshrc 2>/dev/null; "+cifuzzPath+" completion zsh > \"${fpath[1]}/_cifuzz\"")
+	case "darwin":
+		cmd = exec.Command("zsh", "-c", cifuzzPath+" completion zsh > \"$(brew --prefix)/share/zsh/site-functions/_cifuzz\"")
+	default:
+		return nil
+	}
+	cmd.Stderr = os.Stderr
+	log.Printf("Command: %s", cmd.String())
+	err := cmd.Run()
+	return errors.WithStack(err)
+}
+
+func installFishCompletionScript(cifuzzPath string) error {
+	var dir string
+	// Choose the correct directory for the completion script.
+	// See https://fishshell.com/docs/current/completions.html#where-to-put-completions
+	if os.Getuid() == 0 {
+		// We run as root, so we put the completion script into the
+		// system-wide completions directory
+		dir = "/usr/share/fish/vendor_completions.d"
+	} else {
+		// We run as non-root, so install the script to the user's
+		// completions directory
+		if os.Getenv("XDG_DATA_HOME") != "" {
+			dir = os.Getenv("XDG_DATA_HOME") + "/fish/vendor_completions.d"
+		} else {
+			dir = os.Getenv("HOME") + "/.local/share/fish/vendor_completions.d"
+		}
+	}
+	err := os.MkdirAll(dir, 0755)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	cmd := exec.Command("fish", "-c", cifuzzPath+" completion fish > \""+dir+"/cifuzz.fish\"")
+	cmd.Stderr = os.Stderr
+	log.Printf("Command: %s", cmd.String())
+	err = cmd.Run()
+	return errors.WithStack(err)
 }
