@@ -44,10 +44,11 @@ type ReportHandler struct {
 	lastMetrics  *report.FuzzingMetric
 	firstMetrics *report.FuzzingMetric
 
-	numFindings    uint
 	numSeedsAtInit uint
 
 	jsonOutput io.Writer
+
+	Findings []*finding.Finding
 }
 
 func NewReportHandler(options *ReportHandlerOptions) (*ReportHandler, error) {
@@ -85,6 +86,9 @@ func (h *ReportHandler) Handle(r *report.Report) error {
 	var err error
 
 	if r.Finding != nil {
+		// save finding
+		h.Findings = append(h.Findings, r.Finding)
+
 		err := h.handleFinding(r.Finding, !h.PrintJSON)
 		if err != nil {
 			return err
@@ -147,9 +151,6 @@ func (h *ReportHandler) handleFinding(f *finding.Finding, print bool) error {
 
 	f.CreatedAt = time.Now()
 
-	// Count the number of findings for the final metrics
-	h.numFindings += 1
-
 	// Parse the stack trace
 	f.StackTrace, err = stacktrace.NewParser(h.ProjectDir).Parse(f.Logs)
 	if err != nil {
@@ -187,10 +188,11 @@ func (h *ReportHandler) handleFinding(f *finding.Finding, print bool) error {
 
 	// Print some information about the finding
 	var title string
+	numFindings := len(h.Findings)
 	if isDuplicate {
-		title = fmt.Sprintf(" Finding %d ", h.numFindings)
+		title = fmt.Sprintf(" Finding %d ", numFindings)
 	} else {
-		title = fmt.Sprintf(" Finding %d [%s] ", h.numFindings, f.Name)
+		title = fmt.Sprintf(" Finding %d [%s] ", numFindings, f.Name)
 	}
 
 	lenLeftBar := (65 - len(title)) / 2
@@ -301,7 +303,7 @@ func (h *ReportHandler) PrintFinalMetrics(numSeeds uint) error {
 	lines := []string{
 		metrics.DescString("Execution time:\t") + metrics.NumberString(durationStr),
 		metrics.DescString("Average exec/s:\t") + averageExecsStr,
-		metrics.DescString("Findings:\t") + metrics.NumberString("%d", h.numFindings),
+		metrics.DescString("Findings:\t") + metrics.NumberString("%d", len(h.Findings)),
 		metrics.DescString("New seeds:\t") + metrics.NumberString("%d", newSeeds) +
 			metrics.DescString(" (total: %s)", metrics.NumberString("%d", totalSeeds)),
 	}
