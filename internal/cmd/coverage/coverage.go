@@ -226,7 +226,7 @@ func (c *coverageCmd) run() error {
 }
 
 func (c *coverageCmd) buildFuzzTest() (*build.Result, error) {
-	log.Infof("Building %s", pterm.Style{pterm.Reset, pterm.FgLightBlue}.Sprintf(c.opts.fuzzTest))
+	log.Infof("Building %s", pterm.Style{pterm.Reset, pterm.FgLightBlue}.Sprint(c.opts.fuzzTest))
 
 	if c.opts.BuildSystem == config.BuildSystemCMake {
 		builder, err := cmake.NewBuilder(&cmake.BuilderOptions{
@@ -280,7 +280,7 @@ func (c *coverageCmd) buildFuzzTest() (*build.Result, error) {
 }
 
 func (c *coverageCmd) runFuzzTest(buildResult *build.Result) error {
-	log.Infof("Running %s on corpus", pterm.Style{pterm.Reset, pterm.FgLightBlue}.Sprintf(c.opts.fuzzTest))
+	log.Infof("Running %s on corpus", pterm.Style{pterm.Reset, pterm.FgLightBlue}.Sprint(c.opts.fuzzTest))
 	log.Debugf("Executable: %s", buildResult.Executable)
 
 	// Use user-specified seed corpus dirs (if any), the default seed
