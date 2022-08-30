@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 
 	"code-intelligence.com/cifuzz/internal/completion"
@@ -111,7 +112,11 @@ func (cmd *findingCmd) run(args []string) error {
 		}
 		_, _ = fmt.Fprintln(cmd.OutOrStdout(), s)
 	} else {
-		_, _ = fmt.Fprintln(cmd.OutOrStdout(), strings.Join(f.Logs, "\n"))
+		// TODO: Print the short summary here once we have one
+		s := pterm.Style{pterm.Reset, pterm.Bold}.Sprint(f.Name)
+		s += fmt.Sprintf("\nDate: %s\n", f.CreatedAt)
+		s += fmt.Sprintf("\n  %s\n", strings.Join(f.Logs, "\n  "))
+		_, _ = fmt.Fprintf(cmd.OutOrStdout(), s)
 	}
 
 	return nil
