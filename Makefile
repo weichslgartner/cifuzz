@@ -29,8 +29,17 @@ default:
 	@echo cifuzz
 
 .PHONY: clean
-clean:
+clean: clean/examples/cmake
 	rm -rf build/
+
+.ONESHELL:
+clean/examples/cmake:
+	pushd examples/cmake
+	-rm -r .cifuzz-*
+	-rm -r build/
+	-rm crash-*
+	-rm -r *_seed_corpus
+	popd
 
 .PHONY: deps
 deps:
