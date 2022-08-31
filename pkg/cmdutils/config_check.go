@@ -17,6 +17,9 @@ func NeedsConfig(cmd *cobra.Command) bool {
 	case "help", cobra.ShellCompRequestCmd, cobra.ShellCompNoDescRequestCmd:
 		return false
 	}
+	if cmd.Parent() != nil && cmd.Parent().Name() == "completion" {
+		return false
+	}
 
 	for c := cmd; c != nil; c = c.Parent() {
 		if c.Annotations != nil && c.Annotations["skipConfigCheck"] == "true" {
