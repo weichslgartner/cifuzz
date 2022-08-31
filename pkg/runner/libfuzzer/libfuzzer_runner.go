@@ -237,7 +237,11 @@ func (r *Runner) RunLibfuzzerAndReport(ctx context.Context, args []string, env [
 			return err
 		}
 	} else {
-		stderrPipe, err = r.cmd.StderrPipe()
+		// We use a tee pipe here instead of cmd.StderrPipe because tee
+		// pipes allow to call cmd.Wait() before all reads from the pipe
+		// have completed. We don't want to write anywhere else but the
+		// pipe, so we connect the other end of the tee pipe to io.Discard.
+		stderrPipe, err = r.cmd.StderrTeePipe(io.Discard)
 		if err != nil {
 			return err
 		}
@@ -283,13 +287,14 @@ func (r *Runner) RunLibfuzzerAndReport(ctx context.Context, args []string, env [
 			return err
 		}
 
+		// Tee pipes need to be closed when all reads have completed
+		closeErr := stderrPipe.Close()
+		if closeErr != nil {
+			return errors.WithStack(closeErr)
+		}
+
 		select {
 		case err := <-waitErrCh:
-			closeErr := stderrPipe.Close()
-			if closeErr != nil {
-				return errors.WithStack(closeErr)
-			}
-
 			if r.cmd.TerminatedAfterContextDone() {
 				// The command was terminated because the timeout exceeded. We
 				// don't return an error in that case.
