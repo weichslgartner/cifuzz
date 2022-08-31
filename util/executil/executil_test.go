@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"io"
 	"os"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -19,7 +20,7 @@ func TestCmd_StdoutTeePipe_ReadAsync(t *testing.T) {
 	defer fileutil.Cleanup(outFile.Name())
 
 	os.Stdout = outFile
-	cmd := Command("echo", "foo")
+	cmd := echoCommand("foo")
 	pipe, err := cmd.StdoutTeePipe(os.Stdout)
 	require.NoError(t, err)
 
@@ -86,7 +87,7 @@ func TestCmd_StdoutTeePipe_ReadSync(t *testing.T) {
 	defer fileutil.Cleanup(outFile.Name())
 
 	os.Stdout = outFile
-	cmd := Command("echo", "foo")
+	cmd := echoCommand("foo")
 	pipe, err := cmd.StdoutTeePipe(os.Stdout)
 	require.NoError(t, err)
 
@@ -118,7 +119,7 @@ func TestCmd_StdoutTeePipe_ReadSyncWithRun(t *testing.T) {
 	defer fileutil.Cleanup(outFile.Name())
 
 	os.Stdout = outFile
-	cmd := Command("echo", "foo")
+	cmd := echoCommand("foo")
 	pipe, err := cmd.StdoutTeePipe(os.Stdout)
 	require.NoError(t, err)
 
@@ -147,7 +148,7 @@ func TestCmd_StdoutTeePipe_NoRead(t *testing.T) {
 	defer fileutil.Cleanup(outFile.Name())
 
 	os.Stdout = outFile
-	cmd := Command("echo", "foo")
+	cmd := echoCommand("foo")
 	pipe, err := cmd.StdoutTeePipe(os.Stdout)
 	require.NoError(t, err)
 
@@ -175,7 +176,7 @@ func TestCmd_StdoutTeePipe_NoReadWithRun(t *testing.T) {
 	defer fileutil.Cleanup(outFile.Name())
 
 	os.Stdout = outFile
-	cmd := Command("echo", "foo")
+	cmd := echoCommand("foo")
 	pipe, err := cmd.StdoutTeePipe(os.Stdout)
 	require.NoError(t, err)
 
@@ -191,4 +192,13 @@ func TestCmd_StdoutTeePipe_NoReadWithRun(t *testing.T) {
 
 	err = pipe.Close()
 	require.NoError(t, err)
+}
+
+func echoCommand(args ...string) *Cmd {
+	if runtime.GOOS == "windows" {
+		args = append([]string{"/d", "/c", "echo"}, args...)
+		return Command("cmd.exe", args...)
+	} else {
+		return Command("echo", args...)
+	}
 }
