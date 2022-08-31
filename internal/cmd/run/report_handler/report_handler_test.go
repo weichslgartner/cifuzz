@@ -106,7 +106,7 @@ func TestReportHandler_Finding(t *testing.T) {
 	err = h.Handle(findingReport)
 	require.NoError(t, err)
 
-	expectedOutputs := []string{"NEW", findingReport.Finding.Name}
+	expectedOutputs := []string{findingReport.Finding.Name}
 	checkOutput(t, logOutput, expectedOutputs...)
 }
 

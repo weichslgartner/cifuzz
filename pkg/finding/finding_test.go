@@ -50,10 +50,6 @@ func TestFinding_Save_LoadFinding(t *testing.T) {
 	actualJSON, err = stringutil.ToJsonString(loadedFinding)
 	require.NoError(t, err)
 	require.Equal(t, expectedJSON, actualJSON)
-
-	// Check that calling finding.Save again returns an AlreadyExists error
-	err = finding.Save(testDir)
-	require.True(t, IsAlreadyExistsError(err))
 }
 
 func TestFinding_MoveInputFile(t *testing.T) {
@@ -87,38 +83,6 @@ func TestFinding_MoveInputFile(t *testing.T) {
 
 	// Check that the log was updated
 	require.Contains(t, finding.Logs[2], nameCrashingInput)
-
-	// Create a duplicate finding with the same input
-	finding = testFinding()
-	finding.InputFile = testfile
-	err = os.WriteFile(testfile, []byte("input"), 0644)
-	require.NoError(t, err)
-
-	// Check that the input file of the duplicate finding is not copied
-	err = finding.MoveInputFile(projectDir, seedCorpusDir)
-	require.NoError(t, err)
-	matches, err = filepath.Glob(filepath.Join(findingDir, nameCrashingInput+"*"))
-	require.NoError(t, err)
-	require.Len(t, matches, 1)
-	matches, err = filepath.Glob(filepath.Join(seedCorpusDir, finding.Name+"*"))
-	require.NoError(t, err)
-	require.Len(t, matches, 1)
-
-	// Create a duplicate finding with a different input
-	finding = testFinding()
-	finding.InputFile = testfile
-	err = os.WriteFile(testfile, []byte("some_other_input"), 0644)
-	require.NoError(t, err)
-
-	// Check that the input file of the duplicate finding is copied
-	err = finding.MoveInputFile(projectDir, seedCorpusDir)
-	require.NoError(t, err)
-	matches, err = filepath.Glob(filepath.Join(findingDir, nameCrashingInput+"*"))
-	require.NoError(t, err)
-	require.Len(t, matches, 2)
-	matches, err = filepath.Glob(filepath.Join(seedCorpusDir, finding.Name+"*"))
-	require.NoError(t, err)
-	require.Len(t, matches, 2)
 }
 
 func TestListFindings(t *testing.T) {

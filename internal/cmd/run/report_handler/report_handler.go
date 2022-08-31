@@ -171,11 +171,8 @@ func (h *ReportHandler) handleFinding(f *finding.Finding, print bool) error {
 	}
 	f.Name = names.GetDeterministicName(b.Bytes())
 
-	var isDuplicate bool
 	err = f.Save(h.ProjectDir)
-	if finding.IsAlreadyExistsError(err) {
-		isDuplicate = true
-	} else if err != nil {
+	if err != nil {
 		return err
 	}
 
@@ -190,18 +187,7 @@ func (h *ReportHandler) handleFinding(f *finding.Finding, print bool) error {
 		return nil
 	}
 
-	switch {
-	case !isDuplicate:
-		log.Printf("💥 NEW %s", f.ShortDescription())
-
-	case isDuplicate && f.GetSeedPath() == "":
-		// The finding is a duplicate and the input is also already known
-		log.Printf("💥 REGRESSION [%s]", f.Name)
-
-	case isDuplicate && f.GetSeedPath() != "":
-		// The finding is a duplicate but the input is new
-		log.Printf("💥 UPDATE [%s] new crashing input", f.Name)
-	}
+	log.Printf("💥 %s", f.ShortDescription())
 
 	return nil
 }

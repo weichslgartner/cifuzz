@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
 
@@ -17,7 +16,6 @@ import (
 	"code-intelligence.com/cifuzz/internal/cmd/run/report_handler/stacktrace"
 	"code-intelligence.com/cifuzz/pkg/log"
 	"code-intelligence.com/cifuzz/util/fileutil"
-	"code-intelligence.com/cifuzz/util/sliceutil"
 )
 
 const nameCrashingInput = "crashing-input"
@@ -99,24 +97,15 @@ func (f *Finding) Exists(projectDir string) (bool, error) {
 
 func (f *Finding) Save(projectDir string) error {
 	findingDir := filepath.Join(projectDir, nameFindingsDir, f.Name)
+	jsonPath := filepath.Join(findingDir, nameJsonFile)
 
 	err := os.MkdirAll(findingDir, 0755)
 	if err != nil {
 		return errors.WithStack(err)
 	}
 
-	// If a finding of the same name already exists, we found a duplicate.
-	// We let the caller handle that by returning an AlreadyExistsError.
-	jsonPath := filepath.Join(findingDir, nameJsonFile)
-	exists, err := fileutil.Exists(jsonPath)
+	err = f.saveJson(jsonPath)
 	if err != nil {
-		return err
-	}
-	if exists {
-		return WrapAlreadyExistsError(errors.Errorf("Finding %s already exists", f.Name))
-	}
-
-	if err := f.saveJson(jsonPath); err != nil {
 		return err
 	}
 
@@ -172,46 +161,7 @@ func (f *Finding) MoveInputFile(projectDir, seedCorpusDir string) error {
 
 func (f *Finding) moveInputFile(projectDir, seedCorpusDir string) error {
 	findingDir := filepath.Join(projectDir, nameFindingsDir, f.Name)
-
-	// Choose the new name of the input file. If the finding already
-	// exists and we just found another input which causes the same
-	// crash, we copy the input file to the existing finding directory
-	// and increase the number at the end of the filename.
-	var path string
-	i := 1
-	for {
-		path = filepath.Join(findingDir, nameCrashingInput+"-"+strconv.Itoa(i))
-		exists, err := fileutil.Exists(path)
-		if err != nil {
-			return err
-		}
-		if !exists {
-			// We found a filename which doesn't exist yet
-			break
-		}
-
-		// Check if the existing input file and the new file are
-		// identical
-		contentExistingFile, err := os.ReadFile(path)
-		if err != nil {
-			return errors.WithStack(err)
-		}
-		contentNewFile, err := os.ReadFile(f.InputFile)
-		if err != nil {
-			return errors.WithStack(err)
-		}
-		if sliceutil.Equal(contentExistingFile, contentNewFile) {
-			// The input file already exists in the finding
-			// directory, so we don't copy it there again.
-			// We also don't copy it to the seed corpus, because
-			// either it's already there, or the user removed it
-			// from there deliberately, so we shouldn't it add it
-			// again.
-			return nil
-		}
-
-		i += 1
-	}
+	path := filepath.Join(findingDir, nameCrashingInput)
 
 	// Copy the input file to the finding dir. We don't use os.Rename to
 	// avoid errors when source and target are not on the same mounted
@@ -221,15 +171,12 @@ func (f *Finding) moveInputFile(projectDir, seedCorpusDir string) error {
 		return errors.WithStack(err)
 	}
 
-	// Copy the input file to the seed corpus dir. We reuse the number
-	// from the filename in the finding dir to make it more obvious that
-	// the input file in the seed corpus is the same as the input
-	// file in the finding dir.
+	// Copy the input file to the seed corpus dir
 	err = os.MkdirAll(seedCorpusDir, 0755)
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	f.seedPath = filepath.Join(seedCorpusDir, f.Name+"-"+strconv.Itoa(i))
+	f.seedPath = filepath.Join(seedCorpusDir, f.Name)
 	err = copy.Copy(f.InputFile, f.seedPath)
 	if err != nil {
 		return errors.WithStack(err)
