@@ -161,15 +161,16 @@ func (h *ReportHandler) handleFinding(f *finding.Finding, print bool) error {
 		return err
 	}
 
-	// create a name based on a bytes representation of the
-	// information we store from the stack trace (function name,
+	// create a name based on the crashing input and a bytes representation
+	// of the information we store from the stack trace (function name,
 	// source file, line and column).
 	var b bytes.Buffer
 	err = gob.NewEncoder(&b).Encode(f.StackTrace)
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	f.Name = names.GetDeterministicName(b.Bytes())
+	nameSeed := append(b.Bytes(), f.InputData...)
+	f.Name = names.GetDeterministicName(nameSeed)
 
 	err = f.Save(h.ProjectDir)
 	if err != nil {
