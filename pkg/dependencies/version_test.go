@@ -6,7 +6,10 @@ import (
 	"testing"
 
 	"github.com/Masterminds/semver"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"code-intelligence.com/cifuzz/pkg/mocks"
 )
 
 type versionTest struct {
@@ -59,7 +62,7 @@ InstalledDir: /usr/bin`,
 LLVM (http://llvm.org/):
   LLVM version 14.0.6
   Optimized build.
-  Default target: x86_64-pc-linux-gnu
+  Default target: x86_64-pc-linux-gnupa
   Host CPU: znver3`,
 	},
 	{
@@ -82,4 +85,61 @@ func TestVersionParsing(t *testing.T) {
 		require.True(t, version.Equal(test.Want),
 			"%s: expected version %s, got %s", key, test.Want.String(), version.String())
 	}
+}
+
+func TestClangVersion_AllEnv(t *testing.T) {
+	ccVersion := semver.MustParse("10.0.0")
+	cxxVersion := semver.MustParse("11.0.0")
+	mockCheck := func(path string, key Key) (*semver.Version, error) {
+		switch path {
+		case "CC/clang":
+			return ccVersion, nil
+		case "CXX/clang":
+			return cxxVersion, nil
+		}
+		return nil, nil
+	}
+
+	t.Setenv("CC", "CC/clang")
+	t.Setenv("CXX", "CXX/clang")
+
+	keys := []Key{CLANG}
+	deps, err := Define(keys)
+	require.NoError(t, err)
+	dep := deps[CLANG]
+
+	version, err := clangVersion(dep, mockCheck)
+	require.NoError(t, err)
+
+	// we expect the cc version as it is lower than cxx
+	assert.Equal(t, ccVersion, version)
+}
+
+func TestClangVersion_CXXMissing(t *testing.T) {
+	ccVersion := semver.MustParse("10.0.0")
+	pathVersion := semver.MustParse("1.0.0")
+	mockCheck := func(path string, key Key) (*semver.Version, error) {
+		switch path {
+		case "CC/clang":
+			return ccVersion, nil
+		case "path/clang":
+			return pathVersion, nil
+		}
+		return nil, nil
+	}
+
+	finderMock := &mocks.RunfilesFinderMock{}
+	finderMock.On("ClangPath").Return("path/clang", nil)
+
+	t.Setenv("CC", "CC/clang")
+	keys := []Key{CLANG}
+	deps, err := Define(keys)
+	require.NoError(t, err)
+	dep := deps[CLANG]
+	dep.finder = finderMock
+
+	version, err := clangVersion(dep, mockCheck)
+	require.NoError(t, err)
+
+	assert.Equal(t, pathVersion, version)
 }

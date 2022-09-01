@@ -53,7 +53,9 @@ var all = map[Key]Dependency{
 	CLANG: {
 		Key:        CLANG,
 		MinVersion: *semver.MustParse("11.0.0"),
-		GetVersion: clangVersion,
+		GetVersion: func(dep *Dependency) (*semver.Version, error) {
+			return clangVersion(dep, clangCheck)
+		},
 		Installed: func(dep *Dependency) bool {
 			return dep.checkFinder(dep.finder.ClangPath)
 		},
