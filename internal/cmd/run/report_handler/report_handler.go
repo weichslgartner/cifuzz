@@ -161,9 +161,29 @@ func (h *ReportHandler) handleFinding(f *finding.Finding, print bool) error {
 		return err
 	}
 
-	// create a name based on the crashing input and a bytes representation
-	// of the information we store from the stack trace (function name,
-	// source file, line and column).
+	// Generate a name for the finding. The name is chosen deterministically,
+	// based on:
+	// * Parts of the stack trace: The function name, source file name,
+	//   line and column of those stack frames which are located in user
+	//   or library code, i.e. everything above the call to
+	//   LLVMFuzzerTestOneInputNoReturn or LLVMFuzzerTestOneInput.
+	// * The crashing input.
+	//
+	// This automatically provides some very basic deduplication:
+	// Crashes which were triggered by the same line in the user code
+	// and with the same crashing input result in the same name, which
+	// means that a previous finding of the same name gets overwritten.
+	// So when executing the same fuzz test twice, we don't have
+	// duplicate findings, because the same crashing input is used from
+	// the seed corpus (unless the user deliberately removed it), which
+	// results in the same crash and a finding of the same name.
+	//
+	// By including the crashing input, we also generate a new finding
+	// in the scenario that, after a crash was found, the code was fixed
+	// and therefore the old crashing input does not trigger the crash
+	// anymore, but in a subsequent run the fuzzer finds a different
+	// crashing input which causes the crash again. We do want to
+	// produce a distinct new finding in that case.
 	var b bytes.Buffer
 	err = gob.NewEncoder(&b).Encode(f.StackTrace)
 	if err != nil {
