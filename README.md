@@ -112,7 +112,7 @@ and report detailed information about the finding.
 
 2. As a regression test, by invoking it through your IDE/editor or by
 directly executing the replayer binary
-(see [here](docs/How-To-Write-A-Fuzz-Test.md#how-to-buildcompile-your-fuzz-tests)
+(see [here](docs/How-To-Write-A-Fuzz-Test.md#regression-test--replayer)
 on how to build that binary).
 This will use the replayer to apply existing input data from the
 seed corpus, which has to be stored in the directory

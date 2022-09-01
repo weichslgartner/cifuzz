@@ -1,27 +1,5 @@
 # How to write a fuzz test
 
-
-## How to build/compile your fuzz tests
-
-### CMake
-
-If you created a fuzz test with `cifuzz create` and followed the 
-instructions printed by the command, the fuzz test is now built as part 
-of the regular CMake build. 
-You can build the replayer binary (see [README](../README.md#regression-testing)
-for more information about this) for your fuzz test by:
-
-```
-cmake -S . -B build
-# for building the whole project incl. all fuzz tests
-make -C build
-# for building a single fuzz test
-make -C build my_fuzz_test
-```
-
-Of course you can also build the fuzz test via the CMake integration 
-of your IDE.
-
 ## How to convert/cast the fuzzer data into the data types you need
 
 ### C/C++
@@ -55,19 +33,27 @@ FUZZ_TEST(const uint8_t *data, size_t size) {
 
 ### Regression Test / Replayer
 
-When creating a new fuzz test we recommend to use the regression test
+After creating a new fuzz test we recommend to use the regression test
 mode (see [README](../README.md#regression-testing)) to maintain a 
-fast and responsive development cycle. 
-When you run the CMake target from your IDE, the fuzz test is 
-executed in regression test mode.
+fast and responsive development cycle. The fuzz test has to be build
+with so-called sanitizers, which track the execution at runtime to
+be able to detect various errors.
+
+It is recommended to use the provided CMake user presets, which can be
+generated with `cifuzz integrate cmake`. Those provide a preset for
+regression testing, which can be executed from within your IDE or in
+the cli.
+
+After selecting the preset the fuzz test is executed in regression
+test mode.
 ![fuzz test in CMake](/docs/assets/cmake_clion.gif)
 
-You can also run the regression test through the replayer binary
-by building and running the CMake target manually:
+You can also use the regression preset to build the fuzz tests as
+replayer binaries in the cli.
 
-#### CMake
-``` bash
-cmake -S . -B build
-make -C build my_fuzz_test
-./build/my_fuzz_test
+```bash
+cmake --preset="cifuzz (Regression Test)"
+cmake --build --preset="cifuzz (Regression Test)"
 ```
+
+You can find the generated binaries in .cifuzz-build/replayer/address+undefined/.
