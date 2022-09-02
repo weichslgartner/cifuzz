@@ -74,14 +74,13 @@ func TestCmd_TerminateProcessGroup_With_StdoutTeePipe(t *testing.T) {
 }
 
 func TestCmd_StdoutTeePipe_ReadAsync(t *testing.T) {
-	// Redirect stdout to a file
+	// Pipe stdout to a file
 	outFile, err := os.CreateTemp("", "outFile")
 	require.NoError(t, err)
 	defer fileutil.Cleanup(outFile.Name())
 
-	os.Stdout = outFile
 	cmd := echoCommand("foo")
-	pipe, err := cmd.StdoutTeePipe(os.Stdout)
+	pipe, err := cmd.StdoutTeePipe(outFile)
 	require.NoError(t, err)
 
 	err = cmd.Start()
@@ -113,13 +112,8 @@ func TestCmd_StdoutTeePipe_ReadAsync(t *testing.T) {
 }
 
 func TestCmd_StdoutTeePipe_ReadAsyncMultiline(t *testing.T) {
-	var err error
-	// Don't spam stdout with the output of yes(1)
-	os.Stdout, err = os.OpenFile(os.DevNull, os.O_WRONLY, 0)
-	require.NoError(t, err)
-
 	cmd := Command("yes")
-	pipe, err := cmd.StdoutTeePipe(os.Stdout)
+	pipe, err := cmd.StdoutTeePipe(io.Discard)
 	require.NoError(t, err)
 
 	err = cmd.Start()
@@ -141,14 +135,13 @@ func TestCmd_StdoutTeePipe_ReadAsyncMultiline(t *testing.T) {
 }
 
 func TestCmd_StdoutTeePipe_ReadSync(t *testing.T) {
-	// Redirect stdout to a file
+	// Pipe stdout to a file
 	outFile, err := os.CreateTemp("", "outFile")
 	require.NoError(t, err)
 	defer fileutil.Cleanup(outFile.Name())
 
-	os.Stdout = outFile
 	cmd := echoCommand("foo")
-	pipe, err := cmd.StdoutTeePipe(os.Stdout)
+	pipe, err := cmd.StdoutTeePipe(outFile)
 	require.NoError(t, err)
 
 	err = cmd.Start()
@@ -173,14 +166,13 @@ func TestCmd_StdoutTeePipe_ReadSync(t *testing.T) {
 }
 
 func TestCmd_StdoutTeePipe_ReadSyncWithRun(t *testing.T) {
-	// Redirect stdout to a file
+	// Pipe stdout to a file
 	outFile, err := os.CreateTemp("", "outFile")
 	require.NoError(t, err)
 	defer fileutil.Cleanup(outFile.Name())
 
-	os.Stdout = outFile
 	cmd := echoCommand("foo")
-	pipe, err := cmd.StdoutTeePipe(os.Stdout)
+	pipe, err := cmd.StdoutTeePipe(outFile)
 	require.NoError(t, err)
 
 	err = cmd.Run()
@@ -202,14 +194,13 @@ func TestCmd_StdoutTeePipe_ReadSyncWithRun(t *testing.T) {
 }
 
 func TestCmd_StdoutTeePipe_NoRead(t *testing.T) {
-	// Redirect stdout to a file
+	// Pipe stdout to a file
 	outFile, err := os.CreateTemp("", "outFile")
 	require.NoError(t, err)
 	defer fileutil.Cleanup(outFile.Name())
 
-	os.Stdout = outFile
 	cmd := echoCommand("foo")
-	pipe, err := cmd.StdoutTeePipe(os.Stdout)
+	pipe, err := cmd.StdoutTeePipe(outFile)
 	require.NoError(t, err)
 
 	err = cmd.Start()
@@ -230,14 +221,13 @@ func TestCmd_StdoutTeePipe_NoRead(t *testing.T) {
 }
 
 func TestCmd_StdoutTeePipe_NoReadWithRun(t *testing.T) {
-	// Redirect stdout to a file
+	// Pipe stdout to a file
 	outFile, err := os.CreateTemp("", "outFile")
 	require.NoError(t, err)
 	defer fileutil.Cleanup(outFile.Name())
 
-	os.Stdout = outFile
 	cmd := echoCommand("foo")
-	pipe, err := cmd.StdoutTeePipe(os.Stdout)
+	pipe, err := cmd.StdoutTeePipe(outFile)
 	require.NoError(t, err)
 
 	err = cmd.Run()
