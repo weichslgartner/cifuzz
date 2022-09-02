@@ -444,14 +444,17 @@ depsLoop:
 	}
 
 	baseFuzzerInfo := artifact.Fuzzer{
-		Target:       fuzzTest,
-		Path:         fuzzTestArchivePath,
-		ProjectDir:   projectDir,
-		Seeds:        archiveSeedsDir,
-		LibraryPaths: []string{externalLibrariesPrefix},
+		Target:     fuzzTest,
+		Path:       fuzzTestArchivePath,
+		ProjectDir: projectDir,
+		Seeds:      archiveSeedsDir,
 		// Let all remotely executed fuzz tests run as if they were executed within cifuzz (e.g., don't let them start
 		// cifuzz themselves).
 		EngineOptions: artifact.EngineOptions{Env: []string{"NO_CIFUZZ=1"}},
+	}
+
+	if externalLibrariesPrefix != "" {
+		baseFuzzerInfo.LibraryPaths = []string{externalLibrariesPrefix}
 	}
 
 	if buildResult.Engine == "replayer" {
