@@ -4,14 +4,74 @@ import (
 	"bufio"
 	"io"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
 	"code-intelligence.com/cifuzz/util/fileutil"
 )
+
+func TestCmd_TerminateProcessGroup(t *testing.T) {
+	// Start a process which prints output and never exits on its own
+	path := buildYes(t)
+	cmd := Command(path)
+	cmd.Stderr = os.Stderr
+	err := cmd.Start()
+	require.NoError(t, err)
+
+	go func() {
+		time.Sleep(time.Second)
+
+		// Terminate the process
+		err = cmd.TerminateProcessGroup()
+		require.NoError(t, err)
+	}()
+
+	err = cmd.Wait()
+	var exitErr *exec.ExitError
+	require.ErrorAs(t, err, &exitErr)
+	require.Equal(t, -1, exitErr.ExitCode())
+}
+
+func TestCmd_TerminateProcessGroup_With_StdoutTeePipe(t *testing.T) {
+	// Start a process which prints output and never exits on its own
+	path := buildYes(t)
+	cmd := Command(path)
+	cmd.Stderr = os.Stderr
+
+	// Create a tee pipe to test the behavior of TerminateProcessGroup
+	// when the command uses a tee pipe
+	pipe, err := cmd.StdoutTeePipe(io.Discard)
+	require.NoError(t, err)
+
+	err = cmd.Start()
+	require.NoError(t, err)
+
+	go func() {
+		// Read a line from the pipe
+		scanner := bufio.NewScanner(pipe)
+		scanner.Scan()
+		require.NoError(t, scanner.Err())
+		require.Equal(t, "y", scanner.Text())
+
+		// Terminate the process
+		err = cmd.TerminateProcessGroup()
+		require.NoError(t, err)
+	}()
+
+	err = cmd.Wait()
+	var exitErr *exec.ExitError
+	require.ErrorAs(t, err, &exitErr)
+	require.Equal(t, -1, exitErr.ExitCode())
+
+	err = pipe.Close()
+	require.NoError(t, err)
+}
 
 func TestCmd_StdoutTeePipe_ReadAsync(t *testing.T) {
 	// Redirect stdout to a file
@@ -201,4 +261,16 @@ func echoCommand(args ...string) *Cmd {
 	} else {
 		return Command("echo", args...)
 	}
+}
+
+func buildYes(t *testing.T) string {
+	tmpDir, err := os.MkdirTemp("", "cifuzz-yes-")
+	require.NoError(t, err)
+	path := filepath.Join(tmpDir, "yes")
+	if runtime.GOOS == "windows" {
+		path += ".exe"
+	}
+	err = exec.Command("go", "build", "-o", path, "./testdata").Run()
+	require.NoError(t, err)
+	return path
 }
