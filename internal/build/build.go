@@ -27,6 +27,13 @@ func CommonBuildEnv() ([]string, error) {
 	var err error
 	env := os.Environ()
 
+	// Set CIFUZZ=1 to allow the build system to figure out that it was
+	// started by cifuzz.
+	env, err = envutil.Setenv(env, "CIFUZZ", "1")
+	if err != nil {
+		return nil, err
+	}
+
 	// On Windows, our preferred compiler is MSVC, which can't easily be run
 	// from an arbitrary terminal as it requires about a dozen environment
 	// variables to be set correctly. Thus, we assume users to run cifuzz from
