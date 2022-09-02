@@ -8,7 +8,6 @@ import (
 
 	copy2 "github.com/otiai10/copy"
 	"github.com/pkg/errors"
-	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 
 	"code-intelligence.com/cifuzz/internal/config"
@@ -52,7 +51,7 @@ CMakeUserPresets.json file and by adding tasks to your tasks.json:
 Missing files are generated automatically.
 `,
 		ValidArgs: supportedTools(),
-		Args:      cobra.MatchAll(cobra.MaximumNArgs(3), cobra.OnlyValidArgs),
+		Args:      cobra.MatchAll(cobra.RangeArgs(1, len(supportedTools())), cobra.OnlyValidArgs),
 		RunE: func(c *cobra.Command, args []string) error {
 			cmd := integrateCmd{
 				Command: c,
@@ -68,10 +67,6 @@ Missing files are generated automatically.
 
 func (c *integrateCmd) run() error {
 	var err error
-
-	if len(c.tools) == 0 {
-		c.tools, err = selectTools()
-	}
 
 	projectDir, err := config.FindProjectDir()
 	if errors.Is(err, os.ErrNotExist) {
@@ -110,16 +105,6 @@ func (c *integrateCmd) run() error {
 	}
 
 	return nil
-}
-
-// selectTools lets the user select the desired tools via an interactive multiselect dialog
-func selectTools() ([]string, error) {
-	result, err := pterm.DefaultInteractiveMultiselect.WithOptions(supportedTools()).Show()
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	return result, nil
 }
 
 func setupGitIgnore(projectDir string) error {
