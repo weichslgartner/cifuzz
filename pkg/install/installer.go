@@ -4,7 +4,6 @@ import (
 	"embed"
 	"fmt"
 	"io/fs"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -15,6 +14,7 @@ import (
 	"github.com/otiai10/copy"
 	"github.com/pkg/errors"
 
+	"code-intelligence.com/cifuzz/pkg/log"
 	"code-intelligence.com/cifuzz/util/envutil"
 	"code-intelligence.com/cifuzz/util/fileutil"
 )
@@ -398,16 +398,20 @@ func CIFuzzExecutablePath(binDir string) string {
 }
 
 func PrintPathInstructions(binDir string) {
+	log.Success("Installation successful")
+
 	if runtime.GOOS == "windows" {
 		// TODO: On Windows, users generally don't expect having to fiddle with their PATH. We should update it for
 		//       them, but that requires asking for admin access.
-		_, _ = fmt.Fprintf(os.Stderr, `Installation successful. Please add the following directory to your PATH:
-    %s
-If you haven't already done so.`, binDir)
+		log.Notef(`Please add the following directory to your PATH:
+	%s
+If you haven't already done so.
+`, binDir)
 	} else {
-		_, _ = fmt.Fprintf(os.Stderr, `Installation successful. Please add the following to ~/.profile or ~/.bash_profile:
+		log.Notef(`Please add the following to ~/.profile or ~/.bash_profile:
     export PATH="$PATH:%s"
-If you haven't already done so.`, binDir)
+If you haven't already done so.
+`, binDir)
 	}
 }
 
