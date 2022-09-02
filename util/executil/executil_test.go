@@ -59,9 +59,7 @@ func TestCmd_TerminateProcessGroup(t *testing.T) {
 	}()
 
 	err = cmd.Wait()
-	var exitErr *exec.ExitError
-	require.ErrorAs(t, err, &exitErr)
-	require.Equal(t, -1, exitErr.ExitCode())
+	require.True(t, IsTerminatedExitErr(err))
 }
 
 func TestCmd_TerminateProcessGroup_With_StdoutTeePipe(t *testing.T) {
@@ -91,9 +89,7 @@ func TestCmd_TerminateProcessGroup_With_StdoutTeePipe(t *testing.T) {
 	}()
 
 	err = cmd.Wait()
-	var exitErr *exec.ExitError
-	require.ErrorAs(t, err, &exitErr)
-	require.Equal(t, -1, exitErr.ExitCode())
+	require.True(t, IsTerminatedExitErr(err))
 
 	err = pipe.Close()
 	require.NoError(t, err)

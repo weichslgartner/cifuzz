@@ -18,7 +18,6 @@ import (
 	"time"
 
 	"github.com/otiai10/copy"
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sync/errgroup"
 
@@ -287,23 +286,12 @@ func runFuzzer(t *testing.T, cifuzz string, dir string, expectedOutput *regexp.R
 
 	select {
 	case waitErr := <-waitErrCh:
+
 		err = routines.Wait()
 		require.NoError(t, err)
 
-		var exitErr *exec.ExitError
-		var expectedExitCode int
-		if runtime.GOOS == "windows" {
-			// On Windows we terminate the process via taskkill [1],
-			// which causes the process to exit with exit code 1
-			// [1] https://docs.microsoft.com/en-us/windows-server/administration/windows-commands/taskkill
-			expectedExitCode = 1
-		} else {
-			// On Unix we terminate the process via SIGTERM, so the
-			// expected exit code is 128 + 15 = 143
-			expectedExitCode = 143
-		}
 		seen := seenExpectedOutput.Load().(bool)
-		if seen && terminate && errors.As(waitErr, &exitErr) && exitErr.ExitCode() == expectedExitCode {
+		if seen && terminate && executil.IsTerminatedExitErr(waitErr) {
 			return
 		}
 		require.NoError(t, waitErr)

@@ -3,6 +3,7 @@
 package executil
 
 import (
+	"os/exec"
 	"syscall"
 	"time"
 
@@ -10,6 +11,30 @@ import (
 
 	"code-intelligence.com/cifuzz/pkg/log"
 )
+
+// IsTerminatedExitErr returns true if the error is the expected error
+// when the process was terminated via Cmd.TerminateProcessGroup and the
+// process exited within the grace period.
+//
+// On Unix, multiple errors can happen when a SIGTERM is sent to the
+// process group:
+//   - The process can have exit code 143, which is the expected exit
+//     code when a process receives a SIGTERM
+//   - The process can have exit code -1 and the signal of the wait status
+//     set to SIGTERM
+//   - In case that the process doesn't handle the SIGTERM fast enough and
+//     tries to write to the pipe which was already closed by
+//     TerminateProcessGroup, the process has exit code -1 and the signal
+//     of the wait status is set to SIGPIPE
+func IsTerminatedExitErr(err error) bool {
+	var exitErr *exec.ExitError
+	errors.As(err, &exitErr)
+	if exitErr.ExitCode() == 143 {
+		return true
+	}
+	signal := exitErr.Sys().(syscall.WaitStatus).Signal()
+	return signal == syscall.SIGTERM || signal == syscall.SIGPIPE
+}
 
 func (c *Cmd) TerminateProcessGroup() error {
 	if c.getpgidError != nil {

@@ -4,9 +4,22 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
+	"syscall"
 
 	"github.com/pkg/errors"
 )
+
+// IsTerminatedExitErr returns true if the wait status is the
+// wait status that is expected when the process was terminated via
+// Cmd.TerminateProcessGroup.
+//
+// On Windows, processes which are terminated via taskkill exit with
+// exit code 1.
+func IsTerminatedExitErr(err error) bool {
+	var exitErr *exec.ExitError
+	errors.As(err, &exitErr)
+	return exitErr.Sys().(syscall.WaitStatus).ExitCode == 1
+}
 
 // TerminateProcessGroup uses the taskkill command with the /t and /f
 // parameters to forcefully terminate the process of the command and
