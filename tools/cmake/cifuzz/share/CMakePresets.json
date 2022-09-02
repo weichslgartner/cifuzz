@@ -40,6 +40,10 @@
           "type": "BOOL",
           "value": "ON"
         }
+      },
+      "environment": {
+        "CC": "clang",
+        "CXX": "clang++"
       }
     },
     {
