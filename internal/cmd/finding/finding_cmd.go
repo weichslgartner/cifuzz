@@ -67,8 +67,8 @@ func (cmd *findingCmd) run(args []string) error {
 	}
 
 	if len(args) == 0 {
-		// If called without arguments, `cifuzz findings` lists the
-		// findings
+		// If called without arguments, `cifuzz findings` lists short
+		// descriptions of all findings
 		findings, err := finding.ListFindings(projectDir)
 		if err != nil {
 			return err
@@ -88,7 +88,7 @@ func (cmd *findingCmd) run(args []string) error {
 			return nil
 		}
 		for _, f := range findings {
-			_, _ = fmt.Fprintln(cmd.OutOrStdout(), f.Name)
+			_, _ = fmt.Fprintln(cmd.OutOrStdout(), f.ShortDescription())
 		}
 		return nil
 	}
@@ -112,8 +112,7 @@ func (cmd *findingCmd) run(args []string) error {
 		}
 		_, _ = fmt.Fprintln(cmd.OutOrStdout(), s)
 	} else {
-		// TODO: Print the short summary here once we have one
-		s := pterm.Style{pterm.Reset, pterm.Bold}.Sprint(f.Name)
+		s := pterm.Style{pterm.Reset, pterm.Bold}.Sprint(f.ShortDescription())
 		s += fmt.Sprintf("\nDate: %s\n", f.CreatedAt)
 		s += fmt.Sprintf("\n  %s\n", strings.Join(f.Logs, "\n  "))
 		_, _ = fmt.Fprintf(cmd.OutOrStdout(), s)
