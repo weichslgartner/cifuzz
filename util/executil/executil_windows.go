@@ -18,6 +18,8 @@ import (
 // to exit if the pipes were not closed yet. In that case, Wait will
 // block until the pipes are closed.
 func (c *Cmd) TerminateProcessGroup() error {
+	defer c.closeDescriptors(c.CloseAfterWait)
+
 	// Based on https://stackoverflow.com/a/44551450/2804197
 	// Original author: https://stackoverflow.com/users/301049/rots
 	kill := exec.Command("TASKKILL", "/T", "/F", "/PID", strconv.Itoa(c.Process.Pid))

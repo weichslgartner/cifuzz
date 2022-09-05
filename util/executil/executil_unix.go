@@ -21,6 +21,11 @@ func (c *Cmd) TerminateProcessGroup() error {
 	// anymore at this point.
 	_ = syscall.Kill(-c.pgid, syscall.SIGTERM) // note the minus sign
 
+	// Close the write ends of any pipes to avoid that Wait blocks
+	// until the command has finished printing output (which could be
+	// indefinitely).
+	c.closeDescriptors(c.CloseAfterWait)
+
 	// Give the process group a few seconds to exit
 	select {
 	case <-time.After(processGroupTerminationGracePeriod):
