@@ -14,7 +14,7 @@ require (
 	github.com/otiai10/copy v1.7.0
 	github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8
 	github.com/pkg/errors v0.9.1
-	github.com/pterm/pterm v0.12.45
+	github.com/pterm/pterm v0.12.46
 	github.com/spf13/cobra v1.5.0
 	github.com/spf13/viper v1.12.0
 	golang.org/x/sync v0.0.0-20201207232520-09787c993a3a
