@@ -373,8 +373,20 @@ func (r *Runner) FuzzerEnvironment() ([]string, error) {
 
 	// Add the user-specified environment variables. We do this after
 	// setting our defaults but before setting sanitizer options,
-	// because there we  take care of overriding options which we need
+	// because there we take care of overriding options which we need
 	// to override and keeping other options.
+	if os.Getenv("ASAN_OPTIONS") != "" {
+		env, err = envutil.Setenv(env, "ASAN_OPTIONS", os.Getenv("ASAN_OPTIONS"))
+		if err != nil {
+			return nil, err
+		}
+	}
+	if os.Getenv("UBSAN_OPTIONS") != "" {
+		env, err = envutil.Setenv(env, "UBSAN_OPTIONS", os.Getenv("UBSAN_OPTIONS"))
+		if err != nil {
+			return nil, err
+		}
+	}
 	env, err = fuzzer_runner.AddEnvFlags(env, r.EnvVars)
 	if err != nil {
 		return nil, err
