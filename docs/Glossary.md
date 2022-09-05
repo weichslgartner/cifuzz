@@ -46,9 +46,40 @@ different meanings depending on the context, previous knowledge or
 might even be used differently by the various fuzzing engines. 
 To avoid confusion we provide the following definitions:
 
-### Features
+### exec/s
+The average number of times per second the fuzz target has been called
+with a generated input since fuzzing started. 
 
-### Branches
+### paths
+While the fuzzer feeds generated inputs to a fuzz test, it progressively 
+explores the code under test. 
+The "paths" metric captures the different kinds of progress the fuzzer 
+can make, such as
 
-### Coverage
+* reaching new lines of code;
+* executing a loop body a different number of times;
+* satisfying equality for larger parts of a failing comparison.
+
+While this number increasing can be taken as a sign that the fuzzer is 
+still making progress, it is not meaningful to compare across 
+different fuzz tests.
+
+For the libFuzzer engine, the "paths" metric coincides with the 
+engine's "ft" (feature) count.
+
+### last new path
+The time that has passed since the last increase of the "paths" metric.
+
+If this number keeps increasing, it is likely that the fuzzer isn't 
+making progress anymore. In this case, use `cifuzz coverage` to 
+get an idea of where the fuzzer got stuck.
+
+## Coverage
+Coverage describes the code reached (and therefore executed) during an 
+application/fuzzing run. It can be measured in different categories, 
+for example:
+
+* Lines
+* Functions
+* Branches 
 
