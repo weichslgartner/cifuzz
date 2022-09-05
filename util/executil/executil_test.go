@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 
@@ -15,6 +16,31 @@ import (
 
 	"code-intelligence.com/cifuzz/util/fileutil"
 )
+
+func TestCmd_SendSigterm(t *testing.T) {
+	// Sending SIGTERM via cmd.Process.Signal is not supported on Windows
+	if runtime.GOOS == "windows" {
+		return
+	}
+
+	// Start a process which prints output and never exits on its own
+	path := buildYes(t)
+	cmd := Command(path)
+	cmd.Stderr = os.Stderr
+	err := cmd.Start()
+	require.NoError(t, err)
+
+	go func() {
+		time.Sleep(time.Second)
+
+		// Terminate the process
+		err = cmd.Process.Signal(syscall.SIGTERM)
+		require.NoError(t, err)
+	}()
+
+	err = cmd.Wait()
+	require.True(t, IsTerminatedExitErr(err))
+}
 
 func TestCmd_TerminateProcessGroup(t *testing.T) {
 	// Start a process which prints output and never exits on its own
