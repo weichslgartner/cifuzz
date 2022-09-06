@@ -4,7 +4,7 @@
 You can start coverage runs from within CLion with the help of CMake
 user presets. Custom cifuzz presets can be added by running:
     
-    cifuzz integrate clion
+    cifuzz integrate cmake
 
 Those presets have to be enabled before they show up as a run
 configuration.
