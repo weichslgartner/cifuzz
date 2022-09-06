@@ -81,9 +81,11 @@ type configureVariant struct {
 func New(conf *config.Config) *cobra.Command {
 	opts := &bundleOpts{}
 	cmd := &cobra.Command{
-		Use:               "bundle",
-		Short:             "Bundles the fuzz test into an archive",
-		Long:              "Bundles all runtime artifacts required by the given fuzz test into a self-contained archive that can be executed by a remote fuzzing worker",
+		Use:   "bundle [flags] [<fuzz test>]...",
+		Short: "Bundles fuzz tests into an archive",
+		Long: `Bundles all runtime artifacts required by the given fuzz tests into
+a self-contained archive that can be executed by a remote fuzzing worker.
+If no fuzz tests are specified all fuzz tests are added to the bundle.`,
 		ValidArgsFunction: completion.ValidFuzzTests,
 		Args:              cobra.ArbitraryArgs,
 		PreRunE: func(cmd *cobra.Command, args []string) error {
