@@ -25,6 +25,7 @@ import (
 	"code-intelligence.com/cifuzz/pkg/artifact"
 	"code-intelligence.com/cifuzz/pkg/finding"
 	"code-intelligence.com/cifuzz/pkg/install"
+	"code-intelligence.com/cifuzz/util/envutil"
 	"code-intelligence.com/cifuzz/util/executil"
 	"code-intelligence.com/cifuzz/util/fileutil"
 	"code-intelligence.com/cifuzz/util/testutil"
@@ -114,7 +115,7 @@ func TestIntegration_CMake_InitCreateRunCoverageBundle(t *testing.T) {
 	require.Empty(t, findings)
 
 	// Run the (empty) fuzz test
-	runFuzzer(t, cifuzz, dir, regexp.MustCompile(`^paths: \d+`), true)
+	runFuzzer(t, cifuzz, dir, regexp.MustCompile(`^paths: \d+`), true, nil)
 
 	// Make the fuzz test call a function. Before we do that, we sleep
 	// for one second, to avoid make implementations which only look at
@@ -123,7 +124,7 @@ func TestIntegration_CMake_InitCreateRunCoverageBundle(t *testing.T) {
 	time.Sleep(time.Second)
 	modifyFuzzTestToCallFunction(t, fuzzTestPath)
 	// Run the fuzz test
-	runFuzzer(t, cifuzz, dir, regexp.MustCompile(`^==\d*==ERROR: AddressSanitizer: heap-use-after-free`), false)
+	runFuzzer(t, cifuzz, dir, regexp.MustCompile(`^==\d*==ERROR: AddressSanitizer: heap-use-after-free`), false, nil)
 
 	// Check that the findings command lists the finding
 	findings = getFindings(t, cifuzz, dir)
@@ -164,14 +165,19 @@ func TestIntegration_CMake_InitCreateRunCoverageBundle(t *testing.T) {
 	err = os.WriteFile(filepath.Join(dir, "cifuzz.yaml"), []byte(configFileContent), 0644)
 	// When minijail is used, the artifact prefix is set to the minijail
 	// output path
-	runFuzzer(t, cifuzz, dir, regexp.MustCompile(`artifact_prefix='./'`), false)
+	runFuzzer(t, cifuzz, dir, regexp.MustCompile(`artifact_prefix='./'`), false, nil)
 
 	if runtime.GOOS == "linux" {
 		// Check that command-line flags take precedence over config file
 		// settings (only on Linux because we only support Minijail on
 		// Linux).
-		runFuzzer(t, cifuzz, dir, regexp.MustCompile(`minijail`), false, "--use-sandbox=true")
+		runFuzzer(t, cifuzz, dir, regexp.MustCompile(`minijail`), false, nil, "--use-sandbox=true")
 	}
+
+	// Check that ASAN_OPTIONS can be set
+	env, err := envutil.Setenv(os.Environ(), "ASAN_OPTIONS", "print_stats=1:atexit=1")
+	require.NoError(t, err)
+	runFuzzer(t, cifuzz, dir, regexp.MustCompile(`Stats:`), false, env)
 
 	// Building with coverage instrumentation doesn't work on Windows yet
 	if runtime.GOOS != "windows" {
@@ -201,8 +207,12 @@ func copyTestdataDir(t *testing.T) string {
 	return dir
 }
 
-func runFuzzer(t *testing.T, cifuzz string, dir string, expectedOutput *regexp.Regexp, terminate bool, args ...string) {
+func runFuzzer(t *testing.T, cifuzz string, dir string, expectedOutput *regexp.Regexp, terminate bool, env []string, args ...string) {
 	t.Helper()
+
+	if env == nil {
+		env = os.Environ()
+	}
 
 	runCtx, closeRunCtx := context.WithCancel(context.Background())
 	defer closeRunCtx()
@@ -216,6 +226,7 @@ func runFuzzer(t *testing.T, cifuzz string, dir string, expectedOutput *regexp.R
 		args...,
 	)
 	cmd.Dir = dir
+	cmd.Env = env
 	stdoutPipe, err := cmd.StdoutTeePipe(os.Stdout)
 	require.NoError(t, err)
 	stderrPipe, err := cmd.StderrTeePipe(os.Stderr)
