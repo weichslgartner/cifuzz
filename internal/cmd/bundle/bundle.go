@@ -450,8 +450,8 @@ depsLoop:
 		Path:       fuzzTestArchivePath,
 		ProjectDir: projectDir,
 		Seeds:      archiveSeedsDir,
-		// Let all remotely executed fuzz tests run as if they were executed within cifuzz (e.g., don't let them start
-		// cifuzz themselves).
+		// Set NO_CIFUZZ=1 to avoid that remotely executed fuzz tests try
+		// to start cifuzz
 		EngineOptions: artifact.EngineOptions{Env: []string{"NO_CIFUZZ=1"}},
 	}
 
