@@ -210,7 +210,7 @@ func (i *InstallationBundler) BuildMinijail() error {
 	minijailDir := filepath.Join(i.projectDir, "third-party", "minijail")
 
 	// Build minijail
-	cmd := exec.Command("make", "CC_BINARY(minijail0)", "CC_LIBRARY(libminijailpreload.so)")
+	cmd := exec.Command("make", "CC_BINARY(minijail0)")
 	cmd.Dir = minijailDir
 	// The minijail Makefile changes the directory to $PWD, so we have
 	// to set that.
@@ -226,15 +226,9 @@ func (i *InstallationBundler) BuildMinijail() error {
 		return errors.WithStack(err)
 	}
 
-	// Copy minijail binaries
+	// Copy minijail binary
 	src := filepath.Join(i.projectDir, "third-party", "minijail", "minijail0")
 	dest := filepath.Join(i.binDir(), "minijail0")
-	err = copy.Copy(src, dest)
-	if err != nil {
-		return errors.WithStack(err)
-	}
-	src = filepath.Join(i.projectDir, "third-party", "minijail", "libminijailpreload.so")
-	dest = filepath.Join(i.libDir(), "libminijailpreload.so")
 	err = copy.Copy(src, dest)
 	if err != nil {
 		return errors.WithStack(err)
@@ -424,7 +418,6 @@ func ExtractBundle(targetDir string, bundle *embed.FS) error {
 	executableFiles := []string{
 		"bin/cifuzz",
 		"bin/minijail0",
-		"lib/libminijailpreload.so",
 		"lib/process_wrapper",
 	}
 

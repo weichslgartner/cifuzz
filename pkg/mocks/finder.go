@@ -36,11 +36,6 @@ func (m *RunfilesFinderMock) JazzerDriverPath() (string, error) {
 	return args.String(0), args.Error(1)
 }
 
-func (m *RunfilesFinderMock) LibMinijailPreloadPath() (string, error) {
-	args := m.Called()
-	return args.String(0), args.Error(1)
-}
-
 func (m *RunfilesFinderMock) LLVMCovPath() (string, error) {
 	args := m.Called()
 	return args.String(0), args.Error(1)

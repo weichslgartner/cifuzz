@@ -9,7 +9,6 @@ import (
 
 	"github.com/pkg/errors"
 
-	"code-intelligence.com/cifuzz/pkg/log"
 	"code-intelligence.com/cifuzz/pkg/runfiles"
 	"code-intelligence.com/cifuzz/util/envutil"
 	"code-intelligence.com/cifuzz/util/fileutil"
@@ -140,11 +139,6 @@ var fixedMinijailArgs = []string{
 	// their minijail wrapper:
 	// https://github.com/google/clusterfuzz/blob/4f8020c4c7ce73c1da0e68f04943af30bb5f0b32/src/clusterfuzz/_internal/system/minijail.py
 	//
-	// In contrast to clusterfuzz, we don't set "-T static", but do
-	// preload libminijailpreload.so, to prevent circumvention of the
-	// seccomp filters, as described in the minijail manual:
-	// https://google.github.io/minijail/minijail0.1.html
-	//
 	"-U", "-m", // Quote from clusterfuzz:
 	// root (uid 0 in namespace) -> USER.
 	// The reason for this is that minijail does setresuid(0, 0, 0) before doing a
@@ -255,23 +249,25 @@ func NewMinijail(opts *Options) (*minijail, error) {
 	}
 	minijailArgs := append([]string{minijailPath}, fixedMinijailArgs...)
 
-	if os.Getenv(DebugEnvVarName) != "" {
-		log.Warn("Running minijail in debug mode, this is NOT SAFE FOR PRODUCTION!")
-		// This causes minijail to not use preload hooking, which
-		// sometimes results in better error messages, so it can be
-		// useful for debugging but shouldn't be used in production,
-		// because (quoting the Minijail manual [1]): "some jailing can
-		// only be achieved from the process to which they will actually
-		// apply [via preloading]".
-		// [1] https://google.github.io/minijail/minijail0.1.html#implementation
-		minijailArgs = append(minijailArgs, "-T", "static", "--ambient")
-	} else {
-		libminijailpreload, err := runfiles.Finder.LibMinijailPreloadPath()
-		if err != nil {
-			return nil, err
-		}
-		minijailArgs = append(minijailArgs, "--preload-library="+libminijailpreload)
-	}
+	// This causes minijail to not use preload hooking, which
+	// allows us to run it without the libminijailpreload.so. That has
+	// two benefits:
+	// * We can use a statically built minijail0 binary, avoiding runtime
+	//   dependencies on libcap.
+	// * It avoids that minijail0 doesn't print error messages, which
+	//   happens when preloading is used.
+	//
+	// Note that (quoting the Minijail manual [1]): "some jailing can
+	// only be achieved from the process to which they will actually
+	// apply [via preloading]".
+	// [1] https://google.github.io/minijail/minijail0.1.html#implementation
+	//
+	// Since we don't use minijail for security but only for safety
+	// (i.e. we only want to protect against accidental damage done to
+	// the system, like the fuzz target accidentally deleting files or
+	// killing processes etc), it should be fine that the jailing is not
+	// perfect.
+	minijailArgs = append(minijailArgs, "-T", "static", "--ambient")
 
 	// Change root filesystem to the chroot directory. See pivot_root(2).
 	minijailArgs = append(minijailArgs, "-P", chrootDir)

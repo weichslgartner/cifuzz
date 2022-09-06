@@ -18,7 +18,6 @@ type RunfilesFinder interface {
 	CMakePresetsPath() (string, error)
 	JazzerAgentDeployJarPath() (string, error)
 	JazzerDriverPath() (string, error)
-	LibMinijailPreloadPath() (string, error)
 	LLVMCovPath() (string, error)
 	LLVMProfDataPath() (string, error)
 	LLVMSymbolizerPath() (string, error)

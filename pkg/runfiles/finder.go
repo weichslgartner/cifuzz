@@ -38,10 +38,6 @@ func (f RunfilesFinderImpl) JazzerDriverPath() (string, error) {
 	return f.findFollowSymlinks("bin/jazzer_driver")
 }
 
-func (f RunfilesFinderImpl) LibMinijailPreloadPath() (string, error) {
-	return f.findFollowSymlinks("lib/libminijailpreload.so")
-}
-
 func (f RunfilesFinderImpl) LLVMCovPath() (string, error) {
 	path, err := exec.LookPath("llvm-cov")
 	return path, errors.WithStack(err)
