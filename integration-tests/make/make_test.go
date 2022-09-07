@@ -20,7 +20,7 @@ import (
 	"code-intelligence.com/cifuzz/util/testutil"
 )
 
-var expectedFinding = regexp.MustCompile(`^==\d*==ERROR: AddressSanitizer: heap-buffer-overflow`)
+var expectedFinding = regexp.MustCompile(`heap buffer overflow in exploreMe`)
 var filteredLine = regexp.MustCompile(`child process \d+ exited`)
 
 func TestIntegration_Make_RunCoverage(t *testing.T) {
@@ -58,18 +58,14 @@ func TestIntegration_Make_RunCoverage(t *testing.T) {
 	err = installCmd.Run()
 	require.NoError(t, err)
 
-	cifuzz := install.CIFuzzExecutablePath(filepath.Join(installDir, "bin"))
-
 	dir := copyMakeExampleDir(t)
 	defer fileutil.Cleanup(dir)
 	t.Logf("executing make integration test in %s", dir)
 
 	// Run the two fuzz tests and verify that they crash with the expected finding.
-	runFuzzer(t, cifuzz, dir, "my_fuzz_test_1", expectedFinding)
-	runFuzzer(t, cifuzz, dir, filepath.Join(dir, "my_fuzz_test_2"), expectedFinding)
-
-	createCoverageReport(t, cifuzz, dir, "my_fuzz_test_1")
-	createCoverageReport(t, cifuzz, dir, "my_fuzz_test_2")
+	cifuzz := install.CIFuzzExecutablePath(filepath.Join(installDir, "bin"))
+	runFuzzer(t, cifuzz, dir, "my_fuzz_test", expectedFinding)
+	createCoverageReport(t, cifuzz, dir, "my_fuzz_test")
 }
 
 func copyMakeExampleDir(t *testing.T) string {
@@ -93,7 +89,7 @@ func runFuzzer(t *testing.T, cifuzz string, dir string, fuzzTest string, expecte
 
 	cmd := executil.Command(
 		cifuzz,
-		"run", "-v", fuzzTest,
+		"run", fuzzTest,
 		// The crashes are expected to be found quickly.
 		"--engine-arg=-runs=1000000",
 		"--engine-arg=-seed=1",
@@ -151,5 +147,5 @@ func createCoverageReport(t *testing.T, cifuzz string, dir string, fuzzTest stri
 	// source file
 	bytes, err := os.ReadFile(reportPath)
 	require.NoError(t, err)
-	require.Contains(t, string(bytes), "api.cpp")
+	require.Contains(t, string(bytes), "explore_me.cpp")
 }

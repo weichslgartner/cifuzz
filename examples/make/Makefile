@@ -5,18 +5,18 @@ all: main
 clean:
 	rm -f *.o *.a *.so a.out
 
-libapi.so: api.cpp api.h
-	${CXX} ${CXXFLAGS} -shared -fpic -o libapi.so $<
+libexplore.so: src/explore_me.cpp src/explore_me.h
+	${CXX} ${CXXFLAGS} -shared -fpic -o libexplore.so $<
 
-api.o: api.cpp api.h
+explore_me.o: src/explore_me.cpp src/explore_me.h
 	${CXX} ${CXXFLAGS} -fpic $< -c
 
-api.a: api.o
+explore_me.a: explore_me.o
 	ar rv api.a api.o
 
-main: api.o
-	${CXX} ${CXXFLAGS} api.o main.cpp
+main: explore_me.o
+	${CXX} ${CXXFLAGS} explore_me.o main.cpp
 
-my_fuzz_test%: libapi.so
+my_fuzz_test: libexplore.so
 	@echo "Building $@"
-	${CXX} ${CXXFLAGS} ${FUZZ_TEST_CFLAGS} ${FUZZ_TEST_LDFLAGS} -pie -fPIE -o $@ $@.cpp -Wl,-rpath '-Wl,$$ORIGIN' -L. -lapi
+	${CXX} ${CXXFLAGS} ${FUZZ_TEST_CFLAGS} ${FUZZ_TEST_LDFLAGS} -pie -fPIE -o $@ $@.cpp -Wl,-rpath '-Wl,$$ORIGIN' -L. -lexplore
