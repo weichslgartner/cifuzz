@@ -2,12 +2,14 @@ package bundle
 
 import (
 	"bufio"
+	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
 	"runtime"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -67,11 +69,12 @@ type bundleCmd struct {
 }
 
 type bundleOpts struct {
-	NumBuildJobs   uint     `mapstructure:"build-jobs"`
-	Dictionary     string   `mapstructure:"dict"`
-	EngineArgs     []string `mapstructure:"engine-args"`
-	FuzzTestArgs   []string `mapstructure:"fuzz-test-args"`
-	SeedCorpusDirs []string `mapstructure:"seed-corpus-dirs"`
+	NumBuildJobs   uint          `mapstructure:"build-jobs"`
+	Dictionary     string        `mapstructure:"dict"`
+	EngineArgs     []string      `mapstructure:"engine-args"`
+	FuzzTestArgs   []string      `mapstructure:"fuzz-test-args"`
+	SeedCorpusDirs []string      `mapstructure:"seed-corpus-dirs"`
+	Timeout        time.Duration `mapstructure:"timeout"`
 
 	fuzzTests  []string
 	outputPath string
@@ -94,6 +97,11 @@ func (opts *bundleOpts) validate() error {
 			log.Error(err, err.Error())
 			return cmdutils.ErrSilent
 		}
+	}
+
+	if opts.Timeout != 0 && opts.Timeout < time.Second {
+		msg := fmt.Sprintf("invalid argument %q for \"--timeout\" flag: timeout can't be less than a second", opts.Timeout)
+		return cmdutils.WrapIncorrectUsageError(errors.New(msg))
 	}
 
 	return nil
@@ -514,6 +522,7 @@ depsLoop:
 			Flags: c.opts.EngineArgs,
 		},
 		FuzzTestArgs: c.opts.FuzzTestArgs,
+		MaxRunTime:   uint(c.opts.Timeout.Seconds()),
 	}
 
 	if externalLibrariesPrefix != "" {

@@ -506,6 +506,7 @@ func createAndExtractArtifactArchive(t *testing.T, dir string, cifuzz string) st
 		"--fuzz-test-arg", "arg3",
 		"--fuzz-test-arg", "arg4",
 		"--seed-corpus", seedCorpusDir,
+		"--timeout", "100m",
 	)
 	cmd.Dir = dir
 	cmd.Stdout = os.Stdout
@@ -570,6 +571,11 @@ func runArchivedFuzzer(t *testing.T, archiveDir string) {
 	// Check that the empty seed from the user-specified seed corpus
 	// was copied into the archive
 	require.FileExists(t, filepath.Join(seedCorpusPath, "empty"))
+
+	// Verify that the maximum runtime has been set
+	maxRunTimePattern := regexp.MustCompile(`\W*max_run_time: (.*)`)
+	maxRunTime := string(maxRunTimePattern.FindSubmatch(metadataYaml)[1])
+	require.Equal(t, "6000", maxRunTime)
 
 	if runtime.GOOS == "windows" {
 		// There are no coverage builds on Windows.
