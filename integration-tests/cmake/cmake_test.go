@@ -485,6 +485,11 @@ func createAndExtractArtifactArchive(t *testing.T, dir string, cifuzz string) st
 	defer fileutil.Cleanup(tempDir)
 	archivePath := filepath.Join(tempDir, "parser_fuzz_test.tar.gz")
 
+	// Create a dictionary
+	dictPath := filepath.Join(tempDir, "some_dict")
+	err = os.WriteFile(dictPath, []byte("test-dictionary-content"), 0600)
+	require.NoError(t, err)
+
 	// Create a seed corpus directory with an empty seed
 	seedCorpusDir, err := os.MkdirTemp(tempDir, "seeds-")
 	require.NoError(t, err)
@@ -494,6 +499,7 @@ func createAndExtractArtifactArchive(t *testing.T, dir string, cifuzz string) st
 	// Bundle all fuzz tests into an archive.
 	cmd := executil.Command(cifuzz, "bundle",
 		"-o", archivePath,
+		"--dict", dictPath,
 		"--seed-corpus", seedCorpusDir,
 	)
 	cmd.Dir = dir
@@ -532,6 +538,14 @@ func runArchivedFuzzer(t *testing.T, archiveDir string) {
 	cmd.Env = append(os.Environ(), "NO_CIFUZZ=1")
 	err = cmd.Run()
 	require.NoError(t, err)
+
+	// Verify that the dictionary has been packaged with the fuzzer.
+	dictPattern := regexp.MustCompile(`\W*dictionary: (.*)`)
+	dictPath := filepath.Join(archiveDir, string(dictPattern.FindSubmatch(metadataYaml)[1]))
+	require.FileExists(t, dictPath)
+	content, err := os.ReadFile(dictPath)
+	require.NoError(t, err)
+	require.Equal(t, "test-dictionary-content", string(content))
 
 	// Verify that the seed corpus has been packaged with the fuzzer. Only parser_fuzz_test has a corpus, so we can
 	// use the only matched line.

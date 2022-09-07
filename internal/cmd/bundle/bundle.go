@@ -68,6 +68,7 @@ type bundleCmd struct {
 
 type bundleOpts struct {
 	NumBuildJobs   uint     `mapstructure:"build-jobs"`
+	Dictionary     string   `mapstructure:"dict"`
 	SeedCorpusDirs []string `mapstructure:"seed-corpus-dirs"`
 
 	fuzzTests  []string
@@ -447,6 +448,13 @@ depsLoop:
 		archiveManifest[archivePath] = dep
 	}
 
+	// Add dictionary to archive
+	var archiveDict string
+	if c.opts.Dictionary != "" {
+		archiveDict = filepath.Join(fuzzTestPrefix(fuzzTest, buildResult), "dict")
+		archiveManifest[archiveDict] = c.opts.Dictionary
+	}
+
 	// Add seeds from user-specified seed corpus dirs (if any) and the
 	// default seed corpus (if it exists) to the seeds directory in the
 	// archive
@@ -473,6 +481,7 @@ depsLoop:
 		Target:     fuzzTest,
 		Path:       fuzzTestArchivePath,
 		ProjectDir: projectDir,
+		Dictionary: archiveDict,
 		Seeds:      archiveSeedsDir,
 		// Set NO_CIFUZZ=1 to avoid that remotely executed fuzz tests try
 		// to start cifuzz

@@ -25,6 +25,7 @@ type Fuzzer struct {
 	// include the root directory of the *source* rather than the build tree of the project. Rather than expose all
 	// cifuzz devs to this inconsistency, we keep it in the serialization logic.
 	ProjectDir    string        `yaml:"build_dir"`
+	Dictionary    string        `yaml:"dictionary,omitempty"`
 	Seeds         string        `yaml:"seeds,omitempty"`
 	LibraryPaths  []string      `yaml:"library_paths,omitempty"`
 	EngineOptions EngineOptions `yaml:"engine_options,omitempty"`
