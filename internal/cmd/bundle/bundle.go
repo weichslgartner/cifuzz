@@ -70,6 +70,7 @@ type bundleOpts struct {
 	NumBuildJobs   uint     `mapstructure:"build-jobs"`
 	Dictionary     string   `mapstructure:"dict"`
 	EngineArgs     []string `mapstructure:"engine-args"`
+	FuzzTestArgs   []string `mapstructure:"fuzz-test-args"`
 	SeedCorpusDirs []string `mapstructure:"seed-corpus-dirs"`
 
 	fuzzTests  []string
@@ -490,6 +491,7 @@ depsLoop:
 			Env:   []string{"NO_CIFUZZ=1"},
 			Flags: c.opts.EngineArgs,
 		},
+		FuzzTestArgs: c.opts.FuzzTestArgs,
 	}
 
 	if externalLibrariesPrefix != "" {

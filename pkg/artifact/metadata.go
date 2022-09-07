@@ -29,6 +29,9 @@ type Fuzzer struct {
 	Seeds         string        `yaml:"seeds,omitempty"`
 	LibraryPaths  []string      `yaml:"library_paths,omitempty"`
 	EngineOptions EngineOptions `yaml:"engine_options,omitempty"`
+	// Same as above, this YAML field name is not a typo but has this
+	// name for historical reasons.
+	FuzzTestArgs []string `yaml:"fuzzer_run_args,omitempty"`
 }
 
 // RunEnvironment specifies the environment in which the fuzzers are to be run.

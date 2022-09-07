@@ -503,6 +503,8 @@ func createAndExtractArtifactArchive(t *testing.T, dir string, cifuzz string) st
 		"--dict", dictPath,
 		"--engine-arg", "arg1",
 		"--engine-arg", "arg2",
+		"--fuzz-test-arg", "arg3",
+		"--fuzz-test-arg", "arg4",
 		"--seed-corpus", seedCorpusDir,
 	)
 	cmd.Dir = dir
@@ -533,8 +535,9 @@ func runArchivedFuzzer(t *testing.T, archiveDir string) {
 	err = yaml.Unmarshal(metadataYaml, metadata)
 	require.NoError(t, err)
 
-	// Verify that the metadata contain the engine arg
+	// Verify that the metadata contain the engine args and fuzz test args
 	require.Equal(t, []string{"arg1", "arg2"}, metadata.Fuzzers[0].EngineOptions.Flags)
+	require.Equal(t, []string{"arg3", "arg4"}, metadata.Fuzzers[0].FuzzTestArgs)
 
 	// We use a simple regex here instead of duplicating knowledge of our metadata YAML schema.
 	fuzzerPathPattern := regexp.MustCompile(`\W*path: (.*address.*parser_fuzz_test.*)`)
