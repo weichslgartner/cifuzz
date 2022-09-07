@@ -69,6 +69,7 @@ type bundleCmd struct {
 type bundleOpts struct {
 	NumBuildJobs   uint     `mapstructure:"build-jobs"`
 	Dictionary     string   `mapstructure:"dict"`
+	EngineArgs     []string `mapstructure:"engine-args"`
 	SeedCorpusDirs []string `mapstructure:"seed-corpus-dirs"`
 
 	fuzzTests  []string
@@ -485,7 +486,10 @@ depsLoop:
 		Seeds:      archiveSeedsDir,
 		// Set NO_CIFUZZ=1 to avoid that remotely executed fuzz tests try
 		// to start cifuzz
-		EngineOptions: artifact.EngineOptions{Env: []string{"NO_CIFUZZ=1"}},
+		EngineOptions: artifact.EngineOptions{
+			Env:   []string{"NO_CIFUZZ=1"},
+			Flags: c.opts.EngineArgs,
+		},
 	}
 
 	if externalLibrariesPrefix != "" {

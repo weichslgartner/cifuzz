@@ -20,6 +20,7 @@ import (
 	"github.com/otiai10/copy"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sync/errgroup"
+	"gopkg.in/yaml.v3"
 
 	"code-intelligence.com/cifuzz/internal/cmd/run/report_handler/stacktrace"
 	"code-intelligence.com/cifuzz/pkg/artifact"
@@ -500,6 +501,8 @@ func createAndExtractArtifactArchive(t *testing.T, dir string, cifuzz string) st
 	cmd := executil.Command(cifuzz, "bundle",
 		"-o", archivePath,
 		"--dict", dictPath,
+		"--engine-arg", "arg1",
+		"--engine-arg", "arg2",
 		"--seed-corpus", seedCorpusDir,
 	)
 	cmd.Dir = dir
@@ -525,6 +528,14 @@ func runArchivedFuzzer(t *testing.T, archiveDir string) {
 	require.FileExists(t, metadataPath)
 	metadataYaml, err := os.ReadFile(metadataPath)
 	require.NoError(t, err)
+
+	metadata := &artifact.Metadata{}
+	err = yaml.Unmarshal(metadataYaml, metadata)
+	require.NoError(t, err)
+
+	// Verify that the metadata contain the engine arg
+	require.Equal(t, []string{"arg1", "arg2"}, metadata.Fuzzers[0].EngineOptions.Flags)
+
 	// We use a simple regex here instead of duplicating knowledge of our metadata YAML schema.
 	fuzzerPathPattern := regexp.MustCompile(`\W*path: (.*address.*parser_fuzz_test.*)`)
 	fuzzerPath := filepath.Join(archiveDir, string(fuzzerPathPattern.FindSubmatch(metadataYaml)[1]))
