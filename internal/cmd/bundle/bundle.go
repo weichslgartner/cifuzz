@@ -77,6 +77,28 @@ type bundleOpts struct {
 	outputPath string
 }
 
+func (opts *bundleOpts) validate() error {
+	var err error
+
+	opts.SeedCorpusDirs, err = cmdutils.ValidateSeedCorpusDirs(opts.SeedCorpusDirs)
+	if err != nil {
+		log.Error(err, err.Error())
+		return cmdutils.ErrSilent
+	}
+
+	if opts.Dictionary != "" {
+		// Check if the dictionary exists and can be accessed
+		_, err := os.Stat(opts.Dictionary)
+		if err != nil {
+			err = errors.WithStack(err)
+			log.Error(err, err.Error())
+			return cmdutils.ErrSilent
+		}
+	}
+
+	return nil
+}
+
 type configureVariant struct {
 	Engine     string
 	Sanitizers []string
@@ -113,7 +135,7 @@ If no fuzz tests are specified all fuzz tests are added to the bundle.`,
 				return errors.New("cifuzz bundle currently only supports CMake projects")
 			}
 			opts.fuzzTests = args
-			return nil
+			return opts.validate()
 		},
 		RunE: func(c *cobra.Command, args []string) error {
 			cmd := bundleCmd{
