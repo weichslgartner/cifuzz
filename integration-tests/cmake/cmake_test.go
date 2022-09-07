@@ -201,9 +201,7 @@ func TestIntegration_CMake_InitCreateRunCoverageBundle(t *testing.T) {
 	}
 
 	// Run cifuzz bundle and verify the contents of the archive.
-	archiveDir := createAndExtractArtifactArchive(t, dir, cifuzz)
-	defer fileutil.Cleanup(archiveDir)
-	runArchivedFuzzer(t, archiveDir)
+	testBundle(t, dir, cifuzz)
 }
 
 func copyTestdataDir(t *testing.T) string {
@@ -480,11 +478,12 @@ func modifyFuzzTestToCallFunction(t *testing.T, fuzzTestPath string) {
 	require.NoError(t, err)
 }
 
-func createAndExtractArtifactArchive(t *testing.T, dir string, cifuzz string) string {
+func testBundle(t *testing.T, dir string, cifuzz string) {
 	tempDir, err := os.MkdirTemp("", "cifuzz-archive-*")
 	require.NoError(t, err)
 	defer fileutil.Cleanup(tempDir)
 	archivePath := filepath.Join(tempDir, "parser_fuzz_test.tar.gz")
+	defer fileutil.Cleanup(archivePath)
 
 	// Create a dictionary
 	dictPath := filepath.Join(tempDir, "some_dict")
@@ -522,10 +521,7 @@ func createAndExtractArtifactArchive(t *testing.T, dir string, cifuzz string) st
 	require.NoError(t, err)
 	err = artifact.ExtractArchiveForTestsOnly(archiveFile, archiveDir)
 	require.NoError(t, err)
-	return archiveDir
-}
 
-func runArchivedFuzzer(t *testing.T, archiveDir string) {
 	// Read the fuzzer path from the YAML.
 	metadataPath := filepath.Join(archiveDir, "cifuzz.yaml")
 	require.FileExists(t, metadataPath)
@@ -546,7 +542,7 @@ func runArchivedFuzzer(t *testing.T, archiveDir string) {
 	require.FileExists(t, fuzzerPath)
 
 	// Run the fuzzer on the empty input to verify that it finds all its runtime dependencies.
-	cmd := executil.Command(fuzzerPath, "-runs=0")
+	cmd = executil.Command(fuzzerPath, "-runs=0")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	// NO_CIFUZZ is set on the backend via engine_options.
@@ -556,7 +552,7 @@ func runArchivedFuzzer(t *testing.T, archiveDir string) {
 
 	// Verify that the dictionary has been packaged with the fuzzer.
 	dictPattern := regexp.MustCompile(`\W*dictionary: (.*)`)
-	dictPath := filepath.Join(archiveDir, string(dictPattern.FindSubmatch(metadataYaml)[1]))
+	dictPath = filepath.Join(archiveDir, string(dictPattern.FindSubmatch(metadataYaml)[1]))
 	require.FileExists(t, dictPath)
 	content, err := os.ReadFile(dictPath)
 	require.NoError(t, err)
@@ -567,10 +563,10 @@ func runArchivedFuzzer(t *testing.T, archiveDir string) {
 	seedCorpusPattern := regexp.MustCompile(`\W*seeds: (.*)`)
 	seedCorpusPath := filepath.Join(archiveDir, string(seedCorpusPattern.FindSubmatch(metadataYaml)[1]))
 	require.DirExists(t, seedCorpusPath)
-	require.FileExists(t, filepath.Join(seedCorpusPath, "some_seed"))
+	require.FileExists(t, filepath.Join(seedCorpusPath, "parser_fuzz_test_seed_corpus", "some_seed"))
 	// Check that the empty seed from the user-specified seed corpus
 	// was copied into the archive
-	require.FileExists(t, filepath.Join(seedCorpusPath, "empty"))
+	require.FileExists(t, filepath.Join(seedCorpusPath, filepath.Base(seedCorpusDir), "empty"))
 
 	// Verify that the maximum runtime has been set
 	maxRunTimePattern := regexp.MustCompile(`\W*max_run_time: (.*)`)

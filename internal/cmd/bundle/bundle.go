@@ -27,6 +27,7 @@ import (
 	"code-intelligence.com/cifuzz/pkg/runfiles"
 	"code-intelligence.com/cifuzz/pkg/vcs"
 	"code-intelligence.com/cifuzz/util/fileutil"
+	"code-intelligence.com/cifuzz/util/sliceutil"
 )
 
 // The (possibly empty) directory inside the fuzzing artifact archive that will be the fuzzers working directory.
@@ -496,13 +497,29 @@ depsLoop:
 		return
 	}
 	if exists {
-		seedCorpusDirs = append(seedCorpusDirs, buildResult.SeedCorpus)
+		seedCorpusDirs = append([]string{buildResult.SeedCorpus}, seedCorpusDirs...)
 	}
 	var archiveSeedsDir string
 	if len(seedCorpusDirs) > 0 {
 		archiveSeedsDir = filepath.Join(fuzzTestPrefix(fuzzTest, buildResult), "seeds")
-		for _, dir := range seedCorpusDirs {
-			err = artifact.AddDirToManifest(archiveManifest, archiveSeedsDir, dir)
+		var targetDirs []string
+		for _, sourceDir := range seedCorpusDirs {
+			// Put the seeds into subdirectories of the "seeds" directory
+			// to avoid seeds with the same name to override each other.
+
+			// Choose a name for the target directory which wasn't used
+			// before
+			basename := filepath.Join(archiveSeedsDir, filepath.Base(sourceDir))
+			targetDir := basename
+			i := 1
+			for sliceutil.Contains(targetDirs, targetDir) {
+				targetDir = fmt.Sprintf("%s-%d", basename, i)
+				i++
+			}
+			targetDirs = append(targetDirs, targetDir)
+
+			// Add the seeds of the seed corpus directory to the target directory
+			err = artifact.AddDirToManifest(archiveManifest, targetDir, sourceDir)
 			if err != nil {
 				return
 			}

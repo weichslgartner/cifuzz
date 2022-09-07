@@ -78,7 +78,7 @@ func ExtractArchiveForTestsOnly(in io.Reader, dir string) error {
 
 		switch header.Typeflag {
 		case tar.TypeDir:
-			err = os.Mkdir(filepath.Join(dir, header.Name), 0755)
+			err = os.MkdirAll(filepath.Join(dir, header.Name), 0755)
 			if err != nil {
 				return errors.WithStack(err)
 			}

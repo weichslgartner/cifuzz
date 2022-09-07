@@ -104,11 +104,11 @@ func TestAssembleArtifacts(t *testing.T) {
 	}, *fuzzers[0])
 
 	assert.Equal(t, map[string]string{
-		filepath.Join("libfuzzer", "address", "some_fuzz_test", "bin", "pkg", "some_fuzz_test"): filepath.Join(buildDir, "pkg", "some_fuzz_test"),
-		filepath.Join("libfuzzer", "address", "some_fuzz_test", "bin", "lib", "helper.so"):      filepath.Join(buildDir, "lib", "helper.so"),
-		filepath.Join("libfuzzer", "address", "some_fuzz_test", "external_libs", "libfoo.so"):   externalDep,
-		filepath.Join("libfuzzer", "address", "some_fuzz_test", "seeds"):                        seedCorpus,
-		filepath.Join("libfuzzer", "address", "some_fuzz_test", "seeds", "seed"):                filepath.Join(seedCorpus, "seed"),
+		filepath.Join("libfuzzer", "address", "some_fuzz_test", "bin", "pkg", "some_fuzz_test"):             filepath.Join(buildDir, "pkg", "some_fuzz_test"),
+		filepath.Join("libfuzzer", "address", "some_fuzz_test", "bin", "lib", "helper.so"):                  filepath.Join(buildDir, "lib", "helper.so"),
+		filepath.Join("libfuzzer", "address", "some_fuzz_test", "external_libs", "libfoo.so"):               externalDep,
+		filepath.Join("libfuzzer", "address", "some_fuzz_test", "seeds", filepath.Base(seedCorpus)):         seedCorpus,
+		filepath.Join("libfuzzer", "address", "some_fuzz_test", "seeds", filepath.Base(seedCorpus), "seed"): filepath.Join(seedCorpus, "seed"),
 	}, manifest)
 
 	if runtime.GOOS != "windows" {
