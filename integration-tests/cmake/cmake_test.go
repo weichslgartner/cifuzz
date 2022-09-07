@@ -485,8 +485,17 @@ func createAndExtractArtifactArchive(t *testing.T, dir string, cifuzz string) st
 	defer fileutil.Cleanup(tempDir)
 	archivePath := filepath.Join(tempDir, "parser_fuzz_test.tar.gz")
 
+	// Create a seed corpus directory with an empty seed
+	seedCorpusDir, err := os.MkdirTemp(tempDir, "seeds-")
+	require.NoError(t, err)
+	err = fileutil.Touch(filepath.Join(seedCorpusDir, "empty"))
+	require.NoError(t, err)
+
 	// Bundle all fuzz tests into an archive.
-	cmd := executil.Command(cifuzz, "bundle", "-o", archivePath)
+	cmd := executil.Command(cifuzz, "bundle",
+		"-o", archivePath,
+		"--seed-corpus", seedCorpusDir,
+	)
 	cmd.Dir = dir
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -530,6 +539,9 @@ func runArchivedFuzzer(t *testing.T, archiveDir string) {
 	seedCorpusPath := filepath.Join(archiveDir, string(seedCorpusPattern.FindSubmatch(metadataYaml)[1]))
 	require.DirExists(t, seedCorpusPath)
 	require.FileExists(t, filepath.Join(seedCorpusPath, "some_seed"))
+	// Check that the empty seed from the user-specified seed corpus
+	// was copied into the archive
+	require.FileExists(t, filepath.Join(seedCorpusPath, "empty"))
 
 	if runtime.GOOS == "windows" {
 		// There are no coverage builds on Windows.

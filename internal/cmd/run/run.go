@@ -34,10 +34,10 @@ type runOptions struct {
 	BuildSystem    string        `mapstructure:"build-system"`
 	BuildCommand   string        `mapstructure:"build-command"`
 	NumBuildJobs   uint          `mapstructure:"build-jobs"`
-	SeedCorpusDirs []string      `mapstructure:"seed-corpus-dirs"`
 	Dictionary     string        `mapstructure:"dict"`
 	EngineArgs     []string      `mapstructure:"engine-args"`
 	FuzzTestArgs   []string      `mapstructure:"fuzz-test-args"`
+	SeedCorpusDirs []string      `mapstructure:"seed-corpus-dirs"`
 	Timeout        time.Duration `mapstructure:"timeout"`
 	UseSandbox     bool          `mapstructure:"use-sandbox"`
 	PrintJSON      bool          `mapstructure:"print-json"`
@@ -128,10 +128,10 @@ depends on the build system configured for the project:
 			// were bound to the flags of other commands before.
 			cmdutils.ViperMustBindPFlag("build-command", cmd.Flags().Lookup("build-command"))
 			cmdutils.ViperMustBindPFlag("build-jobs", cmd.Flags().Lookup("build-jobs"))
-			cmdutils.ViperMustBindPFlag("seed-corpus-dirs", cmd.Flags().Lookup("seed-corpus"))
 			cmdutils.ViperMustBindPFlag("dict", cmd.Flags().Lookup("dict"))
 			cmdutils.ViperMustBindPFlag("engine-args", cmd.Flags().Lookup("engine-arg"))
 			cmdutils.ViperMustBindPFlag("fuzz-test-args", cmd.Flags().Lookup("fuzz-test-arg"))
+			cmdutils.ViperMustBindPFlag("seed-corpus-dirs", cmd.Flags().Lookup("seed-corpus"))
 			cmdutils.ViperMustBindPFlag("timeout", cmd.Flags().Lookup("timeout"))
 			cmdutils.ViperMustBindPFlag("use-sandbox", cmd.Flags().Lookup("use-sandbox"))
 			cmdutils.ViperMustBindPFlag("print-json", cmd.Flags().Lookup("json"))
@@ -157,13 +157,13 @@ depends on the build system configured for the project:
 	cmd.Flags().String("build-command", "", "The `command` to build the fuzz test. Ignored when the build system is CMake.")
 	cmd.Flags().Uint("build-jobs", 0, "Maximum number of concurrent processes to use when building.\nIf argument is omitted the native build tool's default number is used.\nOnly available when the build system is CMake.")
 	cmd.Flags().Lookup("build-jobs").NoOptDefVal = "0"
-	// TODO(afl): Also link to https://aflplus.plus/docs/fuzzing_in_depth/#a-collecting-inputs
-	cmd.Flags().StringArrayP("seed-corpus", "s", nil, "A `directory` containing sample inputs for the code under test.\nSee https://llvm.org/docs/LibFuzzer.html#corpus.")
 	// TODO(afl): Also link to https://github.com/AFLplusplus/AFLplusplus/blob/stable/dictionaries/README.md
 	cmd.Flags().String("dict", "", "A `file` containing input language keywords or other interesting byte sequences.\nSee https://llvm.org/docs/LibFuzzer.html#dictionaries.")
 	// TODO(afl): Also link to https://www.mankier.com/8/afl-fuzz
 	cmd.Flags().StringArray("engine-arg", nil, "Command-line `argument` to pass to the fuzzing engine.\nSee https://llvm.org/docs/LibFuzzer.html#options.")
 	cmd.Flags().StringArray("fuzz-test-arg", nil, "Command-line `argument` to pass to the fuzz test.")
+	// TODO(afl): Also link to https://aflplus.plus/docs/fuzzing_in_depth/#a-collecting-inputs
+	cmd.Flags().StringArrayP("seed-corpus", "s", nil, "A `directory` containing sample inputs for the code under test.\nSee https://llvm.org/docs/LibFuzzer.html#corpus.")
 	cmd.Flags().Duration("timeout", 0, "Maximum time to run the fuzz test, e.g. \"30m\", \"1h\". The default is to run indefinitely.")
 	cmd.Flags().Bool("use-sandbox", false, "By default, fuzz tests are executed in a sandbox to prevent accidental damage to the system.\nUse --use-sandbox=false to run the fuzz test unsandboxed.\nOnly supported on Linux.")
 	viper.SetDefault("use-sandbox", runtime.GOOS == "linux")

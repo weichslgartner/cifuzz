@@ -87,7 +87,8 @@ func TestAssembleArtifacts(t *testing.T) {
 		RuntimeDeps: runtimeDeps,
 	}
 
-	fuzzers, manifest, systemDeps, err := assembleArtifacts(fuzzTest, buildResult, projectDir)
+	c := &bundleCmd{opts: &bundleOpts{}}
+	fuzzers, manifest, systemDeps, err := c.assembleArtifacts(fuzzTest, buildResult, projectDir)
 	require.NoError(t, err)
 
 	require.Equal(t, 1, len(fuzzers))

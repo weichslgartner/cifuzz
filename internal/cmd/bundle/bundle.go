@@ -67,7 +67,8 @@ type bundleCmd struct {
 }
 
 type bundleOpts struct {
-	NumBuildJobs uint `mapstructure:"build-jobs"`
+	NumBuildJobs   uint     `mapstructure:"build-jobs"`
+	SeedCorpusDirs []string `mapstructure:"seed-corpus-dirs"`
 
 	fuzzTests  []string
 	outputPath string
@@ -93,10 +94,10 @@ If no fuzz tests are specified all fuzz tests are added to the bundle.`,
 			// function, because that would re-bind viper keys which
 			// were bound to the flags of other commands before.
 			cmdutils.ViperMustBindPFlag("build-jobs", cmd.Flags().Lookup("build-jobs"))
-			cmdutils.ViperMustBindPFlag("seed-corpus-dirs", cmd.Flags().Lookup("seed-corpus"))
 			cmdutils.ViperMustBindPFlag("dict", cmd.Flags().Lookup("dict"))
 			cmdutils.ViperMustBindPFlag("engine-args", cmd.Flags().Lookup("engine-arg"))
 			cmdutils.ViperMustBindPFlag("fuzz-test-args", cmd.Flags().Lookup("fuzz-test-arg"))
+			cmdutils.ViperMustBindPFlag("seed-corpus-dirs", cmd.Flags().Lookup("seed-corpus"))
 			cmdutils.ViperMustBindPFlag("timeout", cmd.Flags().Lookup("timeout"))
 
 			_, err := config.ParseProjectConfig(opts)
@@ -123,13 +124,13 @@ If no fuzz tests are specified all fuzz tests are added to the bundle.`,
 
 	cmd.Flags().Uint("build-jobs", 0, "Maximum number of concurrent processes to use when building.\nIf argument is omitted the native build tool's default number is used.\nOnly available when the build system is CMake.")
 	cmd.Flags().Lookup("build-jobs").NoOptDefVal = "0"
-	// TODO(afl): Also link to https://aflplus.plus/docs/fuzzing_in_depth/#a-collecting-inputs
-	cmd.Flags().StringArrayP("seed-corpus", "s", nil, "A `directory` containing sample inputs for the code under test.\nSee https://llvm.org/docs/LibFuzzer.html#corpus.")
 	// TODO(afl): Also link to https://github.com/AFLplusplus/AFLplusplus/blob/stable/dictionaries/README.md
 	cmd.Flags().String("dict", "", "A `file` containing input language keywords or other interesting byte sequences.\nSee https://llvm.org/docs/LibFuzzer.html#dictionaries.")
 	// TODO(afl): Also link to https://www.mankier.com/8/afl-fuzz
 	cmd.Flags().StringArray("engine-arg", nil, "Command-line `argument` to pass to the fuzzing engine.\nSee https://llvm.org/docs/LibFuzzer.html#options.")
 	cmd.Flags().StringArray("fuzz-test-arg", nil, "Command-line `argument` to pass to the fuzz test.")
+	// TODO(afl): Also link to https://aflplus.plus/docs/fuzzing_in_depth/#a-collecting-inputs
+	cmd.Flags().StringArrayP("seed-corpus", "s", nil, "A `directory` containing sample inputs for the code under test.\nSee https://llvm.org/docs/LibFuzzer.html#corpus.")
 	cmd.Flags().Duration("timeout", 0, "Maximum time to run the fuzz test, e.g. \"30m\", \"1h\". The default is to run indefinitely.")
 	cmd.Flags().StringVarP(&opts.outputPath, "output", "o", "", "Output path of the artifact (.tar.gz)")
 
@@ -176,7 +177,7 @@ func (c *bundleCmd) run() error {
 	deduplicatedSystemDeps := make(map[string]struct{})
 	for _, buildResults := range allVariantBuildResults {
 		for fuzzTest, buildResult := range buildResults {
-			fuzzTestFuzzers, fuzzTestArchiveManifest, systemDeps, err := assembleArtifacts(fuzzTest, buildResult, c.config.ProjectDir)
+			fuzzTestFuzzers, fuzzTestArchiveManifest, systemDeps, err := c.assembleArtifacts(fuzzTest, buildResult, c.config.ProjectDir)
 			if err != nil {
 				return err
 			}
@@ -335,7 +336,7 @@ func (c *bundleCmd) checkDependencies() (bool, error) {
 }
 
 //nolint:nonamedreturns
-func assembleArtifacts(fuzzTest string, buildResult *build.Result, projectDir string) (
+func (c *bundleCmd) assembleArtifacts(fuzzTest string, buildResult *build.Result, projectDir string) (
 	fuzzers []*artifact.Fuzzer,
 	archiveManifest map[string]string,
 	systemDeps []string,
@@ -446,16 +447,26 @@ depsLoop:
 		archiveManifest[archivePath] = dep
 	}
 
-	// Add the default seed corpus directory if it exists.
-	seedCorpus := buildResult.SeedCorpus
-	exists, err := fileutil.Exists(seedCorpus)
+	// Add seeds from user-specified seed corpus dirs (if any) and the
+	// default seed corpus (if it exists) to the seeds directory in the
+	// archive
+	seedCorpusDirs := c.opts.SeedCorpusDirs
+	exists, err := fileutil.Exists(buildResult.SeedCorpus)
 	if err != nil {
 		return
 	}
-	archiveSeedsDir := ""
 	if exists {
+		seedCorpusDirs = append(seedCorpusDirs, buildResult.SeedCorpus)
+	}
+	var archiveSeedsDir string
+	if len(seedCorpusDirs) > 0 {
 		archiveSeedsDir = filepath.Join(fuzzTestPrefix(fuzzTest, buildResult), "seeds")
-		err = artifact.AddDirToManifest(archiveManifest, archiveSeedsDir, seedCorpus)
+		for _, dir := range seedCorpusDirs {
+			err = artifact.AddDirToManifest(archiveManifest, archiveSeedsDir, dir)
+			if err != nil {
+				return
+			}
+		}
 	}
 
 	baseFuzzerInfo := artifact.Fuzzer{
