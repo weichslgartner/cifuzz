@@ -47,8 +47,14 @@ fi
 REPO="$1"
 REF="$2"
 
-TARGET_DIR=$(basename ${REPO})
-rm -rf "${SCRIPT_DIR}/${TARGET_DIR}"
+TARGET_DIR=$(basename "${REPO}")
+rm -rf "${SCRIPT_DIR:?}/${TARGET_DIR}"
 git clone --depth 1 --branch "${REF}" "${REPO}" ${TARGET_DIR}
 rm -rf "${TARGET_DIR}/.git"
 echo "${REF}" >"${TARGET_DIR}/ref"
+
+for patch in "${TARGET_DIR}"*.patch; do
+  if [ -f "${patch}" ]; then
+    patch --directory "${TARGET_DIR}" -p1 < "${patch}"
+  fi
+done

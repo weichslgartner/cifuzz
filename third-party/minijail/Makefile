@@ -77,13 +77,13 @@ tests: TEST(CXX_BINARY(libminijail_unittest)) \
 	TEST(CXX_BINARY(util_unittest)) \
 
 
-CC_BINARY(minijail0): LDLIBS += -lcap -ldl
+CC_BINARY(minijail0): LDLIBS += -l:libcap.a -ldl
 CC_BINARY(minijail0): $(CORE_OBJECT_FILES) \
 	elfparse.o minijail0.o minijail0_cli.o
 clean: CLEAN(minijail0)
 
 
-CC_LIBRARY(libminijail.so): LDLIBS += -lcap
+CC_LIBRARY(libminijail.so): LDLIBS += -l:libcap.a
 CC_LIBRARY(libminijail.so): $(CORE_OBJECT_FILES)
 clean: CLEAN(libminijail.so)
 
@@ -93,7 +93,7 @@ clean: CLEAN(libminijail.*.a)
 
 CXX_BINARY(libminijail_unittest): CXXFLAGS += -Wno-write-strings \
 						$(GTEST_CXXFLAGS)
-CXX_BINARY(libminijail_unittest): LDLIBS += -lcap $(GTEST_LIBS)
+CXX_BINARY(libminijail_unittest): LDLIBS += -l:libcap.a $(GTEST_LIBS)
 ifeq ($(USE_SYSTEM_GTEST),no)
 CXX_BINARY(libminijail_unittest): $(GTEST_LIBS)
 endif
@@ -104,13 +104,13 @@ clean: CLEAN(libminijail_unittest)
 TEST(CXX_BINARY(libminijail_unittest)): CC_LIBRARY(libminijailpreload.so)
 
 
-CC_LIBRARY(libminijailpreload.so): LDLIBS += -lcap -ldl
+CC_LIBRARY(libminijailpreload.so): LDLIBS += -l:libcap.a -ldl
 CC_LIBRARY(libminijailpreload.so): libminijailpreload.o $(CORE_OBJECT_FILES)
 clean: CLEAN(libminijailpreload.so)
 
 
 CXX_BINARY(minijail0_cli_unittest): CXXFLAGS += $(GTEST_CXXFLAGS)
-CXX_BINARY(minijail0_cli_unittest): LDLIBS += -lcap $(GTEST_LIBS)
+CXX_BINARY(minijail0_cli_unittest): LDLIBS += -l:libcap.a $(GTEST_LIBS)
 ifeq ($(USE_SYSTEM_GTEST),no)
 CXX_BINARY(minijail0_cli_unittest): $(GTEST_LIBS)
 endif
@@ -121,7 +121,7 @@ clean: CLEAN(minijail0_cli_unittest)
 
 CXX_BINARY(syscall_filter_unittest): CXXFLAGS += -Wno-write-strings \
 						$(GTEST_CXXFLAGS)
-CXX_BINARY(syscall_filter_unittest): LDLIBS += -lcap $(GTEST_LIBS)
+CXX_BINARY(syscall_filter_unittest): LDLIBS += -l:libcap.a $(GTEST_LIBS)
 ifeq ($(USE_SYSTEM_GTEST),no)
 CXX_BINARY(syscall_filter_unittest): $(GTEST_LIBS)
 endif
@@ -131,7 +131,7 @@ clean: CLEAN(syscall_filter_unittest)
 
 
 CXX_BINARY(system_unittest): CXXFLAGS += $(GTEST_CXXFLAGS)
-CXX_BINARY(system_unittest): LDLIBS += -lcap $(GTEST_LIBS)
+CXX_BINARY(system_unittest): LDLIBS += -l:libcap.a $(GTEST_LIBS)
 ifeq ($(USE_SYSTEM_GTEST),no)
 CXX_BINARY(system_unittest): $(GTEST_LIBS)
 endif
@@ -141,7 +141,7 @@ clean: CLEAN(system_unittest)
 
 
 CXX_BINARY(util_unittest): CXXFLAGS += $(GTEST_CXXFLAGS)
-CXX_BINARY(util_unittest): LDLIBS += -lcap $(GTEST_LIBS)
+CXX_BINARY(util_unittest): LDLIBS += -l:libcap.a $(GTEST_LIBS)
 ifeq ($(USE_SYSTEM_GTEST),no)
 CXX_BINARY(util_unittest): $(GTEST_LIBS)
 endif
