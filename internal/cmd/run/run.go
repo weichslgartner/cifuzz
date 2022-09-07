@@ -2,6 +2,7 @@ package run
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -80,6 +81,11 @@ func (opts *runOptions) validate() error {
 	// To build with other build systems, a build command must be provided
 	if opts.BuildSystem == config.BuildSystemOther && opts.BuildCommand == "" {
 		msg := "Flag \"build-command\" must be set when using build system type \"other\""
+		return cmdutils.WrapIncorrectUsageError(errors.New(msg))
+	}
+
+	if opts.Timeout != 0 && opts.Timeout < time.Second {
+		msg := fmt.Sprintf("invalid argument %q for \"--timeout\" flag: timeout can't be less than a second", opts.Timeout)
 		return cmdutils.WrapIncorrectUsageError(errors.New(msg))
 	}
 
