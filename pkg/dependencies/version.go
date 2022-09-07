@@ -61,7 +61,7 @@ func clangVersion(dep *Dependency, clangCheck execCheck) (*semver.Version, error
 	}
 
 	if cxx, found := os.LookupEnv("CXX"); found {
-		if path.Base(cxx) == "clang" {
+		if path.Base(cxx) == "clang++" {
 			cxxVersion, err := clangCheck(cxx, dep.Key)
 			if err != nil {
 				return nil, err
