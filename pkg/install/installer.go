@@ -138,6 +138,9 @@ func (i *InstallationBundler) Lock() error {
 // Unlock releases the file lock to allow other installer instances to
 // run.
 func (i *InstallationBundler) Unlock() error {
+	if !i.isLocked {
+		return nil
+	}
 	err := i.mutex.Unlock()
 	if err != nil {
 		return errors.WithStack(err)
