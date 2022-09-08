@@ -523,6 +523,12 @@ func (c *coverageCmd) lcovReportSummary(fuzzTestExecutable string, runtimeDeps [
 }
 
 func (c *coverageCmd) rawProfilePattern() string {
+	// Use "%m" instead of a fixed path to support coverage of shared
+	// libraries: Each executable or library generates its own profile
+	// file, all of which we have to merge in the end. By using "%m",
+	// the profile is written to a unique file for each executable and
+	// shared library.
+	//
 	// TODO: According to the documentation [1], "%c" should be useful
 	//       here, but for an unclear reason that results in no .profraw
 	//       files being generated.
