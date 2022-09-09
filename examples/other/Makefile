@@ -19,4 +19,4 @@ main: explore_me.o
 
 my_fuzz_test: libexplore.so
 	@echo "Building $@"
-	${CXX} ${CXXFLAGS} ${FUZZ_TEST_CFLAGS} ${FUZZ_TEST_LDFLAGS} -pie -fPIE -o $@ $@.cpp -Wl,-rpath '-Wl,$$ORIGIN' -L. -lexplore
+	${CXX} ${CXXFLAGS} ${FUZZ_TEST_CFLAGS} ${FUZZ_TEST_LDFLAGS} -o $@ $@.cpp -Wl,-rpath '-Wl,$$ORIGIN' -L. -lexplore
