@@ -563,7 +563,7 @@ func testBundle(t *testing.T, dir string, cifuzz string) {
 	seedCorpusPattern := regexp.MustCompile(`\W*seeds: (.*)`)
 	seedCorpusPath := filepath.Join(archiveDir, string(seedCorpusPattern.FindSubmatch(metadataYaml)[1]))
 	require.DirExists(t, seedCorpusPath)
-	require.FileExists(t, filepath.Join(seedCorpusPath, "parser_fuzz_test_seed_corpus", "some_seed"))
+	require.FileExists(t, filepath.Join(seedCorpusPath, "parser_fuzz_test_inputs", "some_seed"))
 	// Check that the empty seed from the user-specified seed corpus
 	// was copied into the archive
 	require.FileExists(t, filepath.Join(seedCorpusPath, filepath.Base(seedCorpusDir), "empty"))

@@ -6,5 +6,5 @@ my_fuzz_test
 
 .cifuzz-findings
 .cifuzz-corpus
-*_seed_corpus
+*_inputs
 crash-*

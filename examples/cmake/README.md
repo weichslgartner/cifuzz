@@ -24,4 +24,4 @@ cmake --build --preset="cifuzz (Regression Test)"
 
 To execute the replayer binary, run `./.cifuzz-build/replayer/address+undefined/my_fuzz_test`.
 When you run the replayer binary, it will use any findings located in
-the my_fuzz_test_seed_corpus directory as input. 
+the my_fuzz_test_inputs directory as input. 

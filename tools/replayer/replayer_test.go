@@ -330,7 +330,7 @@ func TestIntegration_Replayer_WithoutArgsRunsSeedCorpus(t *testing.T) {
 	}
 
 	// Create a seed corpus directory with the correct name next to the replayer binary.
-	seedCorpusDir := strings.TrimSuffix(replayerPath, ".exe") + "_seed_corpus"
+	seedCorpusDir := strings.TrimSuffix(replayerPath, ".exe") + "_inputs"
 	err = os.Mkdir(seedCorpusDir, 0700)
 	require.NoError(t, err)
 	err = os.WriteFile(filepath.Join(seedCorpusDir, "some_entry"), []byte("seed_corpus_entry"), 0700)

@@ -135,7 +135,7 @@ func (b *Builder) Build(fuzzTest string) (*build.Result, error) {
 
 	// For the build system type "other", we expect the default seed corpus next
 	// to the fuzzer executable.
-	seedCorpus, err := fileutil.CanonicalPath(executable + "_seed_corpus")
+	seedCorpus, err := fileutil.CanonicalPath(executable + "_inputs")
 	if err != nil {
 		return nil, err
 	}

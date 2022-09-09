@@ -38,7 +38,7 @@ clean/examples/cmake:
 	-rm -r .cifuzz-*
 	-rm -r build/
 	-rm crash-*
-	-rm -r *_seed_corpus
+	-rm -r *_inputs
 	popd
 
 .PHONY: deps

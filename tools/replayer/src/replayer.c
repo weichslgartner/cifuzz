@@ -16,7 +16,7 @@
  *   - crash on UBSan findings
  *   - disabled dialog boxes for aborts or failed asserts on Windows
  *   - emit summary and follow-up suggestions at the end
- *   - automatically execute a <name>_seed_corpus dir adjacent to the target
+ *   - automatically execute a <name>_inputs dir adjacent to the target
  */
 /*===- StandaloneFuzzTargetMain.c - standalone main() for fuzz targets. ---===//
 //
@@ -67,7 +67,7 @@
 
 /* If no arguments are specified and argv[0] + SEED_CORPUS_SUFFIX exists as a file or directory, its contents will
  * be executed. */
-static const char *SEED_CORPUS_SUFFIX = "_seed_corpus";
+static const char *SEED_CORPUS_SUFFIX = "_inputs";
 
 /* A nonzero value indicates that replayer was launched as a Doctest target by the CLion test framework integration. */
 static int launched_as_clion_doctest = 0;

@@ -201,7 +201,7 @@ function(add_fuzz_test name)
                        BYPRODUCTS "${name}.dSYM")
   endif()
 
-  set(_seed_corpus_suffix _seed_corpus)
+  set(_seed_corpus_suffix _inputs)
   set(_source_seed_corpus "${CMAKE_CURRENT_SOURCE_DIR}/${name}${_seed_corpus_suffix}")
   # Convert path separators to '\' (Windows only) and escape all backslashes for a C string literal.
   # In the regex strings below, one level of escaping is for the CMake string and another one to get a literal backslash
