@@ -124,7 +124,8 @@ func (c *createCmd) getTestType() (config.FuzzTestType, error) {
 func (c *createCmd) printBuildSystemInstructions() {
 	filename := filepath.Base(c.opts.outputPath)
 	// Printing build system instructions is best-effort: Do not fail on errors.
-	if c.config.BuildSystem == config.BuildSystemCMake {
+	switch c.config.BuildSystem {
+	case config.BuildSystemCMake:
 		log.Printf(`
 Create a CMake target for the fuzz test as follows - it behaves just like
 a regular add_executable(...):
@@ -132,6 +133,20 @@ a regular add_executable(...):
     add_fuzz_test(%s %s)
 
 `, strings.TrimSuffix(filename, filepath.Ext(filename)), filename)
+
+	case config.BuildSystemOther:
+		log.Printf(`
+It seems like you're not using a build system which cifuzz has special
+integration support for, so you'll have to configure your build system
+yourself in order to build the fuzz test and specify the command which
+produces the fuzz test executable via the '--build-command' flag or the
+'build-command' option in the cifuzz.yaml. See 'cifuzz run --help' for
+more information about the build command.
+
+The FUZZ_TEST_CLFAGS and FUZZ_TEST_LDFLAGS environment variables are
+set by cifuzz when building the fuzz test, please make sure that
+$FUZZ_TEST_CLFAGS is passed as a command-line argument to the compiler
+and $FUZZ_TEST_LDFLAGS to the linker.`)
 	}
 }
 
