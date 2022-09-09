@@ -75,7 +75,7 @@ func copyMakeExampleDir(t *testing.T) string {
 	// Get the path to the testdata dir
 	cwd, err := os.Getwd()
 	require.NoError(t, err)
-	exampleDir := filepath.Join(cwd, "..", "..", "examples", "make")
+	exampleDir := filepath.Join(cwd, "..", "..", "examples", "other")
 
 	// Copy the example dir to the temporary directory
 	err = copy.Copy(exampleDir, dir)

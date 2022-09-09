@@ -48,9 +48,9 @@ jobs:
           cat fuzzing.log | grep "undefined behaviour"
           cat fuzzing.log | grep -E "Findings:\s+2"
 
-      - name: Run Make Example
+      - name: Run Other Build System Example
         run: |
-          cd examples/make
+          cd examples/other
           ~/cifuzz/bin/cifuzz run my_fuzz_test 2>&1 | tee fuzzing.log
           cat fuzzing.log | grep "heap buffer overflow"
           cat fuzzing.log | grep "undefined behaviour"
@@ -85,10 +85,10 @@ jobs:
           cat fuzzing.log | grep -E "Findings:\s+2"
         shell: bash
 
-      - name: Run Make Example (MacOS)
+      - name: Run Other Build System Example (MacOS)
         if: contains(matrix.os, 'macos')
         run: |
-          cd examples/make
+          cd examples/other
           ~/cifuzz/bin/cifuzz run my_fuzz_test 2>&1 | tee fuzzing.log
           cat fuzzing.log | grep "heap buffer overflow"
           cat fuzzing.log | grep "undefined behaviour"
