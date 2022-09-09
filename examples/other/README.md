@@ -1,12 +1,13 @@
-# cifuzz Make example
-This is a simple Make based project, already configured with 
-**cifuzz**. It should quickly produce a finding, but slow enough to 
-see the progress of the fuzzer.
+# cifuzz other build systems example
 
-To start make sure you installed **cifuzz** according to the 
-main [README](../../README.md).
+This is a simple C++ project which doesn't use CMake, to demonstrate how
+**cifuzz** can be used with other build systems.
 
-You can start the fuzzing with
+What makes this project usable with **cifuzz** is the `my_fuzz_test`
+target in the [Makefile](Makefile) and the `build-command` setting in
+the [cifuzz.yaml](cifuzz.yaml).
+
+You can start fuzzing with
 ```bash
 cifuzz run my_fuzz_test
 ```

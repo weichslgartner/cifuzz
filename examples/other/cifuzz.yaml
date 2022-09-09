@@ -6,4 +6,11 @@
 ## Valid values: "auto", "cmake", "other".
 #build-system: auto
 
+# The build command executed by cifuzz to build a fuzz test. The
+# $FUZZ_TEST environment variable is set by cifuzz when it executes the
+# build command, which allows us to use a generic build command which
+# builds only the specified fuzz test and its dependencies.
+#
+# The 'make clean' is important here to ensure that subsequent builds,
+# which might use other build flags, produce new executables.
 build-command: make clean && make $FUZZ_TEST
