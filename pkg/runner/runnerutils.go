@@ -120,6 +120,8 @@ func SetCommonASANOptions(env []string) ([]string, error) {
 		//   https://github.com/google/sanitizers/wiki/SanitizerCommonFlags
 		//
 		"exitcode": strconv.Itoa(SanitizerErrorExitCode),
+		// Logs must be written to stderr for us to parse them.
+		"log_path": "stderr",
 	}
 	return SetASANOptions(env, defaultOptions, overrideOptions)
 }
@@ -134,8 +136,13 @@ func SetCommonUBSANOptions(env []string) ([]string, error) {
 		// be mapped to the project build directory.
 		"print_stacktrace": "1",
 	})
+	overrideOptions := map[string]string{
+		// Logs must be written to stderr for us to parse them.
+		"log_path": "stderr",
+	}
+
 	options := envutil.Getenv(env, "UBSAN_OPTIONS")
-	options = SetSanitizerOptions(options, defaultOptions, nil)
+	options = SetSanitizerOptions(options, defaultOptions, overrideOptions)
 	return envutil.Setenv(env, "UBSAN_OPTIONS", options)
 }
 
