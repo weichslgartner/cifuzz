@@ -81,7 +81,7 @@ func (opts *coverageOptions) validate() error {
 
 	// To build with other build systems, a build command must be provided
 	if opts.BuildSystem == config.BuildSystemOther && opts.BuildCommand == "" {
-		msg := `Flag "build-command" must be set when using the build system type "other"`
+		msg := `Flag 'build-command' must be set when using the build system type 'other'`
 		return cmdutils.WrapIncorrectUsageError(errors.New(msg))
 	}
 

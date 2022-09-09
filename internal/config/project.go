@@ -9,6 +9,7 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
 
@@ -25,7 +26,7 @@ var buildSystemTypes = []string{BuildSystemCMake, BuildSystemOther}
 
 type ProjectConfig struct {
 	LastUpdated string
-	BuildSystem string `yaml:"build-system"`
+	BuildSystem string `mapstructure:"build-system"`
 }
 
 const projectConfigFile = "cifuzz.yaml"
@@ -68,6 +69,10 @@ func CreateProjectConfig(projectDir string) (string, error) {
 func ParseProjectConfig(opts interface{}) (string, error) {
 	var err error
 
+	// Also read settings from environment variables
+	viper.SetEnvPrefix("CIFUZZ")
+	viper.AutomaticEnv()
+
 	projectDir, err := FindProjectDir()
 	if err != nil {
 		return "", err
@@ -90,15 +95,28 @@ func ParseProjectConfig(opts interface{}) (string, error) {
 		}
 	}
 
+	err = viper.Unmarshal(opts)
+	if err != nil {
+		return "", errors.WithStack(err)
+	}
+
+	// If the build system was not set by the user, try to determine it
+	// automatically.
+	// We use mapstructure.Decode to overwrite the BuildSystem field of
+	// the options struct, which is the same method viper.ReadInConfig()
+	// uses.
+	//
+	// Note that we don't set this value in viper, which would lead to
+	// DetermineBuildSystem not being called in subsequent calls to
+	// ParseProjectConfig.
+	config := &ProjectConfig{}
 	if viper.GetString("build-system") == "" {
-		buildSystem, err := DetermineBuildSystem(projectDir)
+		config.BuildSystem, err = DetermineBuildSystem(projectDir)
 		if err != nil {
 			return "", err
 		}
-		viper.Set("build-system", buildSystem)
 	}
-
-	err = viper.Unmarshal(opts)
+	err = mapstructure.Decode(config, opts)
 	if err != nil {
 		return "", errors.WithStack(err)
 	}

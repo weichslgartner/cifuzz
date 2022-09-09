@@ -114,7 +114,7 @@ func (opts *Opts) Validate() error {
 }
 
 type Bundler struct {
-	opts *Opts
+	Opts *Opts
 }
 
 func NewBundler(opts *Opts) *Bundler {
@@ -131,11 +131,11 @@ func (b *Bundler) Bundle() error {
 		return dependencies.Error()
 	}
 
-	if b.opts.OutputPath == "" {
-		if len(b.opts.FuzzTests) == 1 {
-			b.opts.OutputPath = b.opts.FuzzTests[0] + ".tar.gz"
+	if b.Opts.OutputPath == "" {
+		if len(b.Opts.FuzzTests) == 1 {
+			b.Opts.OutputPath = b.Opts.FuzzTests[0] + ".tar.gz"
 		} else {
-			b.opts.OutputPath = "fuzz_tests.tar.gz"
+			b.Opts.OutputPath = "fuzz_tests.tar.gz"
 		}
 	}
 
@@ -161,7 +161,7 @@ func (b *Bundler) Bundle() error {
 	deduplicatedSystemDeps := make(map[string]struct{})
 	for _, buildResults := range allVariantBuildResults {
 		for fuzzTest, buildResult := range buildResults {
-			fuzzTestFuzzers, fuzzTestArchiveManifest, systemDeps, err := b.assembleArtifacts(fuzzTest, buildResult, b.opts.ProjectDir)
+			fuzzTestFuzzers, fuzzTestArchiveManifest, systemDeps, err := b.assembleArtifacts(fuzzTest, buildResult, b.Opts.ProjectDir)
 			if err != nil {
 				return err
 			}
@@ -217,7 +217,7 @@ func (b *Bundler) Bundle() error {
 	}
 	archiveManifest[fuzzerWorkDirPath] = workDirPath
 
-	archive, err := os.Create(b.opts.OutputPath)
+	archive, err := os.Create(b.Opts.OutputPath)
 	if err != nil {
 		return errors.Wrap(err, "failed to create fuzzing artifact archive")
 	}
@@ -228,7 +228,7 @@ func (b *Bundler) Bundle() error {
 		return errors.Wrap(err, "failed to write fuzzing artifact archive")
 	}
 
-	log.Successf("Successfully created artifact: %s", b.opts.OutputPath)
+	log.Successf("Successfully created artifact: %s", b.Opts.OutputPath)
 	if len(systemDeps) != 0 {
 		log.Warnf(`The following system libraries are not part of the artifact and have to be provided by the Docker image %q:
   %s`, metadata.RunEnvironment.Docker, strings.Join(systemDeps, "\n  "))
@@ -263,15 +263,15 @@ func (b *Bundler) buildAllVariants() ([]map[string]*build.Result, error) {
 	var allVariantBuildResults []map[string]*build.Result
 	for _, variant := range configureVariants {
 		builder, err := cmake.NewBuilder(&cmake.BuilderOptions{
-			ProjectDir: b.opts.ProjectDir,
+			ProjectDir: b.Opts.ProjectDir,
 			Engine:     variant.Engine,
 			Sanitizers: variant.Sanitizers,
 			Parallel: cmake.ParallelOptions{
 				Enabled: viper.IsSet("build-jobs"),
-				NumJobs: b.opts.NumBuildJobs,
+				NumJobs: b.Opts.NumBuildJobs,
 			},
-			Stdout:          b.opts.Stdout,
-			Stderr:          b.opts.Stderr,
+			Stdout:          b.Opts.Stdout,
+			Stderr:          b.Opts.Stderr,
 			FindRuntimeDeps: true,
 		})
 		if err != nil {
@@ -292,13 +292,13 @@ func (b *Bundler) buildAllVariants() ([]map[string]*build.Result, error) {
 		}
 
 		var fuzzTests []string
-		if len(b.opts.FuzzTests) == 0 {
+		if len(b.Opts.FuzzTests) == 0 {
 			fuzzTests, err = builder.ListFuzzTests()
 			if err != nil {
 				return nil, err
 			}
 		} else {
-			fuzzTests = b.opts.FuzzTests
+			fuzzTests = b.Opts.FuzzTests
 		}
 
 		buildResults, err := builder.Build(fuzzTests)
@@ -313,7 +313,7 @@ func (b *Bundler) buildAllVariants() ([]map[string]*build.Result, error) {
 
 func (b *Bundler) checkDependencies() (bool, error) {
 	deps := []dependencies.Key{dependencies.CLANG}
-	if b.opts.BuildSystem == config.BuildSystemCMake {
+	if b.Opts.BuildSystem == config.BuildSystemCMake {
 		deps = append(deps, dependencies.CMAKE)
 	}
 	return dependencies.Check(deps, dependencies.Default, runfiles.Finder)
@@ -433,15 +433,15 @@ depsLoop:
 
 	// Add dictionary to archive
 	var archiveDict string
-	if b.opts.Dictionary != "" {
+	if b.Opts.Dictionary != "" {
 		archiveDict = filepath.Join(fuzzTestPrefix(fuzzTest, buildResult), "dict")
-		archiveManifest[archiveDict] = b.opts.Dictionary
+		archiveManifest[archiveDict] = b.Opts.Dictionary
 	}
 
 	// Add seeds from user-specified seed corpus dirs (if any) and the
 	// default seed corpus (if it exists) to the seeds directory in the
 	// archive
-	seedCorpusDirs := b.opts.SeedCorpusDirs
+	seedCorpusDirs := b.Opts.SeedCorpusDirs
 	exists, err := fileutil.Exists(buildResult.SeedCorpus)
 	if err != nil {
 		return
@@ -486,10 +486,10 @@ depsLoop:
 		// to start cifuzz
 		EngineOptions: artifact.EngineOptions{
 			Env:   []string{"NO_CIFUZZ=1"},
-			Flags: b.opts.EngineArgs,
+			Flags: b.Opts.EngineArgs,
 		},
-		FuzzTestArgs: b.opts.FuzzTestArgs,
-		MaxRunTime:   uint(b.opts.Timeout.Seconds()),
+		FuzzTestArgs: b.Opts.FuzzTestArgs,
+		MaxRunTime:   uint(b.Opts.Timeout.Seconds()),
 	}
 
 	if externalLibrariesPrefix != "" {
@@ -523,24 +523,24 @@ func (b *Bundler) getCodeRevision() *artifact.CodeRevision {
 	var gitCommit string
 	var gitBranch string
 
-	if b.opts.Commit == "" {
+	if b.Opts.Commit == "" {
 		gitCommit, err = vcs.GitCommit()
 		if err != nil {
 			log.Debugf("failed to get Git commit: %+v", err)
 			return nil
 		}
 	} else {
-		gitCommit = b.opts.Commit
+		gitCommit = b.Opts.Commit
 	}
 
-	if b.opts.Branch == "" {
+	if b.Opts.Branch == "" {
 		gitBranch, err = vcs.GitBranch()
 		if err != nil {
 			log.Debugf("failed to get Git branch: %+v", err)
 			return nil
 		}
 	} else {
-		gitBranch = b.opts.Branch
+		gitBranch = b.Opts.Branch
 	}
 
 	if vcs.GitIsDirty() {

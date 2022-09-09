@@ -110,3 +110,13 @@ func SubtractSlices(a, b []string) []string {
 	}
 	return diff
 }
+
+func MaxLen(elems []string) int {
+	var res int
+	for _, e := range elems {
+		if len(e) > res {
+			res = len(e)
+		}
+	}
+	return res
+}
