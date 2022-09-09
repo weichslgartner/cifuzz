@@ -12,9 +12,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	builderPkg "code-intelligence.com/cifuzz/internal/builder"
 	initCmd "code-intelligence.com/cifuzz/internal/cmd/init"
 	"code-intelligence.com/cifuzz/pkg/cmdutils"
-	"code-intelligence.com/cifuzz/pkg/install"
 	"code-intelligence.com/cifuzz/pkg/log"
 	"code-intelligence.com/cifuzz/pkg/mocks"
 	"code-intelligence.com/cifuzz/util/fileutil"
@@ -131,7 +131,7 @@ func getRootSourceDirectory(t *testing.T) string {
 	require.NoError(t, err)
 
 	// Find root source directory
-	sourceDir, err := install.FindProjectDir()
+	sourceDir, err := builderPkg.FindProjectDir()
 	require.NoError(t, err)
 
 	// Change back to test directory

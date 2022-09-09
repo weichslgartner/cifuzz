@@ -22,10 +22,10 @@ import (
 	"golang.org/x/sync/errgroup"
 	"gopkg.in/yaml.v3"
 
+	builderPkg "code-intelligence.com/cifuzz/internal/builder"
 	"code-intelligence.com/cifuzz/internal/cmd/run/report_handler/stacktrace"
 	"code-intelligence.com/cifuzz/pkg/artifact"
 	"code-intelligence.com/cifuzz/pkg/finding"
-	"code-intelligence.com/cifuzz/pkg/install"
 	"code-intelligence.com/cifuzz/util/envutil"
 	"code-intelligence.com/cifuzz/util/executil"
 	"code-intelligence.com/cifuzz/util/fileutil"
@@ -38,25 +38,25 @@ func TestIntegration_CMake_InitCreateRunCoverageBundle(t *testing.T) {
 	}
 	testutil.RegisterTestDepOnCIFuzz()
 
-	// Create installation bundle
-	projectDir, err := install.FindProjectDir()
+	// Create installation builder
+	projectDir, err := builderPkg.FindProjectDir()
 	require.NoError(t, err)
-	targetDir := filepath.Join(projectDir, "tools", "install", "bundler", "embed", "bundle")
+	targetDir := filepath.Join(projectDir, "cmd", "installer", "build")
 	err = os.RemoveAll(targetDir)
 	require.NoError(t, err)
 
-	opts := install.Options{Version: "dev", TargetDir: targetDir}
-	bundler, err := install.NewInstallationBundler(opts)
-	defer bundler.Cleanup()
+	opts := builderPkg.Options{Version: "dev", TargetDir: targetDir}
+	builder, err := builderPkg.NewCIFuzzBuilder(opts)
+	defer builder.Cleanup()
 	require.NoError(t, err)
-	err = bundler.BuildCIFuzzAndDeps()
+	err = builder.BuildCIFuzzAndDeps()
 	require.NoError(t, err)
 
 	// Install CIFuzz in temp folder
 	installDir, err := os.MkdirTemp("", "cifuzz-")
 	require.NoError(t, err)
 	installDir = filepath.Join(installDir, "cifuzz")
-	installer := filepath.Join("tools", "install", "installer", "installer.go")
+	installer := filepath.Join("cmd", "installer", "installer.go")
 	installCmd := exec.Command("go", "run", "-tags", "installer", installer, "-i", installDir)
 	installCmd.Stderr = os.Stderr
 	installCmd.Dir = projectDir
@@ -72,7 +72,7 @@ func TestIntegration_CMake_InitCreateRunCoverageBundle(t *testing.T) {
 	t.Logf("executing cmake integration test in %s", dir)
 
 	// Execute the root command
-	cifuzz := install.CIFuzzExecutablePath(filepath.Join(installDir, "bin"))
+	cifuzz := builderPkg.CIFuzzExecutablePath(filepath.Join(installDir, "bin"))
 	cmd := executil.Command(cifuzz)
 	cmd.Dir = dir
 	cmd.Stderr = os.Stderr

@@ -13,25 +13,33 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"code-intelligence.com/cifuzz/pkg/install"
+	builderPkg "code-intelligence.com/cifuzz/internal/builder"
 	"code-intelligence.com/cifuzz/pkg/runfiles"
 )
 
 func TestMain(m *testing.M) {
-	bundler, err := install.NewInstallationBundler(install.Options{Version: "dev"})
+	installDir, err := os.MkdirTemp("", "process-wrapper-test-")
 	if err != nil {
-		bundler.Cleanup()
+		log.Fatalf("Failed to create temp dir for tests: %+v", err)
+	}
+	opts := builderPkg.Options{
+		Version:   "dev",
+		TargetDir: installDir,
+	}
+	builder, err := builderPkg.NewCIFuzzBuilder(opts)
+	if err != nil {
+		builder.Cleanup()
 		log.Fatalf("%+v", err)
 	}
-	err = bundler.BuildProcessWrapper()
+	err = builder.BuildProcessWrapper()
 	if err != nil {
-		bundler.Cleanup()
+		builder.Cleanup()
 		log.Fatalf("%+v", err)
 	}
-	runfiles.Finder = runfiles.RunfilesFinderImpl{InstallDir: bundler.TargetDir}
+	runfiles.Finder = runfiles.RunfilesFinderImpl{InstallDir: builder.TargetDir}
 
 	res := m.Run()
-	bundler.Cleanup()
+	builder.Cleanup()
 	os.Exit(res)
 }
 

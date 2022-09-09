@@ -7,11 +7,11 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"code-intelligence.com/cifuzz/pkg/install"
+	builder2 "code-intelligence.com/cifuzz/internal/builder"
 	"code-intelligence.com/cifuzz/pkg/runfiles"
 )
 
-var bundler *install.InstallationBundler
+var builder *builder2.CIFuzzBuilder
 var installOnce sync.Once
 var installMutex sync.Mutex
 
@@ -29,14 +29,14 @@ func TestWithAndWithoutMinijail(t *testing.T, f func(t *testing.T, disableMinija
 
 		installMutex.Lock()
 		installOnce.Do(func() {
-			err := bundler.BuildMinijail()
+			err := builder.BuildMinijail()
 			require.NoError(t, err)
-			err = bundler.BuildProcessWrapper()
+			err = builder.BuildProcessWrapper()
 			require.NoError(t, err)
 		})
 		installMutex.Unlock()
 
-		runfiles.Finder = runfiles.RunfilesFinderImpl{InstallDir: bundler.TargetDir}
+		runfiles.Finder = runfiles.RunfilesFinderImpl{InstallDir: builder.TargetDir}
 
 		f(t, false)
 	})

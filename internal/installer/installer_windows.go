@@ -1,4 +1,4 @@
-package install
+package installer
 
 import (
 	"github.com/pkg/errors"
@@ -8,7 +8,7 @@ import (
 	"code-intelligence.com/cifuzz/pkg/log"
 )
 
-func registerCMakePackage(packageDir string) error {
+func RegisterCMakePackage(packageDir string) error {
 	// Store the path to the root directory of the CMake integration in the registry.
 	// See https://cmake.org/cmake/help/latest/manual/cmake-packages.7.html#user-package-registry
 	key := registry.CURRENT_USER

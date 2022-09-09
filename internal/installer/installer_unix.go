@@ -1,6 +1,6 @@
 //go:build !windows
 
-package install
+package installer
 
 import (
 	"os"
@@ -9,7 +9,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func registerCMakePackage(packageDir string) error {
+func RegisterCMakePackage(packageDir string) error {
 	// Install the CMake package for the current user only by registering it
 	// with the user package registry. This requires creating a file
 	// ~/.cmake/packages/CIFuzz/CIFuzz containing the path to the root directory

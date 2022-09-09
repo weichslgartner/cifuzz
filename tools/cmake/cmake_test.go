@@ -17,7 +17,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"code-intelligence.com/cifuzz/pkg/install"
+	builderPkg "code-intelligence.com/cifuzz/internal/builder"
 	"code-intelligence.com/cifuzz/util/fileutil"
 	"code-intelligence.com/cifuzz/util/testutil"
 )
@@ -36,18 +36,18 @@ func TestMain(m *testing.M) {
 	}
 
 	installDir := filepath.Join(baseTempDir, "install-dir")
-	opts := install.Options{
+	opts := builderPkg.Options{
 		Version:   "dev",
 		TargetDir: installDir,
 	}
-	bundler, err := install.NewInstallationBundler(opts)
+	builder, err := builderPkg.NewCIFuzzBuilder(opts)
 	if err != nil {
-		bundler.Cleanup()
+		builder.Cleanup()
 		log.Fatalf("Failed to install CMake integration: %+v", err)
 	}
-	err = bundler.CopyCMakeIntegration()
+	err = builder.CopyCMakeIntegration()
 	if err != nil {
-		bundler.Cleanup()
+		builder.Cleanup()
 		log.Fatalf("Failed to install CMake integration: %+v", err)
 	}
 
@@ -55,13 +55,13 @@ func TestMain(m *testing.M) {
 	// The CMake registration is tested in the integration test.
 	err = os.Setenv("CMAKE_PREFIX_PATH", installDir)
 	if err != nil {
-		bundler.Cleanup()
+		builder.Cleanup()
 		log.Fatalf("Failed to install CMake integration: %+v", err)
 	}
 
 	m.Run()
 
-	bundler.Cleanup()
+	builder.Cleanup()
 }
 
 func TestIntegration_Ctest_DefaultSettings(t *testing.T) {

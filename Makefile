@@ -52,21 +52,21 @@ deps/dev: deps
 
 .PHONY: install
 install:
-	go run tools/install/bundler/bundler.go --version $(version) 
-	go run -tags installer tools/install/installer/installer.go
-	rm -r tools/install/bundler/embed/bundle
+	go run tools/builder/builder.go --version $(version)
+	go run -tags installer cmd/installer/installer.go
+	rm -r cmd/installer/build
 
 .PHONY: installer
 installer:
-	go run tools/install/bundler/bundler.go --version $(version) 
-	go build -tags installer -o $(installer_base_path)_$(current_os)$(bin_ext) tools/install/installer/installer.go
-	rm -r tools/install/bundler/embed/bundle
+	go run tools/builder/builder.go --version $(version)
+	go build -tags installer -o $(installer_base_path)_$(current_os)$(bin_ext) cmd/installer/installer.go
+	rm -r cmd/installer/build
 
 .PHONY: installer/darwin-arm64
 installer/darwin-arm64:
-	go run tools/install/bundler/bundler.go --version $(version) --goos darwin --goarch arm64 
-	GOOS=darwin GOARCH=arm64 go build -tags installer -o $(installer_base_path)_darwin_arm64 tools/install/installer/installer.go
-	rm -r tools/install/bundler/embed/bundle
+	go run tools/builder/builder.go --version $(version) --goos darwin --goarch arm64
+	GOOS=darwin GOARCH=arm64 go build -tags installer -o $(installer_base_path)_darwin_arm64 cmd/installer/installer.go
+	rm -r cmd/installer/build
 
 .PHONY: build
 build: build/$(current_os)

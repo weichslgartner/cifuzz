@@ -11,7 +11,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"code-intelligence.com/cifuzz/pkg/install"
+	"code-intelligence.com/cifuzz/internal/installer"
 	"code-intelligence.com/cifuzz/util/fileutil"
 )
 
@@ -46,7 +46,7 @@ func RegisterTestDepOnCIFuzz() {
 	// Note: The number of levels we go up here has to be adjusted if
 	// this source file is moved.
 	basepath := filepath.Dir(filepath.Dir(filepath.Dir(b)))
-	for _, dep := range install.Deps {
+	for _, dep := range installer.Deps {
 		deps = append(deps, filepath.Join(basepath, dep))
 	}
 	RegisterTestDeps(deps...)
