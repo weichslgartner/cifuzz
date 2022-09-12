@@ -2,7 +2,7 @@
 
 ## Building from Source (Linux)
 
-**Prerequisites**
+### Prerequisites
 * [git](https://git-scm.com/)
 * [make](https://www.gnu.org/software/make/)
 * [CMake >= 3.21](https://cmake.org/)
@@ -11,18 +11,30 @@
 * [libcap](https://man7.org/linux/man-pages/man3/libcap.3.html)
 
 
-**Ubuntu / Debian**
+#### Ubuntu / Debian
 <!-- when changing this, please make sure it is in sync with the E2E pipeline -->
 ```bash
 sudo apt install git make cmake clang llvm golang-go libcap-dev
 ```
 
-**Arch**
+#### Arch
 <!-- when changing this, please make sure it is in sync with the E2E pipeline -->
 ```bash
-sudo pacman -S git make cmake clang llvm go libcap
+sudo pacman -S git make cmake clang llvm go
+```
+Unfortunately, the Arch `libcap` package does not include the static
+libcap library, which is needed to build cifuzz. You have to build it from
+source instead:
+```bash
+pacman -Sy --noconfirm glibc pam linux-api-headers make diffutils
+git clone git://git.kernel.org/pub/scm/libs/libcap/libcap.git
+cd libcap
+git checkout libcap-2.65
+make
+make install
 ```
 
+### Steps
 To build **cifuzz** from source you have to execute the following steps:
 ```bash
 git clone https://github.com/CodeIntelligenceTesting/cifuzz.git
