@@ -43,7 +43,7 @@ func TestOk(t *testing.T) {
 		"--output",
 		filepath.Join(testDir, "fuzz-test.cpp"),
 	}
-	_, err := cmdutils.ExecuteCommand(t, New(config.NewConfig()), os.Stdin, args...)
+	_, err := cmdutils.ExecuteCommand(t, New(), os.Stdin, args...)
 	assert.NoError(t, err)
 }
 
@@ -56,7 +56,7 @@ func TestOkMaven(t *testing.T) {
 		"--output",
 		filepath.Join(testDir, "FuzzTestCase.java"),
 	}
-	_, err := cmdutils.ExecuteCommand(t, New(config.NewConfig()), os.Stdin, args...)
+	_, err := cmdutils.ExecuteCommand(t, New(), os.Stdin, args...)
 	assert.NoError(t, err)
 }
 
@@ -69,7 +69,7 @@ func TestOkGradle(t *testing.T) {
 		"--output",
 		filepath.Join(testDir, "FuzzTestCase.java"),
 	}
-	_, err := cmdutils.ExecuteCommand(t, New(config.NewConfig()), os.Stdin, args...)
+	_, err := cmdutils.ExecuteCommand(t, New(), os.Stdin, args...)
 	assert.NoError(t, err)
 }
 
@@ -77,7 +77,7 @@ func TestInvalidType(t *testing.T) {
 	args := []string{
 		"foo",
 	}
-	_, err := cmdutils.ExecuteCommand(t, New(config.NewConfig()), os.Stdin, args...)
+	_, err := cmdutils.ExecuteCommand(t, New(), os.Stdin, args...)
 	assert.Error(t, err)
 }
 
@@ -97,10 +97,13 @@ func TestCMakeMissing(t *testing.T) {
 		filepath.Join(testDir, "fuzz-test.cpp"),
 	}
 
-	conf := config.NewConfig()
-	conf.BuildSystem = config.BuildSystemCMake
+	opts := &createOpts{
+		ProjectConfig: config.ProjectConfig{
+			BuildSystem: config.BuildSystemCMake,
+		},
+	}
 
-	_, err := cmdutils.ExecuteCommand(t, New(conf), os.Stdin, args...)
+	_, err := cmdutils.ExecuteCommand(t, newWithOptions(opts), os.Stdin, args...)
 	// should not fail as this command has no hard dependencies, just recommendations
 	require.NoError(t, err)
 
@@ -123,10 +126,13 @@ func TestClangVersion(t *testing.T) {
 		filepath.Join(testDir, "fuzz-test.cpp"),
 	}
 
-	conf := config.NewConfig()
-	conf.BuildSystem = config.BuildSystemCMake
+	opts := &createOpts{
+		ProjectConfig: config.ProjectConfig{
+			BuildSystem: config.BuildSystemCMake,
+		},
+	}
 
-	_, err := cmdutils.ExecuteCommand(t, New(conf), os.Stdin, args...)
+	_, err := cmdutils.ExecuteCommand(t, newWithOptions(opts), os.Stdin, args...)
 	// should not fail as this command has no hard dependencies, just recommendations
 	require.NoError(t, err)
 

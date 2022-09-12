@@ -18,6 +18,8 @@ import (
 )
 
 type createOpts struct {
+	config.ProjectConfig `mapstructure:",squash"`
+
 	outputPath string
 	testType   config.FuzzTestType
 }
@@ -25,8 +27,7 @@ type createOpts struct {
 type createCmd struct {
 	*cobra.Command
 
-	opts   *createOpts
-	config *config.Config
+	opts *createOpts
 }
 
 // map of supported test types -> label:value
@@ -35,9 +36,11 @@ var supportedTestTypes = map[string]string{
 	"Java":  string(config.JAVA),
 }
 
-func New(projectConfig *config.Config) *cobra.Command {
-	opts := &createOpts{}
+func New() *cobra.Command {
+	return newWithOptions(&createOpts{})
+}
 
+func newWithOptions(opts *createOpts) *cobra.Command {
 	createCmd := &cobra.Command{
 		Use:   fmt.Sprintf("create [%s]", strings.Join(maps.Values(supportedTestTypes), "|")),
 		Short: "Create a new fuzz test",
@@ -49,13 +52,20 @@ fuzz test via 'cifuzz run'.`,
 			if len(args) == 1 {
 				opts.testType = config.FuzzTestType(args[0])
 			}
+
+			projectDir, err := config.FindAndParseProjectConfig(opts)
+			if err != nil {
+				log.Errorf(err, "Failed to parse cifuzz.yaml: %v", err.Error())
+				return cmdutils.WrapSilentError(err)
+			}
+			opts.ProjectDir = projectDir
+
 			return nil
 		},
 		RunE: func(c *cobra.Command, args []string) error {
 			cmd := createCmd{
 				Command: c,
 				opts:    opts,
-				config:  projectConfig,
 			}
 			return cmd.run()
 		},
@@ -125,7 +135,7 @@ func (c *createCmd) getTestType() (config.FuzzTestType, error) {
 func (c *createCmd) printBuildSystemInstructions() {
 	filename := filepath.Base(c.opts.outputPath)
 	// Printing build system instructions is best-effort: Do not fail on errors.
-	switch c.config.BuildSystem {
+	switch c.opts.BuildSystem {
 	case config.BuildSystemCMake:
 		log.Printf(`
 Create a CMake target for the fuzz test as follows - it behaves just like
@@ -159,7 +169,7 @@ func (c *createCmd) checkDependencies() (bool, error) {
 		deps = append(deps, dependencies.CLANG)
 	}
 
-	switch c.config.BuildSystem {
+	switch c.opts.BuildSystem {
 	case config.BuildSystemCMake:
 		deps = append(deps, dependencies.CMAKE)
 	}

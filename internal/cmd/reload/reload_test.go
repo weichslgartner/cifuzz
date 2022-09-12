@@ -33,7 +33,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestOtherBuildSystem(t *testing.T) {
-	_, err := cmdutils.ExecuteCommand(t, New(config.NewConfig()), os.Stdin)
+	_, err := cmdutils.ExecuteCommand(t, New(), os.Stdin)
 	assert.Error(t, err)
 }
 
@@ -41,10 +41,11 @@ func TestClangMissing(t *testing.T) {
 	deps := dependencies.CreateTestDeps(t, []dependencies.Key{dependencies.CLANG, dependencies.CMAKE})
 	dependencies.OverwriteInstalledWithFalse(deps[dependencies.CLANG])
 
-	conf := config.NewConfig()
-	conf.BuildSystem = config.BuildSystemCMake
+	opts := &reloadOpts{ProjectConfig: config.ProjectConfig{
+		BuildSystem: config.BuildSystemCMake,
+	}}
 
-	_, err := cmdutils.ExecuteCommand(t, New(conf), os.Stdin)
+	_, err := cmdutils.ExecuteCommand(t, newWithOptions(opts), os.Stdin)
 	require.Error(t, err)
 
 	output, err := io.ReadAll(testOut)
@@ -56,10 +57,11 @@ func TestCMakeMissing(t *testing.T) {
 	deps := dependencies.CreateTestDeps(t, []dependencies.Key{dependencies.CLANG, dependencies.CMAKE})
 	dependencies.OverwriteInstalledWithFalse(deps[dependencies.CMAKE])
 
-	conf := config.NewConfig()
-	conf.BuildSystem = config.BuildSystemCMake
+	opts := &reloadOpts{ProjectConfig: config.ProjectConfig{
+		BuildSystem: config.BuildSystemCMake,
+	}}
 
-	_, err := cmdutils.ExecuteCommand(t, New(conf), os.Stdin)
+	_, err := cmdutils.ExecuteCommand(t, newWithOptions(opts), os.Stdin)
 	require.Error(t, err)
 
 	output, err := io.ReadAll(testOut)
@@ -73,10 +75,11 @@ func TestWrongCMakeVersion(t *testing.T) {
 	dep := deps[dependencies.CMAKE]
 	version := dependencies.OverwriteGetVersionWith0(dep)
 
-	conf := config.NewConfig()
-	conf.BuildSystem = config.BuildSystemCMake
+	opts := &reloadOpts{ProjectConfig: config.ProjectConfig{
+		BuildSystem: config.BuildSystemCMake,
+	}}
 
-	_, err := cmdutils.ExecuteCommand(t, New(conf), os.Stdin)
+	_, err := cmdutils.ExecuteCommand(t, newWithOptions(opts), os.Stdin)
 	require.Error(t, err)
 
 	output, err := io.ReadAll(testOut)

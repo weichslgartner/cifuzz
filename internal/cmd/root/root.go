@@ -29,8 +29,6 @@ import (
 var version string
 
 func New() (*cobra.Command, error) {
-	cmdConfig := config.NewConfig()
-
 	rootCmd := &cobra.Command{
 		Use:     "cifuzz",
 		Version: version,
@@ -45,28 +43,19 @@ func New() (*cobra.Command, error) {
 				return cmdutils.ErrSilent
 			}
 
-			if !cmdutils.NeedsConfig(cmd) {
-				return nil
+			if cmdutils.NeedsConfig(cmd) {
+				_, err = config.FindProjectDir()
+				if errors.Is(err, os.ErrNotExist) {
+					// The project directory doesn't exist, this is an expected
+					// error, so we print it and return a silent error to avoid
+					// printing a stack trace
+					log.Error(err, fmt.Sprintf("%s\nUse 'cifuzz init' to set up a project for use with cifuzz.", err.Error()))
+					return cmdutils.ErrSilent
+				}
+				if err != nil {
+					return err
+				}
 			}
-
-			projectDir, err := config.FindProjectDir()
-			if errors.Is(err, os.ErrNotExist) {
-				// The project directory doesn't exist, this is an expected
-				// error, so we print it and return a silent error to avoid
-				// printing a stack trace
-				log.Error(err, fmt.Sprintf("%s\nUse 'cifuzz init' to set up a project for use with cifuzz.", err.Error()))
-				return cmdutils.ErrSilent
-			}
-			if err != nil {
-				return err
-			}
-
-			projectConfig, err := config.ReadProjectConfig(projectDir)
-			if err != nil {
-				return err
-			}
-			cmdConfig.ProjectDir = projectDir
-			cmdConfig.ProjectConfig = projectConfig
 
 			return nil
 		},
@@ -95,10 +84,10 @@ func New() (*cobra.Command, error) {
 
 	cobra.EnableCommandSorting = false
 	rootCmd.AddCommand(initCmd.New())
-	rootCmd.AddCommand(createCmd.New(cmdConfig))
+	rootCmd.AddCommand(createCmd.New())
 	rootCmd.AddCommand(runCmd.New())
 	rootCmd.AddCommand(remoteRunCmd.New())
-	rootCmd.AddCommand(reloadCmd.New(cmdConfig))
+	rootCmd.AddCommand(reloadCmd.New())
 	rootCmd.AddCommand(bundleCmd.New())
 	rootCmd.AddCommand(coverageCmd.New())
 	rootCmd.AddCommand(findingCmd.New())

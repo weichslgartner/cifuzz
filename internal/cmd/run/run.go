@@ -95,8 +95,7 @@ func (opts *runOptions) validate() error {
 type runCmd struct {
 	*cobra.Command
 	opts *runOptions
-
-	config        *config.Config
+	
 	reportHandler *report_handler.ReportHandler
 }
 
