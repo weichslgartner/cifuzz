@@ -90,6 +90,14 @@ func ParseProjectConfig(opts interface{}) (string, error) {
 		}
 	}
 
+	if viper.GetString("build-system") == "" {
+		buildSystem, err := DetermineBuildSystem(projectDir)
+		if err != nil {
+			return "", err
+		}
+		viper.Set("build-system", buildSystem)
+	}
+
 	err = viper.Unmarshal(opts)
 	if err != nil {
 		return "", errors.WithStack(err)
