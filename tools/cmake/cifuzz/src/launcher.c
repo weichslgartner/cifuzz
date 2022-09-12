@@ -38,7 +38,12 @@ void __msan_scoped_disable_interceptor_checks() {
     return;
   }
   /* Not running within cifuzz, replace the process with cifuzz running this fuzz test. */
-  POSIX_EXECLP("cifuzz", /*argv[0]=*/ "cifuzz", "run", CIFUZZ_TEST_NAME, (char *)0);
+  #ifdef __cplusplus
+  // Prevent old-style-casting warning for cpp build
+  POSIX_EXECLP("cifuzz", /*argv[0]=*/ "cifuzz", "run", CIFUZZ_TEST_NAME, static_cast<char*>(0));
+  #else
+  POSIX_EXECLP("cifuzz", /*argv[0]=*/ "cifuzz", "run", CIFUZZ_TEST_NAME, (char*)0);
+  #endif
   /* Only reached if execl failed. */
   perror("Failed to execute cifuzz");
   printf("To start fuzzing, ensure that cifuzz is contained in PATH and execute:\n\n    cifuzz run %s\n\n", CIFUZZ_TEST_NAME);
