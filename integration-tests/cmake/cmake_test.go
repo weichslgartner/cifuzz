@@ -442,7 +442,7 @@ func followStepsPrintedByInitCommand(t *testing.T, initOutput io.Reader, cmakeLi
 		}
 	}
 	if len(linesToAdd) == 0 {
-		require.FailNow(t, "`cictl init` didn't print the lines which should be added to CMakeLists.txt")
+		require.FailNow(t, "`cifuzz init` didn't print the lines which should be added to CMakeLists.txt")
 	}
 	f, err := os.OpenFile(cmakeLists, os.O_RDWR, 0700)
 	require.NoError(t, err)
@@ -492,7 +492,7 @@ func followStepsPrintedByCreateCommand(t *testing.T, initOutput io.Reader, cmake
 		}
 	}
 	if len(cMakeListsSuffix) == 0 {
-		require.FailNow(t, "`cictl create` didn't print the lines which should be added to CMakeLists.txt")
+		require.FailNow(t, "`cifuzz create` didn't print the lines which should be added to CMakeLists.txt")
 	}
 
 	// Append the lines to CMakeLists.txt
