@@ -214,6 +214,10 @@ func (f *Finding) moveInputFile(projectDir, seedCorpusDir string) error {
 	return nil
 }
 
+func (f *Finding) ShortDescriptionWithName() string {
+	return fmt.Sprintf("[%s] %s", f.Name, f.ShortDescription())
+}
+
 func (f *Finding) ShortDescription() string {
 	// TODO this is just a naive approach to get some error types.
 	// This should be replace as soon as we have a list of the different error types.
@@ -232,7 +236,7 @@ func (f *Finding) ShortDescription() string {
 		errorType = f.Details
 	}
 
-	output := fmt.Sprintf("[%s] %s", f.Name, errorType)
+	output := errorType
 
 	// add location (file, function, line)
 	if len(f.StackTrace) > 0 {

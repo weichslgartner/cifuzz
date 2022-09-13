@@ -34,7 +34,7 @@ func ValidFindings(cmd *cobra.Command, args []string, toComplete string) ([]stri
 
 	var findingNames []string
 	for _, f := range findings {
-		findingNames = append(findingNames, f.Name)
+		findingNames = append(findingNames, f.Name+"\t"+f.ShortDescription())
 	}
 	return findingNames, cobra.ShellCompDirectiveNoFileComp
 }

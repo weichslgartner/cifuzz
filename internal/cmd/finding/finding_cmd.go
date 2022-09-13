@@ -112,7 +112,7 @@ func (cmd *findingCmd) run(args []string) error {
 			return nil
 		}
 		for _, f := range findings {
-			_, _ = fmt.Fprintln(cmd.OutOrStdout(), f.ShortDescription())
+			_, _ = fmt.Fprintln(cmd.OutOrStdout(), fmt.Sprintf("[%s] %s", f.Name, f.ShortDescription()))
 		}
 		return nil
 	}
@@ -142,7 +142,7 @@ func (cmd *findingCmd) printFinding(f *finding.Finding) error {
 			return err
 		}
 	} else {
-		s := pterm.Style{pterm.Reset, pterm.Bold}.Sprint(f.ShortDescription())
+		s := pterm.Style{pterm.Reset, pterm.Bold}.Sprint(f.ShortDescriptionWithName())
 		s += fmt.Sprintf("\nDate: %s\n", f.CreatedAt)
 		s += fmt.Sprintf("\n  %s\n", strings.Join(f.Logs, "\n  "))
 		_, err := fmt.Fprintf(cmd.OutOrStdout(), s)
