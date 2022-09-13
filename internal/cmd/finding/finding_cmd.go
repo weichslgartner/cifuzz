@@ -29,7 +29,7 @@ type findingCmd struct {
 func New() *cobra.Command {
 	opts := &options{}
 	cmd := &cobra.Command{
-		Use:               "finding",
+		Use:               "finding [name]",
 		Aliases:           []string{"findings"},
 		Short:             "List and show findings",
 		Args:              cobra.MaximumNArgs(1),
