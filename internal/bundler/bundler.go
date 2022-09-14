@@ -194,7 +194,7 @@ func (b *Bundler) Bundle() error {
 		Fuzzers: fuzzers,
 		RunEnvironment: &artifact.RunEnvironment{
 			// TODO(fmeum): Make configurable.
-			Docker: "ubuntu",
+			Docker: "ubuntu:rolling",
 		},
 		CodeRevision: b.getCodeRevision(),
 	}
