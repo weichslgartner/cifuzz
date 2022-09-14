@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"text/tabwriter"
 
 	"github.com/pkg/errors"
 	"github.com/pterm/pterm"
@@ -111,8 +112,14 @@ func (cmd *findingCmd) run(args []string) error {
 			log.Print("This project doesn't have any findings yet")
 			return nil
 		}
+
+		w := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 0, 1, ' ', 0)
 		for _, f := range findings {
-			_, _ = fmt.Fprintln(cmd.OutOrStdout(), fmt.Sprintf("[%s] %s", f.Name, f.ShortDescription()))
+			_, _ = fmt.Fprintln(w, fmt.Sprintf("%s\t%s", f.Name, f.ShortDescription()))
+		}
+		err = w.Flush()
+		if err != nil {
+			return errors.WithStack(err)
 		}
 		return nil
 	}
