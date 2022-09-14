@@ -115,7 +115,7 @@ func (cmd *findingCmd) run(args []string) error {
 
 		w := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 0, 1, ' ', 0)
 		for _, f := range findings {
-			_, _ = fmt.Fprintln(w, fmt.Sprintf("%s\t%s", f.Name, f.ShortDescription()))
+			_, _ = fmt.Fprintln(w, f.Name, "\t", strings.Join(f.ShortDescriptionColumns(), "\t"))
 		}
 		err = w.Flush()
 		if err != nil {

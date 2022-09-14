@@ -219,6 +219,12 @@ func (f *Finding) ShortDescriptionWithName() string {
 }
 
 func (f *Finding) ShortDescription() string {
+	return strings.Join(f.ShortDescriptionColumns(), " ")
+}
+
+func (f *Finding) ShortDescriptionColumns() []string {
+	var columns []string
+
 	// TODO this is just a naive approach to get some error types.
 	// This should be replace as soon as we have a list of the different error types.
 	var errorType string
@@ -236,7 +242,7 @@ func (f *Finding) ShortDescription() string {
 		errorType = f.Details
 	}
 
-	output := errorType
+	columns = append(columns, errorType)
 
 	// add location (file, function, line)
 	if len(f.StackTrace) > 0 {
@@ -248,9 +254,9 @@ func (f *Finding) ShortDescription() string {
 		} else {
 			location = fmt.Sprintf("%s:%d", f.SourceFile, f.Line)
 		}
-		output = fmt.Sprintf("%s in %s (%s)", output, f.Function, location)
+		columns = append(columns, fmt.Sprintf("in %s (%s)", f.Function, location))
 	}
-	return output
+	return columns
 }
 
 // ListFindings parses the JSON files of all findings and returns the
