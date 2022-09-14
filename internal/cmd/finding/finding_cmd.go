@@ -19,6 +19,7 @@ import (
 
 type options struct {
 	PrintJSON bool `mapstructure:"print-json"`
+	ShowAll   bool
 }
 
 type findingCmd struct {
@@ -49,6 +50,7 @@ func New() *cobra.Command {
 	// Note: If a flag should be configurable via cifuzz.yaml as well,
 	//       bind it to viper in the PreRun function.
 	cmd.Flags().BoolVar(&opts.PrintJSON, "json", false, "Print output as JSON")
+	cmd.Flags().BoolVar(&opts.ShowAll, "all", false, "Show all findings")
 
 	return cmd
 }
@@ -64,6 +66,28 @@ func (cmd *findingCmd) run(args []string) error {
 	}
 	if err != nil {
 		return err
+	}
+
+	if cmd.opts.ShowAll {
+		findings, err := finding.ListFindings(projectDir)
+		if err != nil {
+			return err
+		}
+
+		if len(findings) == 0 {
+			log.Print("This project doesn't have any findings yet")
+			return nil
+		}
+
+		for _, f := range findings {
+			err = cmd.printFinding(f)
+			if err != nil {
+				return err
+			}
+			// Print a newline to separate the findings
+			_, _ = fmt.Fprintln(cmd.OutOrStdout())
+		}
+		return nil
 	}
 
 	if len(args) == 0 {
@@ -104,19 +128,27 @@ func (cmd *findingCmd) run(args []string) error {
 	if err != nil {
 		return err
 	}
+	return cmd.printFinding(f)
+}
 
+func (cmd *findingCmd) printFinding(f *finding.Finding) error {
 	if cmd.opts.PrintJSON {
 		s, err := stringutil.ToJsonString(f)
 		if err != nil {
 			return err
 		}
-		_, _ = fmt.Fprintln(cmd.OutOrStdout(), s)
+		_, err = fmt.Fprintln(cmd.OutOrStdout(), s)
+		if err != nil {
+			return err
+		}
 	} else {
 		s := pterm.Style{pterm.Reset, pterm.Bold}.Sprint(f.ShortDescription())
 		s += fmt.Sprintf("\nDate: %s\n", f.CreatedAt)
 		s += fmt.Sprintf("\n  %s\n", strings.Join(f.Logs, "\n  "))
-		_, _ = fmt.Fprintf(cmd.OutOrStdout(), s)
+		_, err := fmt.Fprintf(cmd.OutOrStdout(), s)
+		if err != nil {
+			return err
+		}
 	}
-
 	return nil
 }

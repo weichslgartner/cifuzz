@@ -94,3 +94,38 @@ func TestPrintFinding(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, jsonString, output)
 }
+
+func TestPrintAllFindings(t *testing.T) {
+	var err error
+
+	// Create an empty project directory
+	projectDir := testutil.ChdirToTempDir("test-print-finding-")
+	defer fileutil.Cleanup(projectDir)
+
+	// Initialize a cifuzz project
+	_, err = cmdutils.ExecuteCommand(t, initCmd.New(), os.Stdin)
+	require.NoError(t, err)
+
+	// Check that the command lists no findings in the empty project
+	output, err := cmdutils.ExecuteCommand(t, New(), os.Stdin, "--all")
+	require.NoError(t, err)
+	require.Empty(t, output)
+	testutil.CheckOutput(t, logOutput, "This project doesn't have any findings yet")
+
+	// Create two findings
+	findings := []*finding.Finding{
+		{Name: "test_finding1"},
+		{Name: "test_finding2"},
+	}
+	for _, f := range findings {
+		err = f.Save(projectDir)
+		require.NoError(t, err)
+	}
+
+	// Check that the command prints the findings
+	output, err = cmdutils.ExecuteCommand(t, New(), os.Stdin, "--all")
+	require.NoError(t, err)
+	for _, f := range findings {
+		require.Contains(t, output, f.Name)
+	}
+}
