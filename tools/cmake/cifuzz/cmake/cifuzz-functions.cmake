@@ -173,7 +173,13 @@ function(add_fuzz_test name)
     elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR ((NOT "CXX" IN_LIST _enabled_languages) AND (CMAKE_C_COMPILER_ID STREQUAL "Clang")))
       target_link_options("${name}" PRIVATE -fsanitize=fuzzer)
     else()
-      message(FATAL_ERROR "cifuzz: ${CMAKE_CXX_COMPILER_ID} compiler is not supported with the libfuzzer engine")
+      set(_clang_description "clang/clang++")
+      if (CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
+        set(_clang_description "(non-Apple) clang/clang++")
+      endif()
+      message(FATAL_ERROR "cifuzz: ${CMAKE_CXX_COMPILER_ID} compiler is not supported with the libfuzzer engine.\n"
+        "Either specify the full path to ${_clang_description} in CC/CXX or ensure that it is listed before other compilers in your PATH.\n"
+        "After that remove ${CMAKE_BINARY_DIR} and try again.")
     endif()
     # The launcher is written so that it can be compiled as both C and C++.
     # Since we do not have control over the enabled languages, we add the
