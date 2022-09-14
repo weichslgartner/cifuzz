@@ -1,0 +1,63 @@
+name: 'Compatibility Check'
+description: 'Checks if a new version is compatible to existing builds|findings'
+inputs:
+  os: 
+    description: 'current vm operating system'
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Setup (linux)
+      if: contains(inputs.os, 'ubuntu')
+      run: echo "INSTALLER=cifuzz_installer_linux" >> $GITHUB_ENV
+      shell: bash
+
+    - name: Setup (macos)
+      if: contains(inputs.os, 'macos')
+      run: echo "INSTALLER=cifuzz_installer_darwin" >> $GITHUB_ENV
+      shell: bash
+
+    - name: Setup (windows)
+      if: contains(inputs.os, 'windows')
+      run: echo "INSTALLER=cifuzz_installer_windows.exe" >> $GITHUB_ENV
+      shell: bash
+
+    - name: Download & execute latest installer
+      run: |
+        mkdir -p ~/current_release
+        cd ~/current_release
+        sh -c "$(curl -fsSL https://raw.githubusercontent.com/CodeIntelligenceTesting/cifuzz/main/install.sh)"
+      shell: bash
+
+    - name: Run CMake Example
+      run: |
+        cd examples/cmake
+        ~/cifuzz/bin/cifuzz run --use-sandbox=false my_fuzz_test
+        ~/cifuzz/bin/cifuzz findings --json | jq -r '.[].name' >> findings.old
+      shell: bash
+
+    - name: Replace current version with the newly created one
+      run: |
+        rm -r ~/cifuzz
+        cd build/bin
+        chmod u+x $INSTALLER
+        ./$INSTALLER
+      shell: bash
+
+    - name: Run CMake Example again
+      run: |
+        cd examples/cmake
+        ~/cifuzz/bin/cifuzz run my_fuzz_test
+        ~/cifuzz/bin/cifuzz findings --json | jq -r '.[].name' >> findings.new
+      shell: bash
+
+    - name: Compare findings
+      run: |
+        cd examples/cmake
+        echo "--old--" && cat findings.old
+        echo "--new--" && cat findings.new
+        # TODO uncomment as soon as we have a release including the new
+        # animal based names, until then this will fail
+        #cmp findings.old findings.new
+      shell: bash
+

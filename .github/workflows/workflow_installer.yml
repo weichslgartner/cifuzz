@@ -11,7 +11,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macos-11, windows-2019, ubuntu-18.04]
+        os: [macos-11, windows-2022, ubuntu-18.04]
 
     steps:
       - uses: actions/checkout@v3
@@ -29,6 +29,11 @@ jobs:
       - name: Build darwin/arm64 installer (cross compilation)
         if: contains(matrix.os, 'mac')
         run: make version=${{ inputs.version }} installer/darwin-arm64
+
+      - name: Check Compatibility
+        uses: ./.github/actions/compatibility_check
+        with:
+          os: ${{ matrix.os }}
 
       - name: Upload installer
         uses: actions/upload-artifact@v3
