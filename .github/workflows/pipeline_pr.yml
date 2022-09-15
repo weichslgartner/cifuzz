@@ -61,8 +61,23 @@ jobs:
           os: ${{ matrix.os }}
 
       - name: Run integration tests
+        if: contains(matrix.os, 'ubuntu') || contains(matrix.os, 'mac')
         # We run the integration tests sequentially here to avoid that
         # tests write to stderr at the same time, which makes it hard to
         # figure out which output belongs to which test.
         run: make test/integration/sequential
         shell: bash
+
+      - name: Run integration tests
+        if: contains(matrix.os, 'windows')
+        # We allow a maximum of 2 attempts in order to give flaky tests a
+        # better chance to pass.
+        uses: nick-fields/retry@v2
+        with:
+          timeout_minutes: 15
+          max_attempts: 2
+          # We run the integration tests sequentially here to avoid that
+          # tests write to stderr at the same time, which makes it hard to
+          # figure out which output belongs to which test.
+          command: make test/integration/sequential
+          shell: bash
