@@ -220,7 +220,12 @@ func (f *Finding) ShortDescription() string {
 	var errorType string
 	switch f.Type {
 	case ErrorType_CRASH:
-		errorType = strings.ReplaceAll(strings.Split(f.Details, " ")[0], "-", " ")
+		switch f.Details {
+		case "detected memory leaks":
+			errorType = f.Details
+		default:
+			errorType = strings.ReplaceAll(strings.Split(f.Details, " ")[0], "-", " ")
+		}
 	case ErrorType_RUNTIME_ERROR:
 		errorType = strings.Split(f.Details, ":")[0]
 	default:
