@@ -169,7 +169,7 @@ depends on the build system configured for the project:
 	cmd.Flags().StringArray("engine-arg", nil, "Command-line `argument` to pass to the fuzzing engine.\nSee https://llvm.org/docs/LibFuzzer.html#options.")
 	cmd.Flags().StringArray("fuzz-test-arg", nil, "Command-line `argument` to pass to the fuzz test.")
 	// TODO(afl): Also link to https://aflplus.plus/docs/fuzzing_in_depth/#a-collecting-inputs
-	cmd.Flags().StringArrayP("seed-corpus", "s", nil, "A `directory` containing sample inputs for the code under test.\nSee https://llvm.org/docs/LibFuzzer.html#corpus.")
+	cmd.Flags().StringArrayP("seed-corpus", "s", nil, "One or more `directories` containing sample inputs for the code under test.\nThose are used in addition to inputs found in <fuzz test>_inputs.\nSee https://github.com/CodeIntelligenceTesting/cifuzz/blob/main/docs/Glossary.md#corpus.")
 	cmd.Flags().Duration("timeout", 0, "Maximum time to run the fuzz test, e.g. \"30m\", \"1h\". The default is to run indefinitely.")
 	cmd.Flags().Bool("use-sandbox", false, "By default, fuzz tests are executed in a sandbox to prevent accidental damage to the system.\nUse --use-sandbox=false to run the fuzz test unsandboxed.\nOnly supported on Linux.")
 	viper.SetDefault("use-sandbox", runtime.GOOS == "linux")
