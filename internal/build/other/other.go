@@ -213,9 +213,6 @@ func (b *Builder) setLibFuzzerEnv() error {
 		// ----- Flags used to build with ASan -----
 		// Link ASan and UBSan runtime
 		"-fsanitize=address,undefined",
-		// To avoid issues with clang (not clang++) and UBSan, see
-		// https://github.com/bazelbuild/bazel/issues/11122#issuecomment-896613570
-		"-fsanitize-link-c++-runtime",
 	}
 	b.env, err = envutil.Setenv(b.env, "LDFLAGS", strings.Join(ldflags, " "))
 	if err != nil {
