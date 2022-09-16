@@ -83,11 +83,6 @@ function(enable_fuzz_testing)
       else()
         add_compile_options(-fsanitize=undefined)
         add_link_options(-fsanitize=undefined)
-        if (CMAKE_CXX_COMPILER_ID STREQUAL Clang)
-          # To avoid issues with clang (not clang++) and UBSan, see
-          # https://github.com/bazelbuild/bazel/issues/11122#issuecomment-896613570
-          add_link_options(-fsanitize-link-c++-runtime)
-        endif()
       endif()
     elseif(sanitizer STREQUAL coverage)
       if(MSVC)
