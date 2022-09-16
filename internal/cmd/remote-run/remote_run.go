@@ -2,18 +2,21 @@ package remote_run
 
 import (
 	"bufio"
-	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"mime/multipart"
 	"net/http"
 	"os"
+	"os/signal"
 	"runtime"
 	"strings"
+	"syscall"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	"golang.org/x/sync/errgroup"
 	"golang.org/x/term"
 
 	"code-intelligence.com/cifuzz/internal/access_tokens"
@@ -221,36 +224,70 @@ func (c *runRemoteCmd) selectProject(token string) (string, error) {
 }
 
 func (c *runRemoteCmd) uploadArtifacts(path string, token string) (*artifact, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-	defer f.Close()
+	signalHandlerCtx, cancelSignalHandler := context.WithCancel(context.Background())
+	routines, routinesCtx := errgroup.WithContext(signalHandlerCtx)
 
-	var buf bytes.Buffer
-	w := multipart.NewWriter(&buf)
-	fw, err := w.CreateFormFile("fuzzing-artifacts", path)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-	_, err = io.Copy(fw, f)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-	err = w.Close()
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
+	// Cancel the routines context when receiving a termination signal
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, os.Interrupt, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
+	routines.Go(func() error {
+		select {
+		case <-routinesCtx.Done():
+			return nil
+		case s := <-sigs:
+			log.Warnf("Received %s", s.String())
+			return cmdutils.NewSignalError(s.(syscall.Signal))
+		}
+	})
 
-	url := fmt.Sprintf("%s/v2/%s/artifacts/import", c.opts.Server, c.opts.ProjectName)
-	req, err := http.NewRequest("POST", url, &buf)
-	req.Header.Set("Content-Type", w.FormDataContentType())
-	req.Header.Add("Authorization", "Bearer "+token)
+	// Use a pipe to avoid reading the artifacts into memory at once
+	r, w := io.Pipe()
+	m := multipart.NewWriter(w)
 
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	// Write the artifacts to the pipe
+	routines.Go(func() error {
+		defer w.Close()
+		defer m.Close()
+
+		part, err := m.CreateFormFile("fuzzing-artifacts", path)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+
+		f, err := os.Open(path)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+		defer f.Close()
+
+		_, err = io.Copy(part, f)
+		return errors.WithStack(err)
+	})
+
+	// Send a POST request with what we read from the pipe. The request
+	// gets cancelled with the routines context is cancelled, which
+	// happens if an error occurs in the io.Copy above or the user if
+	// cancels the operation.
+	var resp *http.Response
+	routines.Go(func() error {
+		defer r.Close()
+		defer cancelSignalHandler()
+		url := fmt.Sprintf("%s/v2/%s/artifacts/import", c.opts.Server, c.opts.ProjectName)
+		req, err := http.NewRequestWithContext(routinesCtx, "POST", url, r)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+		req.Header.Set("Content-Type", m.FormDataContentType())
+		req.Header.Add("Authorization", "Bearer "+token)
+
+		client := &http.Client{}
+		resp, err = client.Do(req)
+		return errors.WithStack(err)
+	})
+
+	err := routines.Wait()
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 	defer resp.Body.Close()
 
