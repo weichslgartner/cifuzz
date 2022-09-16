@@ -399,6 +399,9 @@ func (c *coverageCmd) indexRawProfile(fuzzTestExecutable string) error {
 	if err != nil {
 		return err
 	}
+	if len(rawProfileFiles) == 0 {
+		return errors.Errorf("%s did not generate .profraw files at %s", fuzzTestExecutable, c.rawProfilePattern())
+	}
 
 	llvmProfData, err := runfiles.Finder.LLVMProfDataPath()
 	if err != nil {
