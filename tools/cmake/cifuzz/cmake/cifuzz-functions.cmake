@@ -186,6 +186,18 @@ function(add_fuzz_test name)
         message(FATAL "CIFuzz: At least one of C and CXX has to be an enabled language")
       endif()
       set(_launcher_src "${CIFUZZ_LAUNCHER_CXX_SRC}")
+      if (coverage IN_LIST CIFUZZ_SANITIZERS)
+        # Never instrument the launcher file for coverage.
+        set_source_files_properties("${CIFUZZ_LAUNCHER_CXX_SRC}"
+                                    PROPERTIES COMPILE_FLAGS
+                                    "-fno-profile-instr-generate -fno-coverage-mapping")
+      endif()
+    endif()
+    if (coverage IN_LIST CIFUZZ_SANITIZERS)
+      # Never instrument the launcher file for coverage.
+      set_source_files_properties("${_launcher_src}"
+                                  PROPERTIES COMPILE_FLAGS
+                                  "-fno-profile-instr-generate -fno-coverage-mapping")
     endif()
     target_sources("${name}" PRIVATE "${_launcher_src}")
   else()
