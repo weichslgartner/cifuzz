@@ -16,6 +16,7 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 
+	"code-intelligence.com/cifuzz/internal/access_tokens"
 	"code-intelligence.com/cifuzz/internal/bundler"
 	"code-intelligence.com/cifuzz/internal/completion"
 	"code-intelligence.com/cifuzz/internal/config"
@@ -133,6 +134,10 @@ func (c *runRemoteCmd) run() error {
 	// Obtain the API access token
 	token := os.Getenv("CIFUZZ_API_TOKEN")
 	if token == "" {
+		token = access_tokens.Get(c.opts.Server)
+	}
+
+	if token == "" {
 		if !term.IsTerminal(int(os.Stdin.Fd())) {
 			b, err := io.ReadAll(os.Stdin)
 			if err != nil {
@@ -148,6 +153,18 @@ your account at %s/dashboard/settings/account.`+"\n", c.opts.Server)
 				return errors.WithStack(err)
 			}
 			token = strings.TrimSpace(token)
+		}
+
+		// Try to authenticate with the access token
+		_, err = c.listProjects(token)
+		if err != nil {
+			return err
+		}
+
+		// Store the access token in the config file
+		err = access_tokens.Set(c.opts.Server, token)
+		if err != nil {
+			return err
 		}
 	}
 
