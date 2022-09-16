@@ -21,6 +21,7 @@ import (
 
 	"code-intelligence.com/cifuzz/internal/access_tokens"
 	"code-intelligence.com/cifuzz/internal/bundler"
+	"code-intelligence.com/cifuzz/internal/cmd/remote-run/progress"
 	"code-intelligence.com/cifuzz/internal/completion"
 	"code-intelligence.com/cifuzz/internal/config"
 	"code-intelligence.com/cifuzz/pkg/cmdutils"
@@ -254,13 +255,20 @@ func (c *runRemoteCmd) uploadArtifacts(path string, token string) (*artifact, er
 			return errors.WithStack(err)
 		}
 
+		fileInfo, err := os.Stat(path)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+
 		f, err := os.Open(path)
 		if err != nil {
 			return errors.WithStack(err)
 		}
 		defer f.Close()
 
-		_, err = io.Copy(part, f)
+		fmt.Println("Uploading...")
+		progressR := progress.NewReader(f, fileInfo.Size(), "Upload complete")
+		_, err = io.Copy(part, progressR)
 		return errors.WithStack(err)
 	})
 
