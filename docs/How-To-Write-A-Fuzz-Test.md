@@ -48,12 +48,13 @@ After selecting the preset the fuzz test is executed in regression
 test mode.
 ![fuzz test in CMake](/docs/assets/cmake_clion.gif)
 
-You can also use the regression preset to build the fuzz tests as
-replayer binaries in the cli.
+You can also run the fuzz tests in regression test mode from the CLI:
 
 ```bash
 cmake --preset="cifuzz (Regression Test)"
 cmake --build --preset="cifuzz (Regression Test)"
+ctest --preset="cifuzz (Regression Test)"
 ```
 
-You can find the generated binaries in .cifuzz-build/replayer/address+undefined/.
+You can find the generated binaries in
+`.cifuzz-build/replayer/address+undefined/`.
