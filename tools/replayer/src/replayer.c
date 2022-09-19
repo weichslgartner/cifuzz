@@ -269,7 +269,7 @@ static void run_file(const char *path) {
   current_input = path;
   run_one_input(buf, len);
   free(buf);
-  fprintf(stderr, "Done:    %s: (%ld bytes)\n", path, (unsigned long) n_read);
+  fprintf(stderr, "Done:    %s (%ld bytes)\n", path, (unsigned long) n_read);
 }
 
 static void run_file_or_dir(const char *path);
