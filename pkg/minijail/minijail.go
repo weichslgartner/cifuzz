@@ -187,6 +187,8 @@ var defaultBindings = []*Binding{
 	// instead doesn't seem to be supported by nginx).
 	{Source: "/etc/passwd"},
 	{Source: "/etc/group"},
+	// Required for system(), which is used by libFuzzer's -merge mode.
+	{Source: "/bin/sh"},
 }
 
 type Options struct {

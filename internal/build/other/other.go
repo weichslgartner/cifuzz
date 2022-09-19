@@ -18,7 +18,6 @@ import (
 	"code-intelligence.com/cifuzz/pkg/runfiles"
 	"code-intelligence.com/cifuzz/util/envutil"
 	"code-intelligence.com/cifuzz/util/fileutil"
-	"code-intelligence.com/cifuzz/util/stringutil"
 )
 
 type BuilderOptions struct {
@@ -54,17 +53,16 @@ func NewBuilder(opts *BuilderOptions) (*Builder, error) {
 	// be passed to the build commands by the build system.
 	switch opts.Engine {
 	case "libfuzzer":
+		if len(opts.Sanitizers) == 1 && opts.Sanitizers[0] == "coverage" {
+			err = b.setCoverageEnv()
+			break
+		}
 		for _, sanitizer := range opts.Sanitizers {
 			if sanitizer != "address" && sanitizer != "undefined" {
 				panic(fmt.Sprintf("Invalid sanitizer for engine %q: %q", opts.Engine, sanitizer))
 			}
 		}
 		err = b.setLibFuzzerEnv()
-	case "replayer":
-		if !stringutil.Equal(opts.Sanitizers, []string{"coverage"}) {
-			panic(fmt.Sprintf("Invalid sanitizers for engine %q: %q", opts.Engine, opts.Sanitizers))
-		}
-		err = b.setCoverageEnv()
 	default:
 		panic(fmt.Sprintf("Invalid engine %q", opts.Engine))
 	}
@@ -79,26 +77,6 @@ func NewBuilder(opts *BuilderOptions) (*Builder, error) {
 func (b *Builder) Build(fuzzTest string) (*build.Result, error) {
 	var err error
 	defer fileutil.Cleanup(b.buildDir)
-
-	if b.Engine == "replayer" {
-		// Build the replayer without coverage instrumentation
-		replayerSource, err := runfiles.Finder.ReplayerSourcePath()
-		if err != nil {
-			return nil, err
-		}
-		clang, err := runfiles.Finder.ClangPath()
-		if err != nil {
-			return nil, err
-		}
-		cmd := exec.Command(clang, "-fPIC", "-c", replayerSource, "-o", filepath.Join(b.buildDir, "replayer.o"))
-		cmd.Stdout = b.Stdout
-		cmd.Stderr = b.Stderr
-		log.Debugf("Command: %s", cmd.String())
-		err = cmd.Run()
-		if err != nil {
-			return nil, errors.WithStack(err)
-		}
-	}
 
 	// Let the build command reference the fuzz test (base)name.
 	buildCommandEnv, err := envutil.Setenv(b.env, "FUZZ_TEST", fuzzTest)
@@ -253,6 +231,11 @@ func (b *Builder) setCoverageEnv() error {
 		"-fprofile-instr-generate",
 		"-fcoverage-mapping",
 	}...)
+	if runtime.GOOS != "darwin" {
+		// LLVM's continuous mode requires compile-time support on non-macOS
+		// platforms.
+		cflags = append(cflags, "-mllvm", "-runtime-counter-relocation")
+	}
 	b.env, err = envutil.Setenv(b.env, "CFLAGS", strings.Join(cflags, " "))
 	if err != nil {
 		return err
@@ -284,10 +267,9 @@ func (b *Builder) setCoverageEnv() error {
 	}
 
 	// Users should pass the environment variable FUZZ_TEST_LDFLAGS to
-	// the linker command building the fuzz test. When building for
-	// coverage, we set it to the replayer object file which we built
-	// before without coverage instrumentation.
-	b.env, err = envutil.Setenv(b.env, "FUZZ_TEST_LDFLAGS", filepath.Join(b.buildDir, "replayer.o"))
+	// the linker command building the fuzz test. We use it to link in libFuzzer
+	// in coverage builds to use its crash-resistant merge feature.
+	b.env, err = envutil.Setenv(b.env, "FUZZ_TEST_LDFLAGS", "-fsanitize=fuzzer")
 	if err != nil {
 		return err
 	}

@@ -5,3 +5,4 @@ project(CmakeTest LANGUAGES CXX)
 enable_testing()
 
 add_subdirectory(src/parser)
+add_subdirectory(src/coverage)

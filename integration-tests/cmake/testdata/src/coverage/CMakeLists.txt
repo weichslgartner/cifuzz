@@ -1,0 +1,1 @@
+add_fuzz_test(crashing_fuzz_test crashing_fuzz_test.cpp)

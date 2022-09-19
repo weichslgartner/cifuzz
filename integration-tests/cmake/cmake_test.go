@@ -2,6 +2,7 @@ package cmake
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"io"
@@ -11,6 +12,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"syscall"
@@ -18,6 +20,7 @@ import (
 	"time"
 
 	"github.com/otiai10/copy"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sync/errgroup"
 	"gopkg.in/yaml.v3"
@@ -200,8 +203,10 @@ func TestIntegration_CMake_InitCreateRunCoverageBundle(t *testing.T) {
 
 	// Building with coverage instrumentation doesn't work on Windows yet
 	if runtime.GOOS != "windows" {
-		// Produce a coverage report for the fuzz test
-		createCoverageReport(t, cifuzz, dir)
+		// Produce a coverage report for parser_fuzz_test
+		createHtmlCoverageReport(t, cifuzz, dir)
+		// Produces a coverage report for crashing_fuzz_test
+		createAndVerifyLcovCoverageReport(t, cifuzz, dir)
 	}
 
 	// Run cifuzz bundle and verify the contents of the archive.
@@ -338,7 +343,7 @@ func runFuzzer(t *testing.T, cifuzz string, dir string, opts *runFuzzerOptions) 
 	require.True(t, seen, "Did not see %q in fuzzer output", opts.expectedOutput.String())
 }
 
-func createCoverageReport(t *testing.T, cifuzz string, dir string) {
+func createHtmlCoverageReport(t *testing.T, cifuzz string, dir string) {
 	t.Helper()
 
 	cmd := executil.Command(cifuzz, "coverage", "-v",
@@ -361,6 +366,64 @@ func createCoverageReport(t *testing.T, cifuzz string, dir string) {
 	report := string(reportBytes)
 	require.Contains(t, report, "parser.cpp")
 	require.NotContains(t, report, "include/cifuzz")
+}
+
+func createAndVerifyLcovCoverageReport(t *testing.T, cifuzz string, dir string) {
+	t.Helper()
+
+	reportPath := filepath.Join(dir, "crashing_fuzz_test.lcov")
+
+	cmd := executil.Command(cifuzz, "coverage", "-v",
+		"--format=lcov",
+		"--output", reportPath,
+		"crashing_fuzz_test")
+	cmd.Dir = dir
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	err := cmd.Run()
+	require.NoError(t, err)
+
+	// Check that the coverage report was created
+	require.FileExists(t, reportPath)
+
+	// Read the report and extract all uncovered lines in the fuzz test source file.
+	reportBytes, err := os.ReadFile(reportPath)
+	require.NoError(t, err)
+	lcov := bufio.NewScanner(bytes.NewBuffer(reportBytes))
+	isFuzzTestSource := false
+	var uncoveredLines []uint
+	for lcov.Scan() {
+		line := lcov.Text()
+
+		if strings.HasPrefix(line, "SF:") {
+			if strings.HasSuffix(line, "/coverage/crashing_fuzz_test.cpp") {
+				isFuzzTestSource = true
+			} else {
+				isFuzzTestSource = false
+				assert.Fail(t, "Unexpected source file: "+line)
+			}
+		}
+
+		if !isFuzzTestSource || !strings.HasPrefix(line, "DA:") {
+			continue
+		}
+		split := strings.Split(strings.TrimPrefix(line, "DA:"), ",")
+		require.Len(t, split, 2)
+		if split[1] == "0" {
+			lineNo, err := strconv.Atoi(split[0])
+			require.NoError(t, err)
+			uncoveredLines = append(uncoveredLines, uint(lineNo))
+		}
+	}
+
+	assert.Subset(t, []uint{
+		// Lines only triggered by the empty input.
+		// FIXME(fmeum): Ensure that the new coverage mode also runs on the empty input.
+		9, 10,
+		// Lines after the three crashes. Whether these are covered depends on implementation details of the coverage
+		// instrumentation, so we conservatively assume they aren't covered.
+		21, 31, 41},
+		uncoveredLines)
 }
 
 func followStepsPrintedByInitCommand(t *testing.T, initOutput io.Reader, cmakeLists string) {
@@ -564,9 +627,8 @@ func testBundle(t *testing.T, dir string, cifuzz string) {
 	require.NoError(t, err)
 	require.Equal(t, "test-dictionary-content", string(content))
 
-	// Verify that the seed corpus has been packaged with the fuzzer. Only parser_fuzz_test has a corpus, so we can
-	// use the only matched line.
-	seedCorpusPattern := regexp.MustCompile(`\W*seeds: (.*)`)
+	// Verify that the seed corpus has been packaged with the fuzzer.
+	seedCorpusPattern := regexp.MustCompile(`\W*seeds: (.*parser_fuzz_test.*)`)
 	seedCorpusPath := filepath.Join(archiveDir, string(seedCorpusPattern.FindSubmatch(metadataYaml)[1]))
 	require.DirExists(t, seedCorpusPath)
 	require.FileExists(t, filepath.Join(seedCorpusPath, "parser_fuzz_test_inputs", "some_seed"))

@@ -2,15 +2,18 @@ package cmake
 
 import (
 	"bufio"
+	"bytes"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/otiai10/copy"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	builderPkg "code-intelligence.com/cifuzz/internal/builder"
@@ -59,24 +62,67 @@ func TestIntegration_Make_RunCoverage(t *testing.T) {
 	err = installCmd.Run()
 	require.NoError(t, err)
 
-	dir := copyMakeExampleDir(t)
+	dir := copyMakeExampleDir(t, filepath.Join("examples", "other"))
 	defer fileutil.Cleanup(dir)
 	t.Logf("executing make integration test in %s", dir)
 
 	// Run the two fuzz tests and verify that they crash with the expected finding.
 	cifuzz := builderPkg.CIFuzzExecutablePath(filepath.Join(installDir, "bin"))
 	runFuzzer(t, cifuzz, dir, "my_fuzz_test", expectedFinding)
-	createCoverageReport(t, cifuzz, dir, "my_fuzz_test")
+	createHtmlCoverageReport(t, cifuzz, dir, "my_fuzz_test")
 }
 
-func copyMakeExampleDir(t *testing.T) string {
+func TestIntegration_Make_DetailedCoverage(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
+	if runtime.GOOS == "windows" {
+		t.Skip("Make support is only available on Unix")
+	}
+	testutil.RegisterTestDepOnCIFuzz()
+
+	// Create installation builder
+	projectDir, err := builderPkg.FindProjectDir()
+	require.NoError(t, err)
+	targetDir := filepath.Join(projectDir, "cmd", "installer", "build")
+	err = os.RemoveAll(targetDir)
+	require.NoError(t, err)
+
+	opts := builderPkg.Options{Version: "dev", TargetDir: targetDir}
+	builder, err := builderPkg.NewCIFuzzBuilder(opts)
+	defer builder.Cleanup()
+	require.NoError(t, err)
+	err = builder.BuildCIFuzzAndDeps()
+	require.NoError(t, err)
+
+	// Install CIFuzz in temp folder
+	installDir, err := os.MkdirTemp("", "cifuzz-")
+	require.NoError(t, err)
+	installDir = filepath.Join(installDir, "cifuzz")
+	installer := filepath.Join("cmd", "installer", "installer.go")
+	installCmd := exec.Command("go", "run", "-tags", "installer", installer, "-i", installDir)
+	installCmd.Stderr = os.Stderr
+	installCmd.Dir = projectDir
+	t.Logf("Command: %s", installCmd.String())
+	err = installCmd.Run()
+	require.NoError(t, err)
+
+	dir := copyMakeExampleDir(t, filepath.Join("integration-tests", "make", "testdata", "coverage"))
+	defer fileutil.Cleanup(dir)
+	t.Logf("executing make coverage test in %s", dir)
+
+	cifuzz := builderPkg.CIFuzzExecutablePath(filepath.Join(installDir, "bin"))
+	createAndVerifyLcovCoverageReport(t, cifuzz, dir)
+}
+
+func copyMakeExampleDir(t *testing.T, rootPath string) string {
 	dir, err := os.MkdirTemp("", "cifuzz-make-example-")
 	require.NoError(t, err)
 
 	// Get the path to the testdata dir
 	cwd, err := os.Getwd()
 	require.NoError(t, err)
-	exampleDir := filepath.Join(cwd, "..", "..", "examples", "other")
+	exampleDir := filepath.Join(cwd, "..", "..", rootPath)
 
 	// Copy the example dir to the temporary directory
 	err = copy.Copy(exampleDir, dir)
@@ -127,7 +173,7 @@ func runFuzzer(t *testing.T, cifuzz string, dir string, fuzzTest string, expecte
 	require.True(t, seenExpectedOutput, "Did not see %q in fuzzer output", expectedOutput.String())
 }
 
-func createCoverageReport(t *testing.T, cifuzz string, dir string, fuzzTest string) {
+func createHtmlCoverageReport(t *testing.T, cifuzz string, dir string, fuzzTest string) {
 	t.Helper()
 
 	cmd := executil.Command(cifuzz, "coverage", "-v",
@@ -151,4 +197,62 @@ func createCoverageReport(t *testing.T, cifuzz string, dir string, fuzzTest stri
 	report := string(reportBytes)
 	require.Contains(t, report, "explore_me.cpp")
 	require.NotContains(t, report, "include/cifuzz")
+}
+
+func createAndVerifyLcovCoverageReport(t *testing.T, cifuzz string, dir string) {
+	t.Helper()
+
+	reportPath := filepath.Join(dir, "crashing_fuzz_test.lcov")
+
+	cmd := executil.Command(cifuzz, "coverage", "-v",
+		"--format=lcov",
+		"--output", reportPath,
+		"crashing_fuzz_test")
+	cmd.Dir = dir
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	err := cmd.Run()
+	require.NoError(t, err)
+
+	// Check that the coverage report was created
+	require.FileExists(t, reportPath)
+
+	// Read the report and extract all uncovered lines in the fuzz test source file.
+	reportBytes, err := os.ReadFile(reportPath)
+	require.NoError(t, err)
+	lcov := bufio.NewScanner(bytes.NewBuffer(reportBytes))
+	isFuzzTestSource := false
+	var uncoveredLines []uint
+	for lcov.Scan() {
+		line := lcov.Text()
+
+		if strings.HasPrefix(line, "SF:") {
+			if strings.HasSuffix(line, "/crashing_fuzz_test.cpp") {
+				isFuzzTestSource = true
+			} else {
+				isFuzzTestSource = false
+				assert.Fail(t, "Unexpected source file: "+line)
+			}
+		}
+
+		if !isFuzzTestSource || !strings.HasPrefix(line, "DA:") {
+			continue
+		}
+		split := strings.Split(strings.TrimPrefix(line, "DA:"), ",")
+		require.Len(t, split, 2)
+		if split[1] == "0" {
+			lineNo, err := strconv.Atoi(split[0])
+			require.NoError(t, err)
+			uncoveredLines = append(uncoveredLines, uint(lineNo))
+		}
+	}
+
+	assert.Subset(t, []uint{
+		// Lines only triggered by the empty input.
+		// FIXME(fmeum): Ensure that the new coverage mode also runs on the empty input.
+		9, 10,
+		// Lines after the three crashes. Whether these are covered depends on implementation details of the coverage
+		// instrumentation, so we conservatively assume they aren't covered.
+		21, 31, 41},
+		uncoveredLines)
 }

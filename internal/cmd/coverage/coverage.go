@@ -233,7 +233,7 @@ func (c *coverageCmd) buildFuzzTest() (*build.Result, error) {
 	if c.opts.BuildSystem == config.BuildSystemCMake {
 		builder, err := cmake.NewBuilder(&cmake.BuilderOptions{
 			ProjectDir: c.opts.ProjectDir,
-			Engine:     "replayer",
+			Engine:     "libfuzzer",
 			Sanitizers: []string{"coverage"},
 			Parallel: cmake.ParallelOptions{
 				Enabled: viper.IsSet("build-jobs"),
@@ -263,7 +263,7 @@ func (c *coverageCmd) buildFuzzTest() (*build.Result, error) {
 		}
 		builder, err := other.NewBuilder(&other.BuilderOptions{
 			BuildCommand: c.opts.BuildCommand,
-			Engine:       "replayer",
+			Engine:       "libfuzzer",
 			Sanitizers:   []string{"coverage"},
 			Stdout:       c.OutOrStdout(),
 			Stderr:       c.ErrOrStderr(),
@@ -327,7 +327,21 @@ func (c *coverageCmd) runFuzzTest(buildResult *build.Result) error {
 	// The environment we run minijail in
 	wrapperEnv := os.Environ()
 
-	args := append([]string{buildResult.Executable}, corpusDirs...)
+	emptyDir, err := os.MkdirTemp("", "cifuzz-coverage-*")
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	defer fileutil.Cleanup(emptyDir)
+
+	// We use libFuzzer's crash-resistant merge mode to merge all corpus directories into an empty directory, which
+	// makes libFuzzer go over all inputs in a subprocess that is restarted in case it crashes. With LLVM's continuous
+	// mode (see rawProfilePattern) and since the LLVM coverage information is automatically appended to the existing
+	// .profraw file, we collect complete coverage information even if the target crashes on an input in the corpus.
+	// FIXME(fmeum): This does not run the fuzz test on the empty input and we can't just pass in an empty seed due to
+	//  this check:
+	//  https://github.com/llvm/llvm-project/blob/c7c0ce7d9ebdc0a49313bc77e14d1e856794f2e0/compiler-rt/lib/fuzzer/FuzzerIO.cpp#L127
+	args := []string{buildResult.Executable, "-merge=1", emptyDir}
+	args = append(args, corpusDirs...)
 	if len(c.opts.FuzzTestArgs) > 0 {
 		args = append(append(args, "--"), c.opts.FuzzTestArgs...)
 	}
@@ -338,7 +352,7 @@ func (c *coverageCmd) runFuzzTest(buildResult *build.Result) error {
 			{Source: buildResult.Executable},
 		}
 
-		for _, dir := range corpusDirs {
+		for _, dir := range append(corpusDirs, emptyDir) {
 			bindings = append(bindings, &minijail.Binding{Source: dir})
 		}
 
@@ -558,12 +572,11 @@ func (c *coverageCmd) rawProfilePattern() string {
 	// file, all of which we have to merge in the end. By using "%m",
 	// the profile is written to a unique file for each executable and
 	// shared library.
-	//
-	// TODO: According to the documentation [1], "%c" should be useful
-	//       here, but for an unclear reason that results in no .profraw
-	//       files being generated.
-	//       [1] https://clang.llvm.org/docs/SourceBasedCodeCoverage.html#running-the-instrumented-program
-	return filepath.Join(c.tmpDir, "%m.profraw")
+	// Use "%c", which expands out to nothing, to enable the continuous mode in
+	// which the .profraw is mmaped and thus kept in sync with the counters in
+	// the instrumented code even when it crashes.
+	// https://clang.llvm.org/docs/SourceBasedCodeCoverage.html#running-the-instrumented-program
+	return filepath.Join(c.tmpDir, "%c%m.profraw")
 }
 
 func (c *coverageCmd) rawProfileFiles() ([]string, error) {
