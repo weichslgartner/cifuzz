@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strings"
 
@@ -421,7 +422,9 @@ func (c *coverageCmd) indexRawProfile(fuzzTestExecutable string) error {
 }
 
 func (c *coverageCmd) generateHTMLReport(executable string, runtimeDeps []string) error {
-	report, err := c.runLlvmCov([]string{"show", "-format=html"}, executable, runtimeDeps)
+	args := []string{"show", "-format=html"}
+	args = append(args, c.ignoreCifuzzIncludesArgs()...)
+	report, err := c.runLlvmCov(args, executable, runtimeDeps)
 	if err != nil {
 		return err
 	}
@@ -491,6 +494,7 @@ func (c *coverageCmd) runLlvmCov(args []string, fuzzTestExecutable string, runti
 
 func (c *coverageCmd) generateLcovReport(executable string, runtimeDeps []string) error {
 	args := []string{"export", "-format=lcov"}
+	args = append(args, c.ignoreCifuzzIncludesArgs()...)
 	report, err := c.runLlvmCov(args, executable, runtimeDeps)
 	if err != nil {
 		return err
@@ -517,12 +521,24 @@ func (c *coverageCmd) generateLcovReport(executable string, runtimeDeps []string
 
 func (c *coverageCmd) lcovReportSummary(fuzzTestExecutable string, runtimeDeps []string) (string, error) {
 	args := []string{"export", "-format=lcov", "-summary-only"}
+	args = append(args, c.ignoreCifuzzIncludesArgs()...)
 	output, err := c.runLlvmCov(args, fuzzTestExecutable, runtimeDeps)
 	if err != nil {
 		return "", err
 	}
 
 	return output, nil
+}
+
+func (c *coverageCmd) ignoreCifuzzIncludesArgs() []string {
+	cifuzzIncludePath, err := runfiles.Finder.CIFuzzIncludePath()
+	if err != nil {
+		// This should be impossible to reach since we found the path during
+		// compilation. If it can't be found now, there is no point in ignoring
+		// it.
+		return nil
+	}
+	return []string{"-ignore-filename-regex=" + regexp.QuoteMeta(cifuzzIncludePath) + "/.*"}
 }
 
 func (c *coverageCmd) rawProfilePattern() string {

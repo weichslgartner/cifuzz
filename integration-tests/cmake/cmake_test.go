@@ -355,10 +355,12 @@ func createCoverageReport(t *testing.T, cifuzz string, dir string) {
 	require.FileExists(t, reportPath)
 
 	// Check that the coverage report contains coverage for the
-	// parser.cpp source file
-	bytes, err := os.ReadFile(reportPath)
+	// parser.cpp source file, but not for our headers.
+	reportBytes, err := os.ReadFile(reportPath)
 	require.NoError(t, err)
-	require.Contains(t, string(bytes), "parser.cpp")
+	report := string(reportBytes)
+	require.Contains(t, report, "parser.cpp")
+	require.NotContains(t, report, "include/cifuzz")
 }
 
 func followStepsPrintedByInitCommand(t *testing.T, initOutput io.Reader, cmakeLists string) {
