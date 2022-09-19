@@ -21,6 +21,7 @@ A set of useful test inputs
 ### Seed Corpus
 A small corpus usually provided by the user. Findings can be added to 
 this corpus for use in regression tests.
+See https://llvm.org/docs/LibFuzzer.html#corpus.
 
 ### Generated Corpus
 The generated corpus contains interesting inputs found by the fuzzer 
