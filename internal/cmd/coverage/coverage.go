@@ -327,20 +327,39 @@ func (c *coverageCmd) runFuzzTest(buildResult *build.Result) error {
 	// The environment we run minijail in
 	wrapperEnv := os.Environ()
 
+	dirWithEmptyFile, err := os.MkdirTemp("", "cifuzz-coverage-*")
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	err = fileutil.Touch(filepath.Join(dirWithEmptyFile, "empty_file"))
+	if err != nil {
+		return err
+	}
+	defer fileutil.Cleanup(dirWithEmptyFile)
+
 	emptyDir, err := os.MkdirTemp("", "cifuzz-coverage-*")
 	if err != nil {
 		return errors.WithStack(err)
 	}
 	defer fileutil.Cleanup(emptyDir)
 
+	// libFuzzer's merge mode never runs the empty input, whereas regular fuzzing runs and the replayer always try the
+	// empty input first. To achieve consistent behavior, manually run the empty input, ignoring any crashes. runFuzzer
+	// always logs any error we encounter.
+	// This line is responsible for empty inputs being skipped:
+	// https://github.com/llvm/llvm-project/blob/c7c0ce7d9ebdc0a49313bc77e14d1e856794f2e0/compiler-rt/lib/fuzzer/FuzzerIO.cpp#L127
+	_ = c.runFuzzer(buildResult.Executable, []string{"-runs=0"}, []string{dirWithEmptyFile}, binaryEnv, wrapperEnv)
+
 	// We use libFuzzer's crash-resistant merge mode to merge all corpus directories into an empty directory, which
 	// makes libFuzzer go over all inputs in a subprocess that is restarted in case it crashes. With LLVM's continuous
 	// mode (see rawProfilePattern) and since the LLVM coverage information is automatically appended to the existing
 	// .profraw file, we collect complete coverage information even if the target crashes on an input in the corpus.
-	// FIXME(fmeum): This does not run the fuzz test on the empty input and we can't just pass in an empty seed due to
-	//  this check:
-	//  https://github.com/llvm/llvm-project/blob/c7c0ce7d9ebdc0a49313bc77e14d1e856794f2e0/compiler-rt/lib/fuzzer/FuzzerIO.cpp#L127
-	args := []string{buildResult.Executable, "-merge=1", emptyDir}
+	return c.runFuzzer(buildResult.Executable, []string{"-merge=1"}, append([]string{emptyDir}, corpusDirs...), binaryEnv, wrapperEnv)
+}
+
+func (c *coverageCmd) runFuzzer(executable string, preCorpusArgs []string, corpusDirs []string, binaryEnv []string, wrapperEnv []string) error {
+	args := []string{executable}
+	args = append(args, preCorpusArgs...)
 	args = append(args, corpusDirs...)
 	if len(c.opts.FuzzTestArgs) > 0 {
 		args = append(append(args, "--"), c.opts.FuzzTestArgs...)
@@ -349,10 +368,10 @@ func (c *coverageCmd) runFuzzTest(buildResult *build.Result) error {
 	if c.opts.UseSandbox {
 		bindings := []*minijail.Binding{
 			// The fuzz target must be accessible
-			{Source: buildResult.Executable},
+			{Source: executable},
 		}
 
-		for _, dir := range append(corpusDirs, emptyDir) {
+		for _, dir := range corpusDirs {
 			bindings = append(bindings, &minijail.Binding{Source: dir})
 		}
 
@@ -373,6 +392,7 @@ func (c *coverageCmd) runFuzzTest(buildResult *build.Result) error {
 		// We don't use minijail, so we can merge the binary and wrapper
 		// environment
 		for key, value := range envutil.ToMap(binaryEnv) {
+			var err error
 			wrapperEnv, err = envutil.Setenv(wrapperEnv, key, value)
 			if err != nil {
 				return err
@@ -394,7 +414,7 @@ func (c *coverageCmd) runFuzzTest(buildResult *build.Result) error {
 	}
 
 	log.Debugf("Command: %s", strings.Join(stringutil.QuotedStrings(cmd.Args), " "))
-	err = cmd.Run()
+	err := cmd.Run()
 	if err != nil {
 		// Print the stderr output of the fuzzer to provide users with
 		// the context of this error even without verbose mode.
@@ -407,7 +427,7 @@ func (c *coverageCmd) runFuzzTest(buildResult *build.Result) error {
 		log.Error(err)
 		return cmdutils.ErrSilent
 	}
-	return nil
+	return err
 }
 
 func (c *coverageCmd) indexRawProfile(fuzzTestExecutable string) error {

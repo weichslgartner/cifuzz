@@ -248,9 +248,6 @@ func createAndVerifyLcovCoverageReport(t *testing.T, cifuzz string, dir string) 
 	}
 
 	assert.Subset(t, []uint{
-		// Lines only triggered by the empty input.
-		// FIXME(fmeum): Ensure that the new coverage mode also runs on the empty input.
-		9, 10,
 		// Lines after the three crashes. Whether these are covered depends on implementation details of the coverage
 		// instrumentation, so we conservatively assume they aren't covered.
 		21, 31, 41},
