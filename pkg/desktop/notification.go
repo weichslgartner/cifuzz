@@ -10,7 +10,7 @@ import (
 )
 
 // Notify sends a desktop notification, but only when the
-// programm is running in a desktop environment
+// program is running in a desktop environment
 func Notify(title, body string) {
 
 	// just skip notifications when running in CI/CD
@@ -19,12 +19,13 @@ func Notify(title, body string) {
 	}
 
 	onWindows := runtime.GOOS == "windows"
-	hasDisplay := os.Getenv("DISPLAY") != ""
+	onMac := runtime.GOOS == "darwin"
+	hasDisplayOnLinux := os.Getenv("DISPLAY") != ""
 
-	if hasDisplay || onWindows {
+	if hasDisplayOnLinux || onWindows || onMac {
 		err := beeep.Notify(title, body, "")
 		if err != nil {
-			// no more error handling as sending notifications is not that critial
+			// no more error handling as sending notifications is not that critical
 			log.Debugf("unable to send desktop notification (%s): %v", title, err)
 		}
 	}
