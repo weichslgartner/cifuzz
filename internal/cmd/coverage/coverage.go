@@ -2,6 +2,7 @@ package coverage
 
 import (
 	"bytes"
+	"debug/macho"
 	"fmt"
 	"io"
 	"os"
@@ -478,8 +479,18 @@ func (c *coverageCmd) runLlvmCov(args []string, fuzzTestExecutable string, runti
 	// processed by llvm-cov to include them in the coverage report
 	args = append(args, "-instr-profile="+c.indexedProfilePath(fuzzTestExecutable))
 	args = append(args, fuzzTestExecutable)
+	if archArg, err := c.archFlagIfNeeded(fuzzTestExecutable); err != nil {
+		return "", err
+	} else if archArg != "" {
+		args = append(args, archArg)
+	}
 	for _, path := range runtimeDeps {
 		args = append(args, "-object="+path)
+		if archArg, err := c.archFlagIfNeeded(path); err != nil {
+			return "", err
+		} else if archArg != "" {
+			args = append(args, archArg)
+		}
 	}
 
 	cmd := exec.Command(llvmCov, args...)
@@ -594,4 +605,51 @@ func (c *coverageCmd) checkDependencies() (bool, error) {
 		deps = append(deps, dependencies.CMAKE)
 	}
 	return dependencies.Check(deps, dependencies.Default, runfiles.Finder)
+}
+
+// Returns an llvm-cov -arch flag indicating the preferred architecture of the given object on macOS, where objects can
+// be "universal", that is, contain versions for multiple architectures.
+func (c *coverageCmd) archFlagIfNeeded(object string) (string, error) {
+	if runtime.GOOS != "darwin" {
+		// Only macOS uses universal binaries that bundle multiple architectures.
+		return "", nil
+	}
+	var cifuzzCpu macho.Cpu
+	if runtime.GOARCH == "amd64" {
+		cifuzzCpu = macho.CpuAmd64
+	} else {
+		cifuzzCpu = macho.CpuArm64
+	}
+	fatFile, fatErr := macho.OpenFat(object)
+	if fatErr == nil {
+		defer fatFile.Close()
+		var fallbackCpu macho.Cpu
+		for _, arch := range fatFile.Arches {
+			// Give preference to the architecture matching that of the cifuzz binary.
+			if arch.Cpu == cifuzzCpu {
+				return cpuToArchFlag(arch.Cpu)
+			}
+			if arch.Cpu == macho.CpuAmd64 || arch.Cpu == macho.CpuArm64 {
+				fallbackCpu = arch.Cpu
+			}
+		}
+		return cpuToArchFlag(fallbackCpu)
+	}
+	file, err := macho.Open(object)
+	if err == nil {
+		defer file.Close()
+		return cpuToArchFlag(file.Cpu)
+	}
+	return "", errors.Errorf("failed to parse Mach-O file %q: %q (as universal binary), %q", object, fatErr, err)
+}
+
+func cpuToArchFlag(cpu macho.Cpu) (string, error) {
+	switch cpu {
+	case macho.CpuArm64:
+		return "-arch=arm64", nil
+	case macho.CpuAmd64:
+		return "-arch=x86_64", nil
+	default:
+		return "", errors.Errorf("unsupported architecture: %s", cpu.String())
+	}
 }
