@@ -50,7 +50,7 @@ func TestIntegration_Make_RunCoverage(t *testing.T) {
 	require.NoError(t, err)
 
 	// Install CIFuzz in temp folder
-	installDir, err := os.MkdirTemp("", "cifuzz-")
+	installDir, err := os.MkdirTemp("", "ci fuzz-")
 	require.NoError(t, err)
 	defer fileutil.Cleanup(installDir)
 	installDir = filepath.Join(installDir, "cifuzz")
@@ -96,7 +96,7 @@ func TestIntegration_Make_DetailedCoverage(t *testing.T) {
 	require.NoError(t, err)
 
 	// Install CIFuzz in temp folder
-	installDir, err := os.MkdirTemp("", "cifuzz-")
+	installDir, err := os.MkdirTemp("", "ci fuzz-")
 	require.NoError(t, err)
 	installDir = filepath.Join(installDir, "cifuzz")
 	installer := filepath.Join("cmd", "installer", "installer.go")

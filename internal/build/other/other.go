@@ -203,7 +203,7 @@ func (b *Builder) setLibFuzzerEnv() error {
 	if err != nil {
 		return err
 	}
-	b.env, err = envutil.Setenv(b.env, "FUZZ_TEST_CFLAGS", "-I"+cifuzzIncludePath)
+	b.env, err = envutil.Setenv(b.env, "FUZZ_TEST_CFLAGS", "'-I"+cifuzzIncludePath+"'")
 	if err != nil {
 		return err
 	}
@@ -261,7 +261,7 @@ func (b *Builder) setCoverageEnv() error {
 	if err != nil {
 		return err
 	}
-	b.env, err = envutil.Setenv(b.env, "FUZZ_TEST_CFLAGS", "-I"+cifuzzIncludePath)
+	b.env, err = envutil.Setenv(b.env, "FUZZ_TEST_CFLAGS", "'-I"+cifuzzIncludePath+"'")
 	if err != nil {
 		return err
 	}
