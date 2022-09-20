@@ -191,9 +191,9 @@ func installBashCompletionScript(cifuzzPath string) error {
 		if err != nil {
 			return errors.WithStack(err)
 		}
-		cmd = exec.Command("bash", "-c", cifuzzPath+" completion bash > \""+dir+"/cifuzz\"")
+		cmd = exec.Command("bash", "-c", "'"+cifuzzPath+"' completion bash > \""+dir+"/cifuzz\"")
 	case "darwin":
-		cmd = exec.Command("bash", "-c", cifuzzPath+" completion bash > \"$(brew --prefix)/etc/bash_completion.d/cifuzz\"")
+		cmd = exec.Command("bash", "-c", "'"+cifuzzPath+"' completion bash > \"$(brew --prefix)/etc/bash_completion.d/cifuzz\"")
 	}
 	cmd.Stderr = os.Stderr
 	log.Printf("Command: %s", cmd.String())
@@ -213,9 +213,9 @@ func installZshCompletionScript(cifuzzPath string) error {
 		// When run as root, it's expected that /root/.zshrc doesn't
 		// exist, which leaves $fpath[1] at the default which is below
 		// /etc.
-		cmd = exec.Command("zsh", "-c", ". ${ZDOTDIR:-${HOME}}/.zshrc 2>/dev/null; "+cifuzzPath+" completion zsh > \"${fpath[1]}/_cifuzz\"")
+		cmd = exec.Command("zsh", "-c", ". ${ZDOTDIR:-${HOME}}/.zshrc 2>/dev/null; '"+cifuzzPath+"' completion zsh > \"${fpath[1]}/_cifuzz\"")
 	case "darwin":
-		cmd = exec.Command("zsh", "-c", cifuzzPath+" completion zsh > \"$(brew --prefix)/share/zsh/site-functions/_cifuzz\"")
+		cmd = exec.Command("zsh", "-c", "'"+cifuzzPath+"' completion zsh > \"$(brew --prefix)/share/zsh/site-functions/_cifuzz\"")
 	default:
 		return nil
 	}
@@ -247,7 +247,7 @@ func installFishCompletionScript(cifuzzPath string) error {
 		return errors.WithStack(err)
 	}
 
-	cmd := exec.Command("fish", "-c", cifuzzPath+" completion fish > \""+dir+"/cifuzz.fish\"")
+	cmd := exec.Command("fish", "-c", "'"+cifuzzPath+"' completion fish > \""+dir+"/cifuzz.fish\"")
 	cmd.Stderr = os.Stderr
 	log.Printf("Command: %s", cmd.String())
 	err = cmd.Run()
