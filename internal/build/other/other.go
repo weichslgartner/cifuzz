@@ -262,6 +262,16 @@ func (b *Builder) setCoverageEnv() error {
 		return err
 	}
 
+	ldflags := []string{
+		// ----- Flags used to link in coverage runtime -----
+		"-fprofile-instr-generate",
+		"-fcoverage-mapping",
+	}
+	b.env, err = envutil.Setenv(b.env, "LDFLAGS", strings.Join(ldflags, " "))
+	if err != nil {
+		return err
+	}
+
 	// Users should pass the environment variable FUZZ_TEST_CFLAGS to the
 	// compiler command building the fuzz test.
 	cifuzzIncludePath, err := runfiles.Finder.CIFuzzIncludePath()
