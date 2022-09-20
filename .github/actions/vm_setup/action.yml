@@ -19,12 +19,12 @@ runs:
           path: |
             C:/Program Files/LLVM
             ./llvm
-          key: ${{ inputs.os }}-llvm-13.0
+          key: ${{ inputs.os }}-llvm-14.0
 
       - name: Install LLVM and Clang
         uses: KyleMayes/install-llvm-action@f0cccbdf563688c6e0f9273d4bc27a8c5278de85
         with:
-          version: "13.0"
+          version: "14.0"
           cached: ${{ steps.cache-llvm.outputs.cache-hit }}
 
       - name: Setup - Linux
@@ -38,7 +38,7 @@ runs:
         if: contains(inputs.os, 'macos')
         run: |
           LLVM_PATH=${{ env.LLVM_PATH }}
-          LLVM_VERSION=13.0
+          LLVM_VERSION=14.0
           echo "SDKROOT=$(xcrun --sdk macosx --show-sdk-path)" >> $GITHUB_ENV
           echo "CPATH=$LLVM_PATH/lib/clang/$LLVM_VERSION/include/" >> $GITHUB_ENV
           echo "LDFLAGS=-L$LLVM_PATH/lib" >> $GITHUB_ENV
