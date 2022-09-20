@@ -169,6 +169,7 @@ func TestIntegration_CMake_InitCreateRunCoverageBundle(t *testing.T) {
 	// Check that options set via the config file are respected
 	configFileContent := `use-sandbox: false`
 	err = os.WriteFile(filepath.Join(dir, "cifuzz.yaml"), []byte(configFileContent), 0644)
+	require.NoError(t, err)
 	// When minijail is used, the artifact prefix is set to the minijail
 	// output path
 	runFuzzer(t, cifuzz, dir, &runFuzzerOptions{
@@ -184,6 +185,9 @@ func TestIntegration_CMake_InitCreateRunCoverageBundle(t *testing.T) {
 			args:           []string{"--use-sandbox=true"},
 		})
 	}
+	// Clear cifuzz.yml so that subsequent tests run with defaults (e.g. sandboxing).
+	err = os.WriteFile(filepath.Join(dir, "cifuzz.yaml"), nil, 0644)
+	require.NoError(t, err)
 
 	// Check that ASAN_OPTIONS can be set
 	env, err := envutil.Setenv(os.Environ(), "ASAN_OPTIONS", "print_stats=1:atexit=1")
