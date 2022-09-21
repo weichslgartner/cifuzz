@@ -10,7 +10,6 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"regexp"
@@ -22,7 +21,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/otiai10/copy"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sync/errgroup"
@@ -30,6 +28,7 @@ import (
 
 	builderPkg "code-intelligence.com/cifuzz/internal/builder"
 	"code-intelligence.com/cifuzz/internal/cmd/run/report_handler/stacktrace"
+	testutil_int "code-intelligence.com/cifuzz/internal/testutil"
 	"code-intelligence.com/cifuzz/pkg/artifact"
 	"code-intelligence.com/cifuzz/pkg/finding"
 	"code-intelligence.com/cifuzz/util/envutil"
@@ -46,77 +45,39 @@ func TestIntegration_CMake_InitCreateRunCoverageBundle(t *testing.T) {
 	testutil.RegisterTestDepOnCIFuzz()
 
 	// Create installation builder
-	projectDir, err := builderPkg.FindProjectDir()
-	require.NoError(t, err)
-	targetDir := filepath.Join(projectDir, "cmd", "installer", "build")
-	err = os.RemoveAll(targetDir)
-	require.NoError(t, err)
-
-	opts := builderPkg.Options{Version: "dev", TargetDir: targetDir}
-	builder, err := builderPkg.NewCIFuzzBuilder(opts)
-	defer builder.Cleanup()
-	require.NoError(t, err)
-	err = builder.BuildCIFuzzAndDeps()
+	installDir := testutil_int.InstallCifuzzInTemp(t)
+	cifuzz := builderPkg.CIFuzzExecutablePath(filepath.Join(installDir, "bin"))
+	err := os.Setenv("CMAKE_PREFIX_PATH", installDir)
 	require.NoError(t, err)
 
-	// Install CIFuzz in temp folder
-	installDir, err := os.MkdirTemp("", "cifuzz-")
-	require.NoError(t, err)
-	installDir = filepath.Join(installDir, "cifuzz")
-	installer := filepath.Join("cmd", "installer", "installer.go")
-	installCmd := exec.Command("go", "run", "-tags", "installer", installer, "-i", installDir)
-	installCmd.Stderr = os.Stderr
-	installCmd.Dir = projectDir
-	t.Logf("Command: %s", installCmd.String())
-	err = installCmd.Run()
-	require.NoError(t, err)
-
-	err = os.Setenv("CMAKE_PREFIX_PATH", installDir)
-	require.NoError(t, err)
-
-	dir := copyTestdataDir(t)
+	// Copy testdata
+	dir := testutil_int.CopyTestdataDir(t, "cmake")
 	defer fileutil.Cleanup(dir)
 	t.Logf("executing cmake integration test in %s", dir)
 
 	// Execute the root command
-	cifuzz := builderPkg.CIFuzzExecutablePath(filepath.Join(installDir, "bin"))
-	cmd := executil.Command(cifuzz)
-	cmd.Dir = dir
-	cmd.Stderr = os.Stderr
-	t.Logf("Command: %s", cmd.String())
-	err = cmd.Run()
-	require.NoError(t, err)
+	testutil_int.RunCommand(t, dir, cifuzz, nil)
 
 	// Execute the init command
-	cmd = executil.Command(cifuzz, "init", "-C", dir)
-	cmd.Dir = dir
-	stderrPipe, err := cmd.StderrTeePipe(os.Stderr)
-	require.NoError(t, err)
-	t.Logf("Command: %s", cmd.String())
-	err = cmd.Run()
-	require.NoError(t, err)
-	followStepsPrintedByInitCommand(t, stderrPipe, filepath.Join(dir, "CMakeLists.txt"))
-	err = stderrPipe.Close()
-	require.NoError(t, err)
+	initOutput := testutil_int.RunCommand(t, dir, cifuzz, []string{"init"})
+	testutil_int.AddLinesToFileAtBreakPoint(t, filepath.Join(dir, "CMakeLists.txt"), initOutput, "add_subdirectory", false)
 
 	// Execute the create command
 	outputPath := filepath.Join("src", "parser", "parser_fuzz_test.cpp")
-	cmd = executil.Command(cifuzz, "create", "-C", dir, "cpp", "--output", outputPath)
-	cmd.Dir = dir
-	stderrPipe, err = cmd.StderrTeePipe(os.Stderr)
-	require.NoError(t, err)
-	cmd.Stdout = os.Stdout
-	require.NoError(t, err)
-	t.Logf("Command: %s", cmd.String())
-	err = cmd.Run()
-	require.NoError(t, err)
+	createOutput := testutil_int.RunCommand(t, dir, cifuzz, []string{"create", "cpp", "--output", outputPath})
 
 	// Check that the fuzz test was created in the correct directory
 	fuzzTestPath := filepath.Join(dir, outputPath)
 	require.FileExists(t, fuzzTestPath)
-	followStepsPrintedByCreateCommand(t, stderrPipe, filepath.Join(filepath.Dir(fuzzTestPath), "CMakeLists.txt"))
-	err = stderrPipe.Close()
+
+	// Append the lines to CMakeLists.txt
+	f, err := os.OpenFile(filepath.Join(filepath.Dir(fuzzTestPath), "CMakeLists.txt"), os.O_APPEND|os.O_WRONLY, 0600)
+	defer f.Close()
 	require.NoError(t, err)
+	for _, s := range createOutput {
+		_, err = f.WriteString(s + "\n")
+		require.NoError(t, err)
+	}
 
 	// Check that the findings command doesn't list any findings yet
 	findings := getFindings(t, cifuzz, dir)
@@ -220,22 +181,6 @@ func TestIntegration_CMake_InitCreateRunCoverageBundle(t *testing.T) {
 	if runtime.GOOS == "linux" {
 		testRemoteRun(t, dir, cifuzz)
 	}
-}
-
-func copyTestdataDir(t *testing.T) string {
-	dir, err := os.MkdirTemp("", "cifuzz-cmake-testdata-")
-	require.NoError(t, err)
-
-	// Get the path to the testdata dir
-	cwd, err := os.Getwd()
-	require.NoError(t, err)
-	testDataDir := filepath.Join(cwd, "testdata")
-
-	// Copy the testdata dir to the temporary directory
-	err = copy.Copy(testDataDir, dir)
-	require.NoError(t, err)
-
-	return dir
 }
 
 type runFuzzerOptions struct {
@@ -431,85 +376,6 @@ func createAndVerifyLcovCoverageReport(t *testing.T, cifuzz string, dir string) 
 		// instrumentation, so we conservatively assume they aren't covered.
 		21, 31, 41},
 		uncoveredLines)
-}
-
-func followStepsPrintedByInitCommand(t *testing.T, initOutput io.Reader, cmakeLists string) {
-	t.Helper()
-
-	// Enable fuzz testing by adding to CMakeLists.txt the lines which
-	// `cifuzz init` tells us to add
-
-	// First, parse the `cifuzz init` output to find the lines we should
-	// add to CMakeLists.txt - the first indented block.
-	scanner := bufio.NewScanner(initOutput)
-	var linesToAdd []string
-	for scanner.Scan() {
-		if strings.HasPrefix(scanner.Text(), "    ") {
-			linesToAdd = append(linesToAdd, strings.TrimSpace(scanner.Text()))
-		} else if len(linesToAdd) != 0 {
-			break
-		}
-	}
-	if len(linesToAdd) == 0 {
-		require.FailNow(t, "`cifuzz init` didn't print the lines which should be added to CMakeLists.txt")
-	}
-	f, err := os.OpenFile(cmakeLists, os.O_RDWR, 0700)
-	require.NoError(t, err)
-	defer f.Close()
-
-	// Now find the correct line in CMakeLists.txt where the lines
-	// should be added. It must be before any "add_subdirectory"
-	// functions which add directories that might use functions from
-	// the cifuzz CMake package.
-	scanner = bufio.NewScanner(f)
-	var lines []string
-	var addedLines bool
-	for scanner.Scan() {
-		if !addedLines && strings.HasPrefix(scanner.Text(), "add_subdirectory") {
-			// Found an "add_subdirectory" call, insert the lines before
-			// that line
-			lines = append(lines, linesToAdd...)
-			addedLines = true
-		}
-		lines = append(lines, scanner.Text())
-	}
-	if !addedLines {
-		require.FailNow(t, "Didn't find a \"add_subdirectory\" line in %v", cmakeLists)
-	}
-
-	// Write the new content of CMakeLists.txt back to file
-	_, err = f.Seek(0, io.SeekStart)
-	require.NoError(t, err)
-	_, err = f.WriteString(strings.Join(lines, "\n"))
-	require.NoError(t, err)
-}
-
-func followStepsPrintedByCreateCommand(t *testing.T, initOutput io.Reader, cmakeLists string) {
-	t.Helper()
-
-	// Create a CMake target for the fuzz test by adding to
-	// CMakeLists.txt the lines which `cifuzz create` tells us to add
-
-	// Parse the `cifuzz create` output to find the lines we should add
-	// to CMakeLists.txt
-	scanner := bufio.NewScanner(initOutput)
-	var cMakeListsSuffix []byte
-	for scanner.Scan() {
-		if strings.HasPrefix(scanner.Text(), "    ") {
-			line := strings.TrimSpace(scanner.Text()) + "\n"
-			cMakeListsSuffix = append(cMakeListsSuffix, []byte(line)...)
-		}
-	}
-	if len(cMakeListsSuffix) == 0 {
-		require.FailNow(t, "`cifuzz create` didn't print the lines which should be added to CMakeLists.txt")
-	}
-
-	// Append the lines to CMakeLists.txt
-	f, err := os.OpenFile(cmakeLists, os.O_APPEND|os.O_WRONLY, 0700)
-	require.NoError(t, err)
-	defer f.Close()
-	_, err = f.Write(cMakeListsSuffix)
-	require.NoError(t, err)
 }
 
 func modifyFuzzTestToCallFunction(t *testing.T, fuzzTestPath string) {

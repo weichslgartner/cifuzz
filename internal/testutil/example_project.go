@@ -10,14 +10,14 @@ import (
 	"code-intelligence.com/cifuzz/util/testutil"
 )
 
-// Creates a copy of the CMake example project in a temp dir and
-// change the working dir to the new path
-func ChdirToClonedCmakeExampleProject(prefix string) (string, error) {
+// BootstrapExampleProjectForTest copies the given example project to a temporary folder
+// and changes into that directory.
+func BootstrapExampleProjectForTest(prefix, exampleName string) (string, error) {
 	target := testutil.ChdirToTempDir(prefix)
 
 	if _, thisFile, _, ok := runtime.Caller(0); ok {
 		basepath := filepath.Dir(thisFile)
-		examplePath := filepath.Join(basepath, "..", "..", "examples", "cmake")
+		examplePath := filepath.Join(basepath, "..", "..", "examples", exampleName)
 
 		if err := copy.Copy(examplePath, target); err != nil {
 			return "", errors.WithStack(err)
@@ -25,5 +25,5 @@ func ChdirToClonedCmakeExampleProject(prefix string) (string, error) {
 		return target, nil
 	}
 
-	return "", errors.New("Unable to clone cmake example project")
+	return "", errors.Errorf("Unable to clone example %s project", exampleName)
 }

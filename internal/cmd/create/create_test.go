@@ -36,7 +36,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestOk(t *testing.T) {
-	testDir, err := testutil.ChdirToClonedCmakeExampleProject("create-cmd-test")
+	testDir, err := testutil.BootstrapExampleProjectForTest("create-cmd-test", config.BuildSystemCMake)
 	require.NoError(t, err)
 	defer fileutil.Cleanup(testDir)
 
@@ -65,7 +65,7 @@ func TestCMakeMissing(t *testing.T) {
 	deps := dependencies.CreateTestDeps(t, []dependencies.Key{dependencies.CLANG, dependencies.CMAKE})
 	dependencies.OverwriteInstalledWithFalse(deps[dependencies.CMAKE])
 
-	testDir, err := testutil.ChdirToClonedCmakeExampleProject("create-cmd-test")
+	testDir, err := testutil.BootstrapExampleProjectForTest("create-cmd-test", config.BuildSystemCMake)
 	require.NoError(t, err)
 	defer fileutil.Cleanup(testDir)
 	args := []string{
@@ -92,7 +92,7 @@ func TestClangVersion(t *testing.T) {
 	dep := deps[dependencies.CLANG]
 	version := dependencies.OverwriteGetVersionWith0(dep)
 
-	testDir, err := testutil.ChdirToClonedCmakeExampleProject("create-cmd-test")
+	testDir, err := testutil.BootstrapExampleProjectForTest("create-cmd-test", config.BuildSystemCMake)
 	require.NoError(t, err)
 	defer fileutil.Cleanup(testDir)
 	args := []string{

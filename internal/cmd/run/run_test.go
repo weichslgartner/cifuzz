@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"code-intelligence.com/cifuzz/internal/cmdutils"
+	"code-intelligence.com/cifuzz/internal/config"
 	"code-intelligence.com/cifuzz/internal/testutil"
 	"code-intelligence.com/cifuzz/pkg/dependencies"
 	"code-intelligence.com/cifuzz/pkg/log"
@@ -45,7 +46,7 @@ func TestClangMissing(t *testing.T) {
 
 	// clone the example project because this command needs to parse an actual
 	// project config... if there is none it will fail before the dependency check
-	testDir, err := testutil.ChdirToClonedCmakeExampleProject("run-cmd-test")
+	testDir, err := testutil.BootstrapExampleProjectForTest("run-cmd-test", config.BuildSystemCMake)
 	require.NoError(t, err)
 	defer fileutil.Cleanup(testDir)
 
@@ -65,7 +66,7 @@ func TestLlvmSymbolizerVersion(t *testing.T) {
 
 	// clone the example project because this command needs to parse an actual
 	// project config... if there is none it will fail before the dependency check
-	testDir, err := testutil.ChdirToClonedCmakeExampleProject("run-cmd-test")
+	testDir, err := testutil.BootstrapExampleProjectForTest("run-cmd-test", config.BuildSystemCMake)
 	require.NoError(t, err)
 	defer fileutil.Cleanup(testDir)
 

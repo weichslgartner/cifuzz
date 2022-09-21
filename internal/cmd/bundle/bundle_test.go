@@ -51,7 +51,7 @@ func TestClangMissing(t *testing.T) {
 
 	// clone the example project because this command needs to parse an actual
 	// project config... if there is none it will fail before the dependency check
-	testDir, err := testutil.ChdirToClonedCmakeExampleProject("run-cmd-test")
+	testDir, err := testutil.BootstrapExampleProjectForTest("run-cmd-test", config.BuildSystemCMake)
 	require.NoError(t, err)
 	defer fileutil.Cleanup(testDir)
 
@@ -76,7 +76,7 @@ func TestClangVersion(t *testing.T) {
 
 	// clone the example project because this command needs to parse an actual
 	// project config... if there is none it will fail before the dependency check
-	testDir, err := testutil.ChdirToClonedCmakeExampleProject("run-cmd-test")
+	testDir, err := testutil.BootstrapExampleProjectForTest("run-cmd-test", config.BuildSystemCMake)
 	require.NoError(t, err)
 	defer fileutil.Cleanup(testDir)
 
@@ -100,7 +100,7 @@ func TestCMakeMissing(t *testing.T) {
 
 	// clone the example project because this command needs to parse an actual
 	// project config... if there is none it will fail before the dependency check
-	testDir, err := testutil.ChdirToClonedCmakeExampleProject("run-cmd-test")
+	testDir, err := testutil.BootstrapExampleProjectForTest("run-cmd-test", config.BuildSystemCMake)
 	require.NoError(t, err)
 	defer fileutil.Cleanup(testDir)
 

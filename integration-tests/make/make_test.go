@@ -17,6 +17,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	builderPkg "code-intelligence.com/cifuzz/internal/builder"
+	testutil_int "code-intelligence.com/cifuzz/internal/testutil"
 	"code-intelligence.com/cifuzz/util/executil"
 	"code-intelligence.com/cifuzz/util/fileutil"
 	"code-intelligence.com/cifuzz/util/stringutil"
@@ -35,33 +36,7 @@ func TestIntegration_Make_RunCoverage(t *testing.T) {
 	}
 	testutil.RegisterTestDepOnCIFuzz()
 
-	// Create installation builder
-	projectDir, err := builderPkg.FindProjectDir()
-	require.NoError(t, err)
-	targetDir := filepath.Join(projectDir, "cmd", "installer", "build")
-	err = os.RemoveAll(targetDir)
-	require.NoError(t, err)
-
-	opts := builderPkg.Options{Version: "dev", TargetDir: targetDir}
-	builder, err := builderPkg.NewCIFuzzBuilder(opts)
-	defer builder.Cleanup()
-	require.NoError(t, err)
-	err = builder.BuildCIFuzzAndDeps()
-	require.NoError(t, err)
-
-	// Install CIFuzz in temp folder
-	installDir, err := os.MkdirTemp("", "ci fuzz-")
-	require.NoError(t, err)
-	defer fileutil.Cleanup(installDir)
-	installDir = filepath.Join(installDir, "cifuzz")
-	installer := filepath.Join("cmd", "installer", "installer.go")
-	installCmd := exec.Command("go", "run", "-tags", "installer", installer, "-i", installDir)
-	installCmd.Stderr = os.Stderr
-	installCmd.Dir = projectDir
-	t.Logf("Command: %s", installCmd.String())
-	err = installCmd.Run()
-	require.NoError(t, err)
-
+	installDir := testutil_int.InstallCifuzzInTemp(t)
 	dir := copyMakeExampleDir(t, filepath.Join("examples", "other"))
 	defer fileutil.Cleanup(dir)
 	t.Logf("executing make integration test in %s", dir)
