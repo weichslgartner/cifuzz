@@ -1,7 +1,5 @@
 package com.github.CodeIntelligenceTesting.cifuzz;
 
-import com.code_intelligence.jazzer.api.FuzzerSecurityIssueMedium;
-
 public class ExploreMe {
     // Function with multiple paths that can be discovered by a fuzzer.
     public static void exploreMe(int a, int b, String c) {
@@ -16,15 +14,21 @@ public class ExploreMe {
                 if (b - a < 100000) {
                     System.out.println("branch 3");
 
-                    if (c.equals("FUZZING")) {
+                    // Create reflective call
+                    if (c.startsWith("@")) {
                         System.out.println("branch 4");
-                        throw new FuzzerSecurityIssueMedium("branch 4 has been reached");
+                        String className = c.substring(1);
+                        try {
+                            Class.forName(className);
+                        } catch (ClassNotFoundException ignored) {
+                        }
                     }
                 }
             }
         } else {
             System.out.println("this is the default path");
         }
+
         System.out.println("---------");
     }
 }
