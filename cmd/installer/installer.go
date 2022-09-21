@@ -145,28 +145,36 @@ func ExtractEmbeddedFiles(targetDir string, files *embed.FS) error {
 		return err
 	}
 
-	if runtime.GOOS != "windows" && os.Getuid() == 0 {
-		// On non-Windows systems, CMake doesn't have the concept of a system
-		// package registry. Instead, install the package into the well-known
-		// prefix /usr/local using the following relative search path:
-		// /(lib/|lib|share)/<name>*/(cmake|CMake)/
-		// See:
-		// https://cmake.org/cmake/help/latest/command/find_package.html#config-mode-search-procedure
-		// https://gitlab.kitware.com/cmake/cmake/-/blob/5ed9232d781ccfa3a9fae709e12999c6649aca2f/Modules/Platform/UnixPaths.cmake#L30)
-		cmakeSrc := filepath.Join(targetDir, "share", "cifuzz")
-		cmakeDest := "/usr/local/share/cifuzz"
-		err = copy.Copy(cmakeSrc, cmakeDest)
-		if err != nil {
-			return errors.WithStack(err)
-		}
-	} else {
-		// The CMake package registry entry has to point directly to the directory
-		// containing the CIFuzzConfig.cmake file rather than any valid prefix for
-		// the config mode search procedure.
-		dirForRegistry := filepath.Join(targetDir, "share", "cifuzz", "cmake")
-		err = installer.RegisterCMakePackage(dirForRegistry)
-		if err != nil {
-			return err
+	// Support not copying and registering the CMake package.
+
+	// Install and register the CMake package - unless the user
+	// set CIFUZZ_INSTALLER_NO_CMAKE. One use case for not installing
+	// CMake is when cifuzz is installed in a sandbox which doesn't
+	// allow access to the CMake packages directory.
+	if os.Getenv("CIFUZZ_INSTALLER_NO_CMAKE") == "" {
+		if runtime.GOOS != "windows" && os.Getuid() == 0 {
+			// On non-Windows systems, CMake doesn't have the concept of a system
+			// package registry. Instead, install the package into the well-known
+			// prefix /usr/local using the following relative search path:
+			// /(lib/|lib|share)/<name>*/(cmake|CMake)/
+			// See:
+			// https://cmake.org/cmake/help/latest/command/find_package.html#config-mode-search-procedure
+			// https://gitlab.kitware.com/cmake/cmake/-/blob/5ed9232d781ccfa3a9fae709e12999c6649aca2f/Modules/Platform/UnixPaths.cmake#L30)
+			cmakeSrc := filepath.Join(targetDir, "share", "cifuzz")
+			cmakeDest := "/usr/local/share/cifuzz"
+			err = copy.Copy(cmakeSrc, cmakeDest)
+			if err != nil {
+				return errors.WithStack(err)
+			}
+		} else {
+			// The CMake package registry entry has to point directly to the directory
+			// containing the CIFuzzConfig.cmake file rather than any valid prefix for
+			// the config mode search procedure.
+			dirForRegistry := filepath.Join(targetDir, "share", "cifuzz", "cmake")
+			err = installer.RegisterCMakePackage(dirForRegistry)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
