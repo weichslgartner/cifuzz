@@ -1,0 +1,11 @@
+
+Please make sure to add the following dependency to your
+build.gradle to enable fuzz testing:
+
+    testImplementation 'com.code-intelligence:jazzer-junit:0.12.0'
+
+We highly recommend using cifuzz with JUnit >=5 to ensure
+easy IDE integration. You can add it with the following
+dependency to your build.gradle:
+
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.8.2'

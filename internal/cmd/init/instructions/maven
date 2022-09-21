@@ -1,0 +1,21 @@
+
+Please make sure to add the following dependency to your
+pom.xml to enable fuzz testing:
+
+    <dependency>
+        <groupId>com.code-intelligence</groupId>
+        <artifactId>jazzer-junit</artifactId>
+        <version>0.12.0</version>
+        <scope>test</scope>
+    </dependency>
+
+We highly recommend using cifuzz with JUnit >=5 to ensure
+easy IDE integration. You can add it with the following
+dependency to your pom.xml:
+
+    <dependency>
+        <groupId>org.junit.jupiter</groupId>
+        <artifactId>junit-jupiter-engine</artifactId>
+        <version>5.9.0</version>
+        <scope>test</scope>
+    </dependency>

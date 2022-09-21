@@ -29,6 +29,7 @@ func TestMain(m *testing.M) {
 func TestCreateProjectConfig(t *testing.T) {
 	projectDir, err := os.MkdirTemp(baseTempDir, "project-")
 	require.NoError(t, err)
+	defer fileutil.Cleanup(projectDir)
 
 	path, err := CreateProjectConfig(projectDir)
 	assert.NoError(t, err)
@@ -53,6 +54,8 @@ func TestCreateProjectConfig_NoPerm(t *testing.T) {
 	// create read only project dir
 	projectDir, err := os.MkdirTemp(baseTempDir, "project-")
 	require.NoError(t, err)
+	defer fileutil.Cleanup(projectDir)
+
 	err = acl.Chmod(projectDir, 0555)
 	require.NoError(t, err)
 
@@ -71,6 +74,7 @@ func TestCreateProjectConfig_NoPerm(t *testing.T) {
 func TestCreateProjectConfig_Exists(t *testing.T) {
 	projectDir, err := os.MkdirTemp(baseTempDir, "project-")
 	require.NoError(t, err)
+	defer fileutil.Cleanup(projectDir)
 
 	existingPath := filepath.Join(projectDir, "cifuzz.yaml")
 	err = os.WriteFile(existingPath, []byte{}, 0644)
@@ -91,6 +95,7 @@ func TestCreateProjectConfig_Exists(t *testing.T) {
 func TestReadProjectConfig(t *testing.T) {
 	projectDir, err := os.MkdirTemp(baseTempDir, "project-")
 	require.NoError(t, err)
+	defer fileutil.Cleanup(projectDir)
 
 	configFile := filepath.Join(projectDir, "cifuzz.yaml")
 	err = os.WriteFile(configFile, []byte("build-system: "), 0644)
@@ -105,6 +110,7 @@ func TestReadProjectConfig(t *testing.T) {
 func TestReadProjectConfigCMake(t *testing.T) {
 	projectDir, err := os.MkdirTemp(baseTempDir, "project-")
 	require.NoError(t, err)
+	defer fileutil.Cleanup(projectDir)
 
 	configFile := filepath.Join(projectDir, "cifuzz.yaml")
 	err = os.WriteFile(configFile, []byte("build-system: "), 0644)
@@ -119,4 +125,58 @@ func TestReadProjectConfigCMake(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, BuildSystemCMake, config.BuildSystem)
+}
+
+func TestDetermineBuildSystem_CMake(t *testing.T) {
+	projectDir, err := os.MkdirTemp(baseTempDir, "project-")
+	require.NoError(t, err)
+	defer fileutil.Cleanup(projectDir)
+
+	err = os.WriteFile(filepath.Join(projectDir, "CMakeLists.txt"), []byte{}, 0644)
+	buildSystem, err := DetermineBuildSystem(projectDir)
+	require.NoError(t, err)
+	assert.Equal(t, BuildSystemCMake, buildSystem)
+}
+
+func TestDetermineBuildSystem_Maven(t *testing.T) {
+	projectDir, err := os.MkdirTemp(baseTempDir, "project-")
+	require.NoError(t, err)
+	defer fileutil.Cleanup(projectDir)
+
+	err = os.WriteFile(filepath.Join(projectDir, "pom.xml"), []byte{}, 0644)
+	buildSystem, err := DetermineBuildSystem(projectDir)
+	require.NoError(t, err)
+	assert.Equal(t, BuildSystemMaven, buildSystem)
+}
+
+func TestDetermineBuildSystem_GradleGroovy(t *testing.T) {
+	projectDir, err := os.MkdirTemp(baseTempDir, "project-")
+	require.NoError(t, err)
+	defer fileutil.Cleanup(projectDir)
+
+	err = os.WriteFile(filepath.Join(projectDir, "build.gradle"), []byte{}, 0644)
+	buildSystem, err := DetermineBuildSystem(projectDir)
+	require.NoError(t, err)
+	assert.Equal(t, BuildSystemGradle, buildSystem)
+}
+
+func TestDetermineBuildSystem_GradleKotlin(t *testing.T) {
+	projectDir, err := os.MkdirTemp(baseTempDir, "project-")
+	require.NoError(t, err)
+	defer fileutil.Cleanup(projectDir)
+
+	err = os.WriteFile(filepath.Join(projectDir, "build.gradle.kts"), []byte{}, 0644)
+	buildSystem, err := DetermineBuildSystem(projectDir)
+	require.NoError(t, err)
+	assert.Equal(t, BuildSystemGradle, buildSystem)
+}
+
+func TestDetermineBuildSystem_Other(t *testing.T) {
+	projectDir, err := os.MkdirTemp(baseTempDir, "project-")
+	require.NoError(t, err)
+	defer fileutil.Cleanup(projectDir)
+
+	buildSystem, err := DetermineBuildSystem(projectDir)
+	require.NoError(t, err)
+	assert.Equal(t, BuildSystemOther, buildSystem)
 }

@@ -18,11 +18,13 @@ import (
 )
 
 const (
-	BuildSystemCMake string = "cmake"
-	BuildSystemOther string = "other"
+	BuildSystemCMake  string = "cmake"
+	BuildSystemMaven  string = "maven"
+	BuildSystemGradle string = "gradle"
+	BuildSystemOther  string = "other"
 )
 
-var buildSystemTypes = []string{BuildSystemCMake, BuildSystemOther}
+var buildSystemTypes = []string{BuildSystemCMake, BuildSystemMaven, BuildSystemGradle, BuildSystemOther}
 
 type ProjectConfig struct {
 	LastUpdated string
@@ -166,15 +168,26 @@ func ValidateBuildSystem(buildSystem string) error {
 }
 
 func DetermineBuildSystem(projectDir string) (string, error) {
-	isCMakeProject, err := fileutil.Exists(filepath.Join(projectDir, "CMakeLists.txt"))
-	if err != nil {
-		return "", err
+	buildSystemIdentifier := map[string][]string{
+		BuildSystemCMake:  {"CMakeLists.txt"},
+		BuildSystemMaven:  {"pom.xml"},
+		BuildSystemGradle: {"build.gradle", "build.gradle.kts"},
 	}
-	if isCMakeProject {
-		return BuildSystemCMake, nil
-	} else {
-		return BuildSystemOther, nil
+
+	for buildSystem, files := range buildSystemIdentifier {
+		for _, f := range files {
+			isBuildSystem, err := fileutil.Exists(filepath.Join(projectDir, f))
+			if err != nil {
+				return "", err
+			}
+
+			if isBuildSystem {
+				return buildSystem, nil
+			}
+		}
 	}
+
+	return BuildSystemOther, nil
 }
 
 func FindProjectDir() (string, error) {

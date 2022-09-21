@@ -1,0 +1,7 @@
+
+Enable fuzz testing in your CMake project by adding the following lines
+to the top-level CMakeLists.txt before any add_subdirectory(...),
+add_library(...) or add_executable(...) calls:
+
+    find_package(cifuzz NO_SYSTEM_ENVIRONMENT_PATH)
+    enable_fuzz_testing()
