@@ -440,8 +440,8 @@ func testBundle(t *testing.T, dir string, cifuzz string) {
 	cmd := executil.Command(cifuzz, "bundle",
 		"-o", bundlePath,
 		"--dict", dictPath,
-		"--engine-arg", "arg1",
-		"--engine-arg", "arg2",
+		// Only run the fuzzer on the empty input.
+		"--engine-arg", "-runs=0",
 		"--fuzz-test-arg", "arg3",
 		"--fuzz-test-arg", "arg4",
 		"--seed-corpus", seedCorpusDir,
@@ -476,68 +476,77 @@ func testBundle(t *testing.T, dir string, cifuzz string) {
 	require.NoError(t, err)
 
 	// Verify code revision given by `--branch` and `--commit-sha` flags
-	require.Equal(t, "my-branch", metadata.CodeRevision.Git.Branch)
-	require.Equal(t, "123456abcdef", metadata.CodeRevision.Git.Commit)
+	assert.Equal(t, "my-branch", metadata.CodeRevision.Git.Branch)
+	assert.Equal(t, "123456abcdef", metadata.CodeRevision.Git.Commit)
 
 	// Verify that the metadata contain the engine args and fuzz test args
-	require.Equal(t, []string{"arg1", "arg2"}, metadata.Fuzzers[0].EngineOptions.Flags)
-	require.Equal(t, []string{"arg3", "arg4"}, metadata.Fuzzers[0].FuzzTestArgs)
+	assert.Equal(t, []string{"-runs=0"}, metadata.Fuzzers[0].EngineOptions.Flags)
+	assert.Equal(t, []string{"arg3", "arg4"}, metadata.Fuzzers[0].FuzzTestArgs)
 
-	// We use a simple regex here instead of duplicating knowledge of our metadata YAML schema.
-	fuzzerPathPattern := regexp.MustCompile(`\W*path: (.*address.*parser_fuzz_test.*)`)
-	fuzzerPath := filepath.Join(archiveDir, string(fuzzerPathPattern.FindSubmatch(metadataYaml)[1]))
+	var parserFuzzer *artifact.Fuzzer
+	var parserCoverage *artifact.Fuzzer
+	for _, fuzzer := range metadata.Fuzzers {
+		if fuzzer.Target == "parser_fuzz_test" {
+			if fuzzer.Engine == "LIBFUZZER" {
+				parserFuzzer = fuzzer
+			} else if fuzzer.Engine == "LLVM_COV" {
+				parserCoverage = fuzzer
+			}
+		}
+	}
+
+	require.NotNil(t, parserFuzzer)
+	fuzzerPath := filepath.Join(archiveDir, parserFuzzer.Path)
 	require.FileExists(t, fuzzerPath)
 
 	// Run the fuzzer on the empty input to verify that it finds all its runtime dependencies.
-	cmd = executil.Command(fuzzerPath, "-runs=0")
+	cmd = executil.Command(fuzzerPath, parserFuzzer.EngineOptions.Flags...)
+	cmd.Dir = filepath.Join(archiveDir, "work_dir")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	// NO_CIFUZZ is set on the backend via engine_options.
-	cmd.Env = append(os.Environ(), "NO_CIFUZZ=1")
+	cmd.Env = append(os.Environ(), parserFuzzer.EngineOptions.Env...)
 	err = cmd.Run()
-	require.NoError(t, err)
+	assert.NoError(t, err)
 
 	// Verify that the dictionary has been packaged with the fuzzer.
-	dictPattern := regexp.MustCompile(`\W*dictionary: (.*)`)
-	dictPath = filepath.Join(archiveDir, string(dictPattern.FindSubmatch(metadataYaml)[1]))
+	dictPath = filepath.Join(archiveDir, parserFuzzer.Dictionary)
 	require.FileExists(t, dictPath)
 	content, err := os.ReadFile(dictPath)
 	require.NoError(t, err)
-	require.Equal(t, "test-dictionary-content", string(content))
+	assert.Equal(t, "test-dictionary-content", string(content))
 
 	// Verify that the seed corpus has been packaged with the fuzzer.
-	seedCorpusPattern := regexp.MustCompile(`\W*seeds: (.*parser_fuzz_test.*)`)
-	seedCorpusPath := filepath.Join(archiveDir, string(seedCorpusPattern.FindSubmatch(metadataYaml)[1]))
+	seedCorpusPath := filepath.Join(archiveDir, parserFuzzer.Seeds)
 	require.DirExists(t, seedCorpusPath)
-	require.FileExists(t, filepath.Join(seedCorpusPath, "parser_fuzz_test_inputs", "some_seed"))
+	assert.FileExists(t, filepath.Join(seedCorpusPath, "parser_fuzz_test_inputs", "some_seed"))
 	// Check that the empty seed from the user-specified seed corpus
 	// was copied into the archive
-	require.FileExists(t, filepath.Join(seedCorpusPath, filepath.Base(seedCorpusDir), "empty"))
+	assert.FileExists(t, filepath.Join(seedCorpusPath, filepath.Base(seedCorpusDir), "empty"))
 
 	// Verify that the maximum runtime has been set
-	maxRunTimePattern := regexp.MustCompile(`\W*max_run_time: (.*)`)
-	maxRunTime := string(maxRunTimePattern.FindSubmatch(metadataYaml)[1])
-	require.Equal(t, "6000", maxRunTime)
+	assert.Equal(t, uint(6000), parserFuzzer.MaxRunTime)
 
 	if runtime.GOOS == "windows" {
 		// There are no coverage builds on Windows.
 		return
 	}
 	// Verify that a coverage build has been added to the archive.
-	fuzzerPathPattern = regexp.MustCompile(`\W*path: (replayer/coverage.*parser_fuzz_test.*)`)
-	fuzzerPath = filepath.Join(archiveDir, string(fuzzerPathPattern.FindSubmatch(metadataYaml)[1]))
+	require.NotNil(t, parserCoverage)
+	fuzzerPath = filepath.Join(archiveDir, parserCoverage.Path)
 	require.FileExists(t, fuzzerPath)
 
 	// Run the coverage build, which uses the replayer, on the seed corpus and verify that it creates a coverage
 	// profile.
 	coverageProfile := filepath.Join(archiveDir, "profile.lcov")
-	cmd = executil.Command(fuzzerPath, seedCorpusPath)
+	cmd = executil.Command(fuzzerPath, append(parserCoverage.EngineOptions.Flags, seedCorpusPath)...)
+	cmd.Dir = filepath.Join(archiveDir, "work_dir")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Env = append(os.Environ(), "LLVM_PROFILE_FILE="+coverageProfile)
+	cmd.Env = append(cmd.Env, parserCoverage.EngineOptions.Env...)
 	err = cmd.Run()
-	require.NoError(t, err)
-	require.FileExists(t, coverageProfile)
+	assert.NoError(t, err)
+	assert.FileExists(t, coverageProfile)
 
 	if runtime.GOOS == "linux" {
 		// Try to use the artifacts to start a remote run on a mock server
