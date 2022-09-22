@@ -4,11 +4,8 @@
 name: E2E Installer Installation/Example Test
 
 on:
-  workflow_run:
-    workflows: ["Release Pipeline"]
-    types:
-      - completed
-    branches: [main]
+  release:
+    types: [published]
   workflow_dispatch:
 
 jobs:
