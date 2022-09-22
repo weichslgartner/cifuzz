@@ -7,7 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 enable_testing()
 
-find_package(cifuzz)
+find_package(cifuzz NO_SYSTEM_ENVIRONMENT_PATH)
 enable_fuzz_testing()
 
 add_subdirectory(src/parser)
