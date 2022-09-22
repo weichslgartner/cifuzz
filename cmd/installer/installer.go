@@ -159,13 +159,18 @@ func ExtractEmbeddedFiles(targetDir string, files *embed.FS) error {
 		if err != nil {
 			return errors.WithStack(err)
 		}
+	} else {
+		// The CMake package registry entry has to point directly to the directory
+		// containing the CIFuzzConfig.cmake file rather than any valid prefix for
+		// the config mode search procedure.
+		dirForRegistry := filepath.Join(targetDir, "share", "cifuzz", "cmake")
+		err = installer.RegisterCMakePackage(dirForRegistry)
+		if err != nil {
+			return err
+		}
 	}
 
-	// The CMake package registry entry has to point directly to the directory
-	// containing the CIFuzzConfig.cmake file rather than any valid prefix for
-	// the config mode search procedure.
-	dirForRegistry := filepath.Join(targetDir, "share", "cifuzz", "cmake")
-	return installer.RegisterCMakePackage(dirForRegistry)
+	return nil
 }
 
 func installBashCompletionScript(cifuzzPath string) error {
