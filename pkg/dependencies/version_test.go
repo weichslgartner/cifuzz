@@ -143,3 +143,45 @@ func TestClangVersion_CXXMissing(t *testing.T) {
 
 	assert.Equal(t, pathVersion, version)
 }
+
+func TestClangVersion_CCFilename(t *testing.T) {
+	filename := "my-clang-13"
+	version := semver.MustParse("13.0.0")
+
+	mockCheck := func(path string, key Key) (*semver.Version, error) {
+		return version, nil
+	}
+
+	t.Setenv("CC", filename)
+	t.Setenv("CXX", "g++")
+
+	keys := []Key{CLANG}
+	deps, err := Define(keys)
+	require.NoError(t, err)
+	dep := deps[CLANG]
+
+	versionFound, err := clangVersion(dep, mockCheck)
+	require.NoError(t, err)
+	assert.Equal(t, version, versionFound)
+}
+
+func TestClangVersion_CXXFilename(t *testing.T) {
+	filename := "my-clang++-13"
+	version := semver.MustParse("13.0.0")
+
+	mockCheck := func(path string, key Key) (*semver.Version, error) {
+		return version, nil
+	}
+
+	t.Setenv("CC", "gcc")
+	t.Setenv("CXX", filename)
+
+	keys := []Key{CLANG}
+	deps, err := Define(keys)
+	require.NoError(t, err)
+	dep := deps[CLANG]
+
+	versionFound, err := clangVersion(dep, mockCheck)
+	require.NoError(t, err)
+	assert.Equal(t, version, versionFound)
+}

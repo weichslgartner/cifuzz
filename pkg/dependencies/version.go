@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"path"
 	"regexp"
+	"strings"
 
 	"github.com/Masterminds/semver"
 	"github.com/pkg/errors"
@@ -46,7 +47,7 @@ func clangVersion(dep *Dependency, clangCheck execCheck) (*semver.Version, error
 	checkPath := false
 
 	if cc, found := os.LookupEnv("CC"); found {
-		if path.Base(cc) == "clang" {
+		if strings.Contains(path.Base(cc), "clang") {
 			ccVersion, err := clangCheck(cc, dep.Key)
 			if err != nil {
 				return nil, err
@@ -61,7 +62,7 @@ func clangVersion(dep *Dependency, clangCheck execCheck) (*semver.Version, error
 	}
 
 	if cxx, found := os.LookupEnv("CXX"); found {
-		if path.Base(cxx) == "clang++" {
+		if strings.Contains(path.Base(cxx), "clang") {
 			cxxVersion, err := clangCheck(cxx, dep.Key)
 			if err != nil {
 				return nil, err
