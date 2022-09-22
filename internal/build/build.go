@@ -4,6 +4,7 @@ import (
 	"os"
 	"path"
 	"runtime"
+	"strings"
 
 	"code-intelligence.com/cifuzz/util/envutil"
 )
@@ -43,13 +44,13 @@ func CommonBuildEnv() ([]string, error) {
 		// Set the C/C++ compiler to clang/clang++ (if not already set),
 		// which is needed to build a  binary with fuzzing instrumentation
 		// gcc doesn't have -fsanitize=fuzzer.
-		if val, ok := envutil.LookupEnv(env, "CC"); !ok || path.Base(val) != "clang" {
+		if val, ok := envutil.LookupEnv(env, "CC"); !ok || !strings.HasPrefix(path.Base(val), "clang") {
 			env, err = envutil.Setenv(env, "CC", "clang")
 			if err != nil {
 				return nil, err
 			}
 		}
-		if val, ok := envutil.LookupEnv(env, "CXX"); !ok || path.Base(val) != "clang++" {
+		if val, ok := envutil.LookupEnv(env, "CXX"); !ok || !strings.HasPrefix(path.Base(val), "clang++") {
 			env, err = envutil.Setenv(env, "CXX", "clang++")
 			if err != nil {
 				return nil, err
