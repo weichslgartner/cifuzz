@@ -155,6 +155,12 @@ func (b *Bundler) Bundle() error {
 		return err
 	}
 
+	tempDir, err := os.MkdirTemp("", "cifuzz-bundle-*")
+	if err != nil {
+		return err
+	}
+	defer fileutil.Cleanup(tempDir)
+
 	// Add all fuzz test artifacts to the archive. There will be one "Fuzzer" metadata object for each pair of fuzz test
 	// and Builder instance.
 	var fuzzers []*artifact.Fuzzer
@@ -162,7 +168,7 @@ func (b *Bundler) Bundle() error {
 	deduplicatedSystemDeps := make(map[string]struct{})
 	for _, buildResults := range allVariantBuildResults {
 		for fuzzTest, buildResult := range buildResults {
-			fuzzTestFuzzers, fuzzTestArchiveManifest, systemDeps, err := b.assembleArtifacts(fuzzTest, buildResult, b.Opts.ProjectDir)
+			fuzzTestFuzzers, fuzzTestArchiveManifest, systemDeps, err := b.assembleArtifacts(fuzzTest, buildResult, b.Opts.ProjectDir, tempDir)
 			if err != nil {
 				return err
 			}
@@ -183,12 +189,6 @@ func (b *Bundler) Bundle() error {
 	}
 	systemDeps := maps.Keys(deduplicatedSystemDeps)
 	sort.Strings(systemDeps)
-
-	tempDir, err := os.MkdirTemp("", "cifuzz-bundle-*")
-	if err != nil {
-		return err
-	}
-	defer fileutil.Cleanup(tempDir)
 
 	// Create and add the top-level metadata file.
 	metadata := &artifact.Metadata{
@@ -255,7 +255,7 @@ func (b *Bundler) buildAllVariants() ([]map[string]*build.Result, error) {
 	// Coverage builds are not supported by MSVb.
 	if runtime.GOOS != "windows" {
 		coverageVariant := configureVariant{
-			Engine:     "replayer",
+			Engine:     "libfuzzer",
 			Sanitizers: []string{"coverage"},
 		}
 		configureVariants = append(configureVariants, coverageVariant)
@@ -280,7 +280,7 @@ func (b *Bundler) buildAllVariants() ([]map[string]*build.Result, error) {
 		}
 
 		var typeDisplayString string
-		if variant.Engine == "replayer" {
+		if isCoverageBuild(builder.Sanitizers) {
 			typeDisplayString = "coverage"
 		} else {
 			typeDisplayString = "fuzzing"
@@ -326,7 +326,7 @@ func (b *Bundler) checkDependencies() (bool, error) {
 }
 
 //nolint:nonamedreturns
-func (b *Bundler) assembleArtifacts(fuzzTest string, buildResult *build.Result, projectDir string) (
+func (b *Bundler) assembleArtifacts(fuzzTest string, buildResult *build.Result, projectDir string, tempDir string) (
 	fuzzers []*artifact.Fuzzer,
 	archiveManifest map[string]string,
 	systemDeps []string,
@@ -502,11 +502,15 @@ depsLoop:
 		baseFuzzerInfo.LibraryPaths = []string{externalLibrariesPrefix}
 	}
 
-	if buildResult.Engine == "replayer" {
+	if isCoverageBuild(buildResult.Sanitizers) {
 		fuzzer := baseFuzzerInfo
 		fuzzer.Engine = "LLVM_COV"
-		// Coverage engines require very specific arguments, so don't let users pass in their own flags.
-		fuzzer.EngineOptions.Flags = nil
+		// We use libFuzzer's crash-resistant merge mode. The first positional argument has to be an empty directory,
+		// for which we use the working directory (empty at the beginning of a job as we include an empty work_dir in
+		// the bundle). The second positional argument is the corpus directory passed in by the backend.
+		// Since most libFuzzer options are not useful or potentially disruptive for coverage runs, we do not include
+		// flags passed in via `--engine_args`.
+		fuzzer.EngineOptions.Flags = []string{"-merge=1", "."}
 		fuzzers = []*artifact.Fuzzer{&fuzzer}
 		// Coverage builds are separate from sanitizer builds, so we don't have any other fuzzers to add.
 		return
@@ -570,5 +574,18 @@ func fuzzTestPrefix(fuzzTest string, buildResult *build.Result) string {
 	if sanitizerSegment == "" {
 		sanitizerSegment = "none"
 	}
-	return filepath.Join(buildResult.Engine, sanitizerSegment, fuzzTest)
+	engine := buildResult.Engine
+	if isCoverageBuild(buildResult.Sanitizers) {
+		// The backend currently only passes the corpus directory (rather than the files contained in it) as
+		// an argument to the coverage binary if it finds the substring "replayer/coverage" in the fuzz test archive
+		// path.
+		// FIXME: Remove this workaround as soon as the artifact spec provides a way to specify compatibility with
+		//  directory arguments.
+		engine = "replayer"
+	}
+	return filepath.Join(engine, sanitizerSegment, fuzzTest)
+}
+
+func isCoverageBuild(sanitizers []string) bool {
+	return len(sanitizers) == 1 && sanitizers[0] == "coverage"
 }
