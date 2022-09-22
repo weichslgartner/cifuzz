@@ -458,7 +458,11 @@ func (c *coverageCmd) indexRawProfile(fuzzTestExecutable string) error {
 
 func (c *coverageCmd) generateHTMLReport(executable string, runtimeDeps []string) error {
 	args := []string{"show", "-format=html"}
-	args = append(args, c.ignoreCifuzzIncludesArgs()...)
+	ignoreCifuzzIncludesArgs, err := c.getIgnoreCifuzzIncludesArgs()
+	if err != nil {
+		return err
+	}
+	args = append(args, ignoreCifuzzIncludesArgs...)
 	report, err := c.runLlvmCov(args, executable, runtimeDeps)
 	if err != nil {
 		return err
@@ -539,7 +543,11 @@ func (c *coverageCmd) runLlvmCov(args []string, fuzzTestExecutable string, runti
 
 func (c *coverageCmd) generateLcovReport(executable string, runtimeDeps []string) error {
 	args := []string{"export", "-format=lcov"}
-	args = append(args, c.ignoreCifuzzIncludesArgs()...)
+	ignoreCifuzzIncludesArgs, err := c.getIgnoreCifuzzIncludesArgs()
+	if err != nil {
+		return err
+	}
+	args = append(args, ignoreCifuzzIncludesArgs...)
 	report, err := c.runLlvmCov(args, executable, runtimeDeps)
 	if err != nil {
 		return err
@@ -566,7 +574,11 @@ func (c *coverageCmd) generateLcovReport(executable string, runtimeDeps []string
 
 func (c *coverageCmd) lcovReportSummary(fuzzTestExecutable string, runtimeDeps []string) (string, error) {
 	args := []string{"export", "-format=lcov", "-summary-only"}
-	args = append(args, c.ignoreCifuzzIncludesArgs()...)
+	ignoreCifuzzIncludesArgs, err := c.getIgnoreCifuzzIncludesArgs()
+	if err != nil {
+		return "", err
+	}
+	args = append(args, ignoreCifuzzIncludesArgs...)
 	output, err := c.runLlvmCov(args, fuzzTestExecutable, runtimeDeps)
 	if err != nil {
 		return "", err
@@ -575,15 +587,12 @@ func (c *coverageCmd) lcovReportSummary(fuzzTestExecutable string, runtimeDeps [
 	return output, nil
 }
 
-func (c *coverageCmd) ignoreCifuzzIncludesArgs() []string {
+func (c *coverageCmd) getIgnoreCifuzzIncludesArgs() ([]string, error) {
 	cifuzzIncludePath, err := runfiles.Finder.CIFuzzIncludePath()
 	if err != nil {
-		// This should be impossible to reach since we found the path during
-		// compilation. If it can't be found now, there is no point in ignoring
-		// it.
-		return nil
+		return nil, err
 	}
-	return []string{"-ignore-filename-regex=" + regexp.QuoteMeta(cifuzzIncludePath) + "/.*"}
+	return []string{"-ignore-filename-regex=" + regexp.QuoteMeta(cifuzzIncludePath) + "/.*"}, nil
 }
 
 func (c *coverageCmd) rawProfilePattern() string {
