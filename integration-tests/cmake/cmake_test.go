@@ -5,7 +5,10 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
+	"net"
+	"net/http"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -32,6 +35,7 @@ import (
 	"code-intelligence.com/cifuzz/util/envutil"
 	"code-intelligence.com/cifuzz/util/executil"
 	"code-intelligence.com/cifuzz/util/fileutil"
+	"code-intelligence.com/cifuzz/util/stringutil"
 	"code-intelligence.com/cifuzz/util/testutil"
 )
 
@@ -211,6 +215,11 @@ func TestIntegration_CMake_InitCreateRunCoverageBundle(t *testing.T) {
 
 	// Run cifuzz bundle and verify the contents of the archive.
 	testBundle(t, dir, cifuzz)
+
+	// The remote-run command is currently only supported on Linux
+	if runtime.GOOS == "linux" {
+		testRemoteRun(t, dir, cifuzz)
+	}
 }
 
 func copyTestdataDir(t *testing.T) string {
@@ -664,6 +673,104 @@ func testBundle(t *testing.T, dir string, cifuzz string) {
 	err = cmd.Run()
 	require.NoError(t, err)
 	require.FileExists(t, coverageProfile)
+}
+
+func testRemoteRun(t *testing.T, dir string, cifuzz string) {
+	projectName := "test-project"
+	artifactsName := "test-artifacts-123"
+	token := "test-token"
+
+	// Start a mock server to handle our requests
+	server := startMockServer(t, projectName, artifactsName)
+
+	tempDir, err := os.MkdirTemp("", "cifuzz-archive-*")
+	require.NoError(t, err)
+	defer fileutil.Cleanup(tempDir)
+	archivePath := filepath.Join(tempDir, "parser_fuzz_test.tar.gz")
+	defer fileutil.Cleanup(archivePath)
+
+	// Create a dictionary
+	dictPath := filepath.Join(tempDir, "some_dict")
+	err = os.WriteFile(dictPath, []byte("test-dictionary-content"), 0600)
+	require.NoError(t, err)
+
+	// Create a seed corpus directory with an empty seed
+	seedCorpusDir, err := os.MkdirTemp(tempDir, "seeds-")
+	require.NoError(t, err)
+	err = fileutil.Touch(filepath.Join(seedCorpusDir, "empty"))
+	require.NoError(t, err)
+
+	// Bundle all fuzz tests into an archive.
+	cmd := executil.Command(cifuzz, "remote-run",
+		"-o", archivePath,
+		"--dict", dictPath,
+		"--engine-arg", "arg1",
+		"--engine-arg", "arg2",
+		"--fuzz-test-arg", "arg3",
+		"--fuzz-test-arg", "arg4",
+		"--seed-corpus", seedCorpusDir,
+		"--timeout", "100m",
+		"--project", projectName,
+		"--server", server.address,
+	)
+	cmd.Env, err = envutil.Setenv(os.Environ(), "CIFUZZ_API_TOKEN", token)
+	require.NoError(t, err)
+	cmd.Dir = dir
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	t.Logf("Command: %s", cmd.String())
+	err = cmd.Run()
+	require.NoError(t, err)
+	require.FileExists(t, archivePath)
+
+	require.True(t, server.artifactsUploaded)
+	require.True(t, server.runStarted)
+}
+
+type mockServer struct {
+	address           string
+	artifactsUploaded bool
+	runStarted        bool
+}
+
+func startMockServer(t *testing.T, projectName, artifactsName string) *mockServer {
+	server := &mockServer{}
+
+	handleUpload := func(w http.ResponseWriter, req *http.Request) {
+		_, err := io.ReadAll(req.Body)
+		require.NoError(t, err)
+		_, err = fmt.Fprintf(w, `{"display-name": "test-artifacts", "resource-name": "%s"}`, artifactsName)
+		require.NoError(t, err)
+		server.artifactsUploaded = true
+	}
+
+	handleStartRun := func(w http.ResponseWriter, req *http.Request) {
+		_, err := io.ReadAll(req.Body)
+		require.NoError(t, err)
+		_, err = fmt.Fprintf(w, `{"name": "test-campaign-run-123"}`)
+		require.NoError(t, err)
+		server.runStarted = true
+	}
+
+	handleDefault := func(w http.ResponseWriter, req *http.Request) {
+		require.Fail(t, "Unexpected request", stringutil.PrettyString(req))
+	}
+
+	http.HandleFunc(fmt.Sprintf("/v2/projects/%s/artifacts/import", projectName), handleUpload)
+	http.HandleFunc(fmt.Sprintf("/v1/%s:run", artifactsName), handleStartRun)
+	http.HandleFunc("/", handleDefault)
+
+	listener, err := net.Listen("tcp4", ":0")
+	require.NoError(t, err)
+
+	server.address = fmt.Sprintf("http://127.0.0.1:%d", listener.Addr().(*net.TCPAddr).Port)
+
+	go func() {
+		err = http.Serve(listener, nil)
+		require.NoError(t, err)
+	}()
+
+	return server
 }
 
 func getFindings(t *testing.T, cifuzz string, dir string) []*finding.Finding {
