@@ -357,7 +357,7 @@ func (r *Runner) RunLibfuzzerAndReport(ctx context.Context, args []string, env [
 		}
 	})
 
-	return routines.Wait()
+	return errors.WithStack(routines.Wait())
 }
 
 func (r *Runner) FuzzerEnvironment() ([]string, error) {
