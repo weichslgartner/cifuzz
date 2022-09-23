@@ -21,3 +21,4 @@
 /examples @jochil
 /pkg/coverage @jochil
 /pkg/dependencies @jochil
+/pkg/desktop @jochil

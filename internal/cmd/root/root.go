@@ -84,6 +84,12 @@ func New() (*cobra.Command, error) {
 		return nil, errors.WithStack(err)
 	}
 
+	rootCmd.PersistentFlags().Bool("no-notifications", false,
+		"Turn off desktop notifications")
+	if err := viper.BindPFlag("no-notifications", rootCmd.PersistentFlags().Lookup("no-notifications")); err != nil {
+		return nil, errors.WithStack(err)
+	}
+
 	rootCmd.SetFlagErrorFunc(rootFlagErrorFunc)
 
 	cobra.EnableCommandSorting = false

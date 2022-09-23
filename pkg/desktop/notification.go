@@ -5,6 +5,7 @@ import (
 	"runtime"
 
 	"github.com/gen2brain/beeep"
+	"github.com/spf13/viper"
 
 	"code-intelligence.com/cifuzz/pkg/log"
 )
@@ -13,8 +14,9 @@ import (
 // program is running in a desktop environment
 func Notify(title, body string) {
 
-	// just skip notifications when running in CI/CD
-	if os.Getenv("CI") != "" {
+	// just skip notifications when running in CI/CD or user set
+	// no-notifications flag
+	if os.Getenv("CI") != "" || viper.GetBool("no-notifications") {
 		return
 	}
 
