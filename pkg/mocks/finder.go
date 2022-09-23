@@ -70,3 +70,8 @@ func (m *RunfilesFinderMock) VSCodeTasksPath() (string, error) {
 	args := m.Called()
 	return args.String(0), args.Error(1)
 }
+
+func (m *RunfilesFinderMock) LogoPath() (string, error) {
+	args := m.Called()
+	return args.String(0), args.Error(1)
+}

@@ -25,6 +25,7 @@ type RunfilesFinder interface {
 	ProcessWrapperPath() (string, error)
 	ReplayerSourcePath() (string, error)
 	VSCodeTasksPath() (string, error)
+	LogoPath() (string, error)
 }
 
 var Finder RunfilesFinder

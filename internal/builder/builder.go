@@ -189,6 +189,11 @@ func (i *CIFuzzBuilder) BuildCIFuzzAndDeps() error {
 		return err
 	}
 
+	err = i.CopyLogo()
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -378,6 +383,29 @@ func (i *CIFuzzBuilder) CopyVSCodeTasks() error {
 	tasksSrc := filepath.Join(i.projectDir, "share", "tasks.json")
 	destDir := filepath.Join(i.shareDir(), "share", "tasks.json")
 	err = copy.Copy(tasksSrc, destDir)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	return nil
+}
+
+func (i *CIFuzzBuilder) CopyLogo() error {
+	var err error
+	err = i.Lock()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		err = i.Unlock()
+		if err != nil {
+			log.Printf("error: %v", err)
+		}
+	}()
+
+	logoSrc := filepath.Join(i.projectDir, "share", "logo.png")
+	destDir := filepath.Join(i.shareDir(), "share", "logo.png")
+	err = copy.Copy(logoSrc, destDir)
 	if err != nil {
 		return errors.WithStack(err)
 	}

@@ -9,6 +9,7 @@ import (
 	"github.com/spf13/viper"
 
 	"code-intelligence.com/cifuzz/pkg/log"
+	"code-intelligence.com/cifuzz/pkg/runfiles"
 )
 
 // Notify sends a desktop notification, but only when the
@@ -28,7 +29,13 @@ func Notify(title, body string) {
 	hasDisplayOnLinux := os.Getenv("DISPLAY") != ""
 
 	if hasDisplayOnLinux || onWindows || onMac {
-		err := beeep.Notify(title, body, "")
+		// try to get logo from runfiles finder, if not just continue
+		logoPath, err := runfiles.Finder.LogoPath()
+		if err != nil {
+			log.Debugf("unable to get logo from runfiles finder (%s): %v", title, err)
+		}
+
+		err = beeep.Notify(title, body, logoPath)
 		if err != nil {
 			// no more error handling as sending notifications is not that critical
 			log.Debugf("unable to send desktop notification (%s): %v", title, err)

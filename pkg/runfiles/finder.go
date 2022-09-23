@@ -69,6 +69,10 @@ func (f RunfilesFinderImpl) VSCodeTasksPath() (string, error) {
 	return f.findFollowSymlinks("share/cifuzz/share/tasks.json")
 }
 
+func (f RunfilesFinderImpl) LogoPath() (string, error) {
+	return f.findFollowSymlinks("share/cifuzz/share/logo.png")
+}
+
 func (f RunfilesFinderImpl) findFollowSymlinks(relativePath string) (string, error) {
 	absolutePath := filepath.Join(f.InstallDir, relativePath)
 
