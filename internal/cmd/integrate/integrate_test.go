@@ -14,7 +14,7 @@ import (
 
 	builderPkg "code-intelligence.com/cifuzz/internal/builder"
 	initCmd "code-intelligence.com/cifuzz/internal/cmd/init"
-	"code-intelligence.com/cifuzz/pkg/cmdutils"
+	"code-intelligence.com/cifuzz/internal/cmdutils"
 	"code-intelligence.com/cifuzz/pkg/log"
 	"code-intelligence.com/cifuzz/pkg/mocks"
 	"code-intelligence.com/cifuzz/util/fileutil"

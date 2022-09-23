@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	initCmd "code-intelligence.com/cifuzz/internal/cmd/init"
-	"code-intelligence.com/cifuzz/pkg/cmdutils"
+	"code-intelligence.com/cifuzz/internal/cmdutils"
 	"code-intelligence.com/cifuzz/pkg/finding"
 	"code-intelligence.com/cifuzz/pkg/log"
 	"code-intelligence.com/cifuzz/util/fileutil"

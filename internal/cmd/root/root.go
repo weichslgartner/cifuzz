@@ -21,8 +21,8 @@ import (
 	reloadCmd "code-intelligence.com/cifuzz/internal/cmd/reload"
 	remoteRunCmd "code-intelligence.com/cifuzz/internal/cmd/remote-run"
 	runCmd "code-intelligence.com/cifuzz/internal/cmd/run"
+	"code-intelligence.com/cifuzz/internal/cmdutils"
 	"code-intelligence.com/cifuzz/internal/config"
-	"code-intelligence.com/cifuzz/pkg/cmdutils"
 	"code-intelligence.com/cifuzz/pkg/log"
 )
 
