@@ -76,6 +76,8 @@ type bundleOpts struct {
 	FuzzTestArgs   []string      `mapstructure:"fuzz-test-args"`
 	SeedCorpusDirs []string      `mapstructure:"seed-corpus-dirs"`
 	Timeout        time.Duration `mapstructure:"timeout"`
+	Branch         string
+	Commit         string
 
 	fuzzTests  []string
 	outputPath string
@@ -133,6 +135,8 @@ If no fuzz tests are specified all fuzz tests are added to the bundle.`,
 			cmdutils.ViperMustBindPFlag("fuzz-test-args", cmd.Flags().Lookup("fuzz-test-arg"))
 			cmdutils.ViperMustBindPFlag("seed-corpus-dirs", cmd.Flags().Lookup("seed-corpus"))
 			cmdutils.ViperMustBindPFlag("timeout", cmd.Flags().Lookup("timeout"))
+			cmdutils.ViperMustBindPFlag("branch", cmd.Flags().Lookup("branch"))
+			cmdutils.ViperMustBindPFlag("commit", cmd.Flags().Lookup("commit"))
 
 			_, err := config.ParseProjectConfig(opts)
 			if err != nil {
@@ -167,6 +171,8 @@ If no fuzz tests are specified all fuzz tests are added to the bundle.`,
 	cmd.Flags().StringArrayP("seed-corpus", "s", nil, "A `directory` containing sample inputs for the code under test.\nSee https://llvm.org/docs/LibFuzzer.html#corpus.")
 	cmd.Flags().Duration("timeout", 0, "Maximum time to run the fuzz test, e.g. \"30m\", \"1h\". The default is to run indefinitely.")
 	cmd.Flags().StringVarP(&opts.outputPath, "output", "o", "", "Output path of the artifact (.tar.gz)")
+	cmd.Flags().StringVar(&opts.Branch, "branch", "", "Branch name to get used instead of the default detecting mechanism. Used in bundle config to identify code revision.")
+	cmd.Flags().StringVar(&opts.Commit, "commit", "", "Commit to get used instead of default detecing mechanism. Used in bundle config to identify code revision.")
 
 	return cmd
 }
@@ -246,7 +252,7 @@ func (c *bundleCmd) run() error {
 			// TODO(fmeum): Make configurable.
 			Docker: "ubuntu",
 		},
-		CodeRevision: getCodeRevision(),
+		CodeRevision: c.getCodeRevision(),
 	}
 	metadataYamlContent, err := metadata.ToYaml()
 	if err != nil {
@@ -568,27 +574,29 @@ depsLoop:
 	return
 }
 
-// fuzzTestPrefix returns the path in the resulting artifact archive under which fuzz test specific files should be
-// added.
-func fuzzTestPrefix(fuzzTest string, buildResult *build.Result) string {
-	sanitizerSegment := strings.Join(buildResult.Sanitizers, "+")
-	if sanitizerSegment == "" {
-		sanitizerSegment = "none"
-	}
-	return filepath.Join(buildResult.Engine, sanitizerSegment, fuzzTest)
-}
+func (c *bundleCmd) getCodeRevision() *artifact.CodeRevision {
+	var err error
+	var gitCommit string
+	var gitBranch string
 
-func getCodeRevision() *artifact.CodeRevision {
-	gitCommit, err := vcs.GitCommit()
-	if err != nil {
-		log.Debugf("failed to get Git commit: %+v", err)
-		return nil
+	if c.opts.Commit == "" {
+		gitCommit, err = vcs.GitCommit()
+		if err != nil {
+			log.Debugf("failed to get Git commit: %+v", err)
+			return nil
+		}
+	} else {
+		gitCommit = c.opts.Commit
 	}
 
-	gitBranch, err := vcs.GitBranch()
-	if err != nil {
-		log.Debugf("failed to get Git branch: %+v", err)
-		return nil
+	if c.opts.Branch == "" {
+		gitBranch, err = vcs.GitBranch()
+		if err != nil {
+			log.Debugf("failed to get Git branch: %+v", err)
+			return nil
+		}
+	} else {
+		gitBranch = c.opts.Branch
 	}
 
 	if vcs.GitIsDirty() {
@@ -601,4 +609,14 @@ func getCodeRevision() *artifact.CodeRevision {
 			Branch: gitBranch,
 		},
 	}
+}
+
+// fuzzTestPrefix returns the path in the resulting artifact archive under which fuzz test specific files should be
+// added.
+func fuzzTestPrefix(fuzzTest string, buildResult *build.Result) string {
+	sanitizerSegment := strings.Join(buildResult.Sanitizers, "+")
+	if sanitizerSegment == "" {
+		sanitizerSegment = "none"
+	}
+	return filepath.Join(buildResult.Engine, sanitizerSegment, fuzzTest)
 }

@@ -573,6 +573,8 @@ func testBundle(t *testing.T, dir string, cifuzz string) {
 		"--fuzz-test-arg", "arg4",
 		"--seed-corpus", seedCorpusDir,
 		"--timeout", "100m",
+		"--branch", "my-branch",
+		"--commit", "123456abcdef",
 	)
 	cmd.Dir = dir
 	cmd.Stdout = os.Stdout
@@ -598,6 +600,10 @@ func testBundle(t *testing.T, dir string, cifuzz string) {
 	metadata := &artifact.Metadata{}
 	err = yaml.Unmarshal(metadataYaml, metadata)
 	require.NoError(t, err)
+
+	// Verify code revision given by `--branch` and `--commit-sha` flags
+	require.Equal(t, "my-branch", metadata.CodeRevision.Git.Branch)
+	require.Equal(t, "123456abcdef", metadata.CodeRevision.Git.Commit)
 
 	// Verify that the metadata contain the engine args and fuzz test args
 	require.Equal(t, []string{"arg1", "arg2"}, metadata.Fuzzers[0].EngineOptions.Flags)
