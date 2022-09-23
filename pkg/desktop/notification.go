@@ -1,6 +1,7 @@
 package desktop
 
 import (
+	"flag"
 	"os"
 	"runtime"
 
@@ -14,9 +15,11 @@ import (
 // program is running in a desktop environment
 func Notify(title, body string) {
 
-	// just skip notifications when running in CI/CD or user set
-	// no-notifications flag
-	if os.Getenv("CI") != "" || viper.GetBool("no-notifications") {
+	// just skip notifications when running in CI/CD, user set
+	// no-notifications flag or the program is executed by go test
+	if os.Getenv("CI") != "" ||
+		viper.GetBool("no-notifications") ||
+		flag.Lookup("test.v") != nil {
 		return
 	}
 

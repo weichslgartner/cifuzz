@@ -246,6 +246,7 @@ func runFuzzer(t *testing.T, cifuzz string, dir string, opts *runFuzzerOptions) 
 	runCtx, closeRunCtx := context.WithCancel(context.Background())
 	defer closeRunCtx()
 	args := append([]string{"run", "-v", "parser_fuzz_test",
+		"--no-notifications",
 		"--engine-arg=-seed=1",
 		"--engine-arg=-runs=1000000"},
 		opts.args...)

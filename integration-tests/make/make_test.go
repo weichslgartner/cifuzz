@@ -137,6 +137,7 @@ func runFuzzer(t *testing.T, cifuzz string, dir string, fuzzTest string, expecte
 	cmd := executil.Command(
 		cifuzz,
 		"run", fuzzTest,
+		"--no-notifications",
 		// The crashes are expected to be found quickly.
 		"--engine-arg=-runs=1000000",
 		"--engine-arg=-seed=1",
