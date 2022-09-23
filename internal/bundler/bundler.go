@@ -505,6 +505,8 @@ depsLoop:
 	if buildResult.Engine == "replayer" {
 		fuzzer := baseFuzzerInfo
 		fuzzer.Engine = "LLVM_COV"
+		// Coverage engines require very specific arguments, so don't let users pass in their own flags.
+		fuzzer.EngineOptions.Flags = nil
 		fuzzers = []*artifact.Fuzzer{&fuzzer}
 		// Coverage builds are separate from sanitizer builds, so we don't have any other fuzzers to add.
 		return
