@@ -377,7 +377,7 @@ func (c *runCmd) runFuzzTest(buildResult *build.Result) error {
 		// It's expected that libFuzzer might fail due to user
 		// configuration, so we print the error without the stack trace.
 		log.Error(err)
-		return cmdutils.ErrSilent
+		return cmdutils.WrapSilentError(err)
 	}
 
 	return err
