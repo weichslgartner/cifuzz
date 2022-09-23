@@ -248,7 +248,6 @@ func (b *Builder) setCoverageEnv() error {
 	ldflags := []string{
 		// ----- Flags used to link in coverage runtime -----
 		"-fprofile-instr-generate",
-		"-fcoverage-mapping",
 	}
 	b.env, err = envutil.Setenv(b.env, "LDFLAGS", strings.Join(ldflags, " "))
 	if err != nil {

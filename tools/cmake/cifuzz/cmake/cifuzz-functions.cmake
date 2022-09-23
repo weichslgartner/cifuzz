@@ -97,7 +97,7 @@ function(enable_fuzz_testing)
           # LLVM's continous coverage mode currently requires compile-time support on non-macOS platforms.
           add_compile_options(-mllvm -runtime-counter-relocation)
         endif()
-        add_link_options(-fprofile-instr-generate -fcoverage-mapping)
+        add_link_options(-fprofile-instr-generate)
       endif()
     elseif(sanitizer STREQUAL gcov)
       if(MSVC)
