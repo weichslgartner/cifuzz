@@ -68,8 +68,8 @@ If no fuzz tests are specified all fuzz tests are added to the bundle.`,
 	cmd.Flags().StringArrayP("seed-corpus", "s", nil, "A `directory` containing sample inputs for the code under test.\nSee https://llvm.org/docs/LibFuzzer.html#corpus.")
 	cmd.Flags().Duration("timeout", 0, "Maximum time to run the fuzz test, e.g. \"30m\", \"1h\". The default is to run indefinitely.")
 	cmd.Flags().StringVarP(&opts.OutputPath, "output", "o", "", "Output path of the artifact (.tar.gz)")
-	cmd.Flags().StringVar(&opts.Branch, "branch", "", "Branch name to get used instead of the default detecting mechanism. Used in bundle config to identify code revision.")
-	cmd.Flags().StringVar(&opts.Commit, "commit", "", "Commit to get used instead of default detecing mechanism. Used in bundle config to identify code revision.")
+	cmd.Flags().StringVar(&opts.Branch, "branch", "", "Branch name to use in the artifacts config. By default, the currently checked out git branch is used.")
+	cmd.Flags().StringVar(&opts.Commit, "commit", "", "Commit to use in the artifacts config. By default, the head of the currently checked out git branch is used.")
 
 	return cmd
 }
