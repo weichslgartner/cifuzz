@@ -65,7 +65,7 @@ If no fuzz tests are specified all fuzz tests are added to the bundle.`,
 		cmdutils.AddSeedCorpusFlag,
 		cmdutils.AddTimeoutFlag,
 	)
-	cmd.Flags().StringVarP(&opts.OutputPath, "output", "o", "", "Output path of the artifact (.tar.gz)")
+	cmd.Flags().StringVarP(&opts.OutputPath, "output", "o", "", "Output path of the artifacts archive (.tar.gz)")
 
 	return cmd
 }

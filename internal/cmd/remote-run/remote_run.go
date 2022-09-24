@@ -125,7 +125,7 @@ https://github.com/CodeIntelligenceTesting/cifuzz/issues`, system)
 		cmdutils.AddSeedCorpusFlag,
 		cmdutils.AddTimeoutFlag,
 	)
-	cmd.Flags().StringVarP(&opts.OutputPath, "output", "o", "", "Output path of the artifact (.tar.gz)")
+	cmd.Flags().StringVarP(&opts.OutputPath, "output", "o", "", "Output path of the artifacts archive (.tar.gz)")
 	// TODO: Make the project name more accessible in the web app (currently
 	//       it's only shown in the URL)
 	cmd.Flags().StringP("project", "p", "", `The name of the CI Fuzz project you want to start a fuzzing run for,
