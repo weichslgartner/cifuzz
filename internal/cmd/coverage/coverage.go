@@ -96,6 +96,7 @@ type coverageCmd struct {
 
 func New() *cobra.Command {
 	opts := &coverageOptions{}
+	var bindFlags func()
 
 	cmd := &cobra.Command{
 		Use:   "coverage [flags] <fuzz test>",
@@ -122,13 +123,9 @@ Write out an lcov trace file:
 			// Bind viper keys to flags. We can't do this in the New
 			// function, because that would re-bind viper keys which
 			// were bound to the flags of other commands before.
+			bindFlags()
 			cmdutils.ViperMustBindPFlag("format", cmd.Flags().Lookup("format"))
 			cmdutils.ViperMustBindPFlag("output", cmd.Flags().Lookup("output"))
-			cmdutils.ViperMustBindPFlag("build-command", cmd.Flags().Lookup("build-command"))
-			cmdutils.ViperMustBindPFlag("build-jobs", cmd.Flags().Lookup("build-jobs"))
-			cmdutils.ViperMustBindPFlag("seed-corpus-dirs", cmd.Flags().Lookup("seed-corpus"))
-			cmdutils.ViperMustBindPFlag("fuzz-test-args", cmd.Flags().Lookup("fuzz-test-arg"))
-			cmdutils.ViperMustBindPFlag("use-sandbox", cmd.Flags().Lookup("use-sandbox"))
 
 			projectDir, err := config.FindAndParseProjectConfig(opts)
 			if err != nil {
@@ -148,16 +145,15 @@ Write out an lcov trace file:
 
 	// Note: If a flag should be configurable via cifuzz.yaml as well,
 	// bind it to viper in the PreRunE function.
+	bindFlags = cmdutils.AddFlags(cmd,
+		cmdutils.AddBuildCommandFlag,
+		cmdutils.AddBuildJobsFlag,
+		cmdutils.AddFuzzTestArgFlag,
+		cmdutils.AddSeedCorpusFlag,
+		cmdutils.AddUseSandboxFlag,
+	)
 	cmd.Flags().StringP("format", "f", "html", "Output format of the coverage report (html/lcov).")
 	cmd.Flags().StringP("output", "o", "", "Output path of the coverage report.")
-	cmd.Flags().String("build-command", "", "The `command` to build the fuzz test. Ignored when the build system is CMake.")
-	cmd.Flags().Uint("build-jobs", 0, "Maximum number of concurrent processes to use when building.\nIf argument is omitted the native build tool's default number is used.\nOnly available when the build system is CMake.")
-	cmd.Flags().Lookup("build-jobs").NoOptDefVal = "0"
-	// TODO(afl): Also link to https://aflplus.plus/docs/fuzzing_in_depth/#a-collecting-inputs
-	cmd.Flags().StringArrayP("seed-corpus", "s", nil, "A `directory` containing sample inputs for the code under test.\nSee https://llvm.org/docs/LibFuzzer.html#corpus.")
-	cmd.Flags().StringArray("fuzz-test-arg", nil, "Command-line `argument` to pass to the fuzz test.")
-	cmd.Flags().Bool("use-sandbox", false, "By default, fuzz tests are executed in a sandbox to prevent accidental damage to the system.\nUse --use-sandbox=false to run the fuzz test unsandboxed.\nOnly supported on Linux.")
-	viper.SetDefault("use-sandbox", runtime.GOOS == "linux")
 
 	return cmd
 }

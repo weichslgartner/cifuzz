@@ -16,6 +16,7 @@ func New() *cobra.Command {
 }
 
 func newWithOptions(opts *bundler.Opts) *cobra.Command {
+	var bindFlags func()
 	cmd := &cobra.Command{
 		Use:   "bundle [flags] [<fuzz test>]...",
 		Short: "Bundles fuzz tests into an archive",
@@ -28,14 +29,9 @@ If no fuzz tests are specified all fuzz tests are added to the bundle.`,
 			// Bind viper keys to flags. We can't do this in the New
 			// function, because that would re-bind viper keys which
 			// were bound to the flags of other commands before.
-			cmdutils.ViperMustBindPFlag("build-jobs", cmd.Flags().Lookup("build-jobs"))
-			cmdutils.ViperMustBindPFlag("dict", cmd.Flags().Lookup("dict"))
-			cmdutils.ViperMustBindPFlag("engine-args", cmd.Flags().Lookup("engine-arg"))
-			cmdutils.ViperMustBindPFlag("fuzz-test-args", cmd.Flags().Lookup("fuzz-test-arg"))
-			cmdutils.ViperMustBindPFlag("seed-corpus-dirs", cmd.Flags().Lookup("seed-corpus"))
-			cmdutils.ViperMustBindPFlag("timeout", cmd.Flags().Lookup("timeout"))
-			cmdutils.ViperMustBindPFlag("branch", cmd.Flags().Lookup("branch"))
-			cmdutils.ViperMustBindPFlag("commit", cmd.Flags().Lookup("commit"))
+			bindFlags()
+
+			// TODO: Fail early if platform is not supported
 
 			projectDir, err := config.FindAndParseProjectConfig(opts)
 			if err != nil {
@@ -59,10 +55,17 @@ If no fuzz tests are specified all fuzz tests are added to the bundle.`,
 		},
 	}
 
-	cmdutils.AddBundleFlags(cmd)
+	bindFlags = cmdutils.AddFlags(cmd,
+		cmdutils.AddBranchFlag,
+		cmdutils.AddBuildJobsFlag,
+		cmdutils.AddCommitFlag,
+		cmdutils.AddDictFlag,
+		cmdutils.AddEngineArgFlag,
+		cmdutils.AddFuzzTestArgFlag,
+		cmdutils.AddSeedCorpusFlag,
+		cmdutils.AddTimeoutFlag,
+	)
 	cmd.Flags().StringVarP(&opts.OutputPath, "output", "o", "", "Output path of the artifact (.tar.gz)")
-	cmd.Flags().StringVar(&opts.Branch, "branch", "", "Branch name to use in the artifacts config. By default, the currently checked out git branch is used.")
-	cmd.Flags().StringVar(&opts.Commit, "commit", "", "Commit to use in the artifacts config. By default, the head of the currently checked out git branch is used.")
 
 	return cmd
 }

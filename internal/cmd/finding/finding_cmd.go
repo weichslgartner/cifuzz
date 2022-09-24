@@ -19,8 +19,9 @@ import (
 )
 
 type options struct {
-	PrintJSON bool `mapstructure:"print-json"`
-	ShowAll   bool
+	PrintJSON  bool `mapstructure:"print-json"`
+	ProjectDir string
+	ShowAll    bool
 }
 
 type findingCmd struct {
@@ -30,17 +31,33 @@ type findingCmd struct {
 
 func New() *cobra.Command {
 	opts := &options{}
+	var bindFlags func()
+
 	cmd := &cobra.Command{
 		Use:               "finding [name]",
 		Aliases:           []string{"findings"},
 		Short:             "List and show findings",
 		Args:              cobra.MaximumNArgs(1),
 		ValidArgsFunction: completion.ValidFindings,
-		PreRun: func(cmd *cobra.Command, args []string) {
+		PreRunE: func(cmd *cobra.Command, args []string) error {
 			// Bind viper keys to flags. We can't do this in the New
 			// function, because that would re-bind viper keys which
 			// were bound to the flags of other commands before.
-			cmdutils.ViperMustBindPFlag("print-json", cmd.Flags().Lookup("json"))
+			bindFlags()
+			projectDir, err := config.FindAndParseProjectConfig(opts)
+			if errors.Is(err, os.ErrNotExist) {
+				// The project directory doesn't exist, this is an expected
+				// error, so we print it and return a silent error to avoid
+				// printing a stack trace
+				log.Error(err, fmt.Sprintf("%s\nUse 'cifuzz init' to set up a project for use with cifuzz.", err.Error()))
+				return cmdutils.WrapSilentError(err)
+			}
+			if err != nil {
+				log.Errorf(err, "Failed to parse cifuzz.yaml: %v", err.Error())
+				return cmdutils.WrapSilentError(err)
+			}
+			opts.ProjectDir = projectDir
+			return nil
 		},
 		RunE: func(c *cobra.Command, args []string) error {
 			cmd := findingCmd{Command: c, opts: opts}
@@ -48,29 +65,18 @@ func New() *cobra.Command {
 		},
 	}
 
-	// Note: If a flag should be configurable via cifuzz.yaml as well,
-	//       bind it to viper in the PreRun function.
-	cmd.Flags().BoolVar(&opts.PrintJSON, "json", false, "Print output as JSON")
+	// Note: If a flag should be configurable via viper as well (i.e.
+	//       via cifuzz.yaml and CIFUZZ_* environment variables), bind
+	//       it to viper in the PreRun function.
+	bindFlags = cmdutils.AddPrintJSONFlag(cmd)
 	cmd.Flags().BoolVar(&opts.ShowAll, "all", false, "Show all findings")
 
 	return cmd
 }
 
 func (cmd *findingCmd) run(args []string) error {
-	projectDir, err := config.FindProjectDir()
-	if errors.Is(err, os.ErrNotExist) {
-		// The project directory doesn't exist, this is an expected
-		// error, so we print it and return a silent error to avoid
-		// printing a stack trace
-		log.Error(err, fmt.Sprintf("%s\nUse 'cifuzz init' to set up a project for use with cifuzz.", err.Error()))
-		return cmdutils.ErrSilent
-	}
-	if err != nil {
-		return err
-	}
-
 	if cmd.opts.ShowAll {
-		findings, err := finding.ListFindings(projectDir)
+		findings, err := finding.ListFindings(cmd.opts.ProjectDir)
 		if err != nil {
 			return err
 		}
@@ -94,7 +100,7 @@ func (cmd *findingCmd) run(args []string) error {
 	if len(args) == 0 {
 		// If called without arguments, `cifuzz findings` lists short
 		// descriptions of all findings
-		findings, err := finding.ListFindings(projectDir)
+		findings, err := finding.ListFindings(cmd.opts.ProjectDir)
 		if err != nil {
 			return err
 		}
@@ -127,7 +133,7 @@ func (cmd *findingCmd) run(args []string) error {
 	// If called with one argument, `cifuzz finding <finding name>`
 	// prints the information available for the specified finding
 	findingName := args[0]
-	f, err := finding.LoadFinding(projectDir, findingName)
+	f, err := finding.LoadFinding(cmd.opts.ProjectDir, findingName)
 	if finding.IsNotExistError(err) {
 		log.Errorf(err, "Finding %s does not exist", findingName)
 		return cmdutils.WrapSilentError(err)

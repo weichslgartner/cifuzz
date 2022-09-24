@@ -62,6 +62,8 @@ func New() *cobra.Command {
 }
 
 func newWithOptions(opts *remoteRunOpts) *cobra.Command {
+	var bindFlags func()
+
 	cmd := &cobra.Command{
 		Use:   "remote-run [flags] [<fuzz test>]...",
 		Short: "Build fuzz tests and run them on a remote fuzzing server",
@@ -74,12 +76,7 @@ start a remote fuzzing run.`,
 			// Bind viper keys to flags. We can't do this in the New
 			// function, because that would re-bind viper keys which
 			// were bound to the flags of other commands before.
-			cmdutils.ViperMustBindPFlag("build-jobs", cmd.Flags().Lookup("build-jobs"))
-			cmdutils.ViperMustBindPFlag("dict", cmd.Flags().Lookup("dict"))
-			cmdutils.ViperMustBindPFlag("engine-args", cmd.Flags().Lookup("engine-arg"))
-			cmdutils.ViperMustBindPFlag("fuzz-test-args", cmd.Flags().Lookup("fuzz-test-arg"))
-			cmdutils.ViperMustBindPFlag("seed-corpus-dirs", cmd.Flags().Lookup("seed-corpus"))
-			cmdutils.ViperMustBindPFlag("timeout", cmd.Flags().Lookup("timeout"))
+			bindFlags()
 			cmdutils.ViperMustBindPFlag("project", cmd.Flags().Lookup("project"))
 			cmdutils.ViperMustBindPFlag("server", cmd.Flags().Lookup("server"))
 
@@ -118,11 +115,17 @@ https://github.com/CodeIntelligenceTesting/cifuzz/issues`, system)
 		},
 	}
 
-	cmdutils.AddBundleFlags(cmd)
+	bindFlags = cmdutils.AddFlags(cmd,
+		cmdutils.AddBranchFlag,
+		cmdutils.AddBuildJobsFlag,
+		cmdutils.AddCommitFlag,
+		cmdutils.AddDictFlag,
+		cmdutils.AddEngineArgFlag,
+		cmdutils.AddFuzzTestArgFlag,
+		cmdutils.AddSeedCorpusFlag,
+		cmdutils.AddTimeoutFlag,
+	)
 	cmd.Flags().StringVarP(&opts.OutputPath, "output", "o", "", "Output path of the artifact (.tar.gz)")
-	cmd.Flags().StringVar(&opts.Branch, "branch", "", "Branch name to use in the artifacts config. By default, the currently checked out git branch is used.")
-	cmd.Flags().StringVar(&opts.Commit, "commit", "", "Commit to use in the artifacts config. By default, the head of the currently checked out git branch is used.")
-
 	// TODO: Make the project name more accessible in the web app (currently
 	//       it's only shown in the URL)
 	cmd.Flags().StringP("project", "p", "", `The name of the CI Fuzz project you want to start a fuzzing run for,

@@ -448,6 +448,7 @@ func testBundle(t *testing.T, dir string, cifuzz string) {
 		"--timeout", "100m",
 		"--branch", "my-branch",
 		"--commit", "123456abcdef",
+		"--verbose",
 	)
 	cmd.Dir = dir
 	cmd.Stdout = os.Stdout

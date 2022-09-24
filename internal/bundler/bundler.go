@@ -67,21 +67,22 @@ func versionedLibraryRegexp(unversionedBasename string) *regexp.Regexp {
 }
 
 type Opts struct {
+	Branch         string        `mapstructure:"branch"`
 	BuildSystem    string        `mapstructure:"build-system"`
 	NumBuildJobs   uint          `mapstructure:"build-jobs"`
+	Commit         string        `mapstructure:"commit"`
 	Dictionary     string        `mapstructure:"dict"`
 	EngineArgs     []string      `mapstructure:"engine-args"`
 	FuzzTestArgs   []string      `mapstructure:"fuzz-test-args"`
 	SeedCorpusDirs []string      `mapstructure:"seed-corpus-dirs"`
 	Timeout        time.Duration `mapstructure:"timeout"`
 	ProjectDir     string        `mapstructure:"project-dir"`
-	Branch         string
-	Commit         string
 
-	// Fields which are not configurable via the config file, by setting
+	// Fields which are not configurable via viper (i.e. via cifuzz.yaml
+	// and CIFUZZ_* environment variables), by setting
 	// mapstructure:"-"
-	OutputPath string    `mapstructure:"-"`
 	FuzzTests  []string  `mapstructure:"-"`
+	OutputPath string    `mapstructure:"-"`
 	Stdout     io.Writer `mapstructure:"-"`
 	Stderr     io.Writer `mapstructure:"-"`
 }
