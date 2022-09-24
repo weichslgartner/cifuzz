@@ -88,7 +88,8 @@ func AddEngineArgFlag(cmd *cobra.Command) func() {
 	// TODO(afl): Also link to https://www.mankier.com/8/afl-fuzz
 	cmd.Flags().StringArray("engine-arg", nil,
 		"Command-line `argument` to pass to the fuzzing engine.\n"+
-			"See https://llvm.org/docs/LibFuzzer.html#options.")
+			"See https://llvm.org/docs/LibFuzzer.html#options.\n"+
+			"This flag can be used multiple times.")
 	return func() {
 		ViperMustBindPFlag("engine-args", cmd.Flags().Lookup("engine-arg"))
 	}
@@ -96,7 +97,8 @@ func AddEngineArgFlag(cmd *cobra.Command) func() {
 
 func AddFuzzTestArgFlag(cmd *cobra.Command) func() {
 	cmd.Flags().StringArray("fuzz-test-arg", nil,
-		"Command-line `argument` to pass to the fuzz test.")
+		"Command-line `argument` to pass to the fuzz test.\n"+
+			"This flag can be used multiple times.")
 	return func() {
 		ViperMustBindPFlag("fuzz-test-args", cmd.Flags().Lookup("fuzz-test-arg"))
 	}
