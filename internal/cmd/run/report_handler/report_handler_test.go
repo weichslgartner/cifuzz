@@ -15,7 +15,6 @@ import (
 	"code-intelligence.com/cifuzz/pkg/finding"
 	"code-intelligence.com/cifuzz/pkg/log"
 	"code-intelligence.com/cifuzz/pkg/report"
-	"code-intelligence.com/cifuzz/util/fileutil"
 	"code-intelligence.com/cifuzz/util/testutil"
 )
 
@@ -30,8 +29,9 @@ func TestMain(m *testing.M) {
 	logOutput = bytes.NewBuffer([]byte{})
 	log.Output = logOutput
 
-	testDir = testutil.ChdirToTempDir("report-handler-test-")
-	defer fileutil.Cleanup(testDir)
+	var cleanup func()
+	testDir, cleanup = testutil.ChdirToTempDir("report-handler-test-")
+	defer cleanup()
 
 	m.Run()
 }

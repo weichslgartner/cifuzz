@@ -88,8 +88,8 @@ func InstallCifuzzInTemp(t *testing.T) string {
 
 	opts := builderPkg.Options{Version: "dev", TargetDir: targetDir}
 	builder, err := builderPkg.NewCIFuzzBuilder(opts)
-	defer builder.Cleanup()
 	require.NoError(t, err)
+	defer builder.Cleanup()
 	err = builder.BuildCIFuzzAndDeps()
 	require.NoError(t, err)
 

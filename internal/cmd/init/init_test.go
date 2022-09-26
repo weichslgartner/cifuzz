@@ -7,13 +7,12 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"code-intelligence.com/cifuzz/internal/cmdutils"
-	"code-intelligence.com/cifuzz/util/fileutil"
 	"code-intelligence.com/cifuzz/util/testutil"
 )
 
 func TestMain(m *testing.M) {
-	testTempDir := testutil.ChdirToTempDir("init-cmd-test-")
-	defer fileutil.Cleanup(testTempDir)
+	_, cleanup := testutil.ChdirToTempDir("init-cmd-test-")
+	defer cleanup()
 
 	m.Run()
 }

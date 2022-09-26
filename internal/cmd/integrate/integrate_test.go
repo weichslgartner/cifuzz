@@ -29,8 +29,9 @@ func TestMain(m *testing.M) {
 	log.Output = logOutput
 
 	// Create an empty project directory and change working directory to it
-	testDir = testutil.ChdirToTempDir("integrate-cmd-test")
-	defer fileutil.Cleanup(testDir)
+	var cleanup func()
+	testDir, cleanup = testutil.ChdirToTempDir("integrate-cmd-test")
+	defer cleanup()
 
 	m.Run()
 }

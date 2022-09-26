@@ -8,7 +8,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"code-intelligence.com/cifuzz/util/fileutil"
 	"code-intelligence.com/cifuzz/util/stringutil"
 	"code-intelligence.com/cifuzz/util/testutil"
 )
@@ -16,8 +15,9 @@ import (
 var testBaseDir string
 
 func TestMain(m *testing.M) {
-	testBaseDir = testutil.ChdirToTempDir("finding-test-")
-	defer fileutil.Cleanup(testBaseDir)
+	var cleanup func()
+	testBaseDir, cleanup = testutil.ChdirToTempDir("finding-test-")
+	defer cleanup()
 
 	m.Run()
 }

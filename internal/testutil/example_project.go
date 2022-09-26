@@ -1,6 +1,7 @@
 package testutil
 
 import (
+	"fmt"
 	"path/filepath"
 	"runtime"
 
@@ -12,18 +13,21 @@ import (
 
 // BootstrapExampleProjectForTest copies the given example project to a temporary folder
 // and changes into that directory.
-func BootstrapExampleProjectForTest(prefix, exampleName string) (string, error) {
-	target := testutil.ChdirToTempDir(prefix)
+func BootstrapExampleProjectForTest(prefix, exampleName string) (tempDir string, cleanup func()) { //nolint:nonamedreturns
+	tempDir, cleanup = testutil.ChdirToTempDir(prefix)
 
-	if _, thisFile, _, ok := runtime.Caller(0); ok {
-		basepath := filepath.Dir(thisFile)
-		examplePath := filepath.Join(basepath, "..", "..", "examples", exampleName)
-
-		if err := copy.Copy(examplePath, target); err != nil {
-			return "", errors.WithStack(err)
-		}
-		return target, nil
+	_, thisFile, _, ok := runtime.Caller(0)
+	if !ok {
+		panic("runtime.Caller failed")
 	}
 
-	return "", errors.Errorf("Unable to clone example %s project", exampleName)
+	basepath := filepath.Dir(thisFile)
+	examplePath := filepath.Join(basepath, "..", "..", "examples", exampleName)
+
+	err := copy.Copy(examplePath, tempDir)
+	if err != nil {
+		panic(fmt.Sprintf("copying %v to %v failed: %+v", examplePath, tempDir, errors.WithStack(err)))
+	}
+
+	return tempDir, cleanup
 }

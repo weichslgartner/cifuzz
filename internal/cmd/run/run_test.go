@@ -16,7 +16,6 @@ import (
 	"code-intelligence.com/cifuzz/internal/testutil"
 	"code-intelligence.com/cifuzz/pkg/dependencies"
 	"code-intelligence.com/cifuzz/pkg/log"
-	"code-intelligence.com/cifuzz/util/fileutil"
 )
 
 var testOut io.ReadWriter
@@ -46,11 +45,10 @@ func TestClangMissing(t *testing.T) {
 
 	// clone the example project because this command needs to parse an actual
 	// project config... if there is none it will fail before the dependency check
-	testDir, err := testutil.BootstrapExampleProjectForTest("run-cmd-test", config.BuildSystemCMake)
-	require.NoError(t, err)
-	defer fileutil.Cleanup(testDir)
+	_, cleanup := testutil.BootstrapExampleProjectForTest("run-cmd-test", config.BuildSystemCMake)
+	defer cleanup()
 
-	_, err = cmdutils.ExecuteCommand(t, New(), os.Stdin, "my_fuzz_test")
+	_, err := cmdutils.ExecuteCommand(t, New(), os.Stdin, "my_fuzz_test")
 	require.Error(t, err)
 
 	output, err := io.ReadAll(testOut)
@@ -66,11 +64,10 @@ func TestLlvmSymbolizerVersion(t *testing.T) {
 
 	// clone the example project because this command needs to parse an actual
 	// project config... if there is none it will fail before the dependency check
-	testDir, err := testutil.BootstrapExampleProjectForTest("run-cmd-test", config.BuildSystemCMake)
-	require.NoError(t, err)
-	defer fileutil.Cleanup(testDir)
+	_, cleanup := testutil.BootstrapExampleProjectForTest("run-cmd-test", config.BuildSystemCMake)
+	defer cleanup()
 
-	_, err = cmdutils.ExecuteCommand(t, New(), os.Stdin, "my_fuzz_test")
+	_, err := cmdutils.ExecuteCommand(t, New(), os.Stdin, "my_fuzz_test")
 	require.Error(t, err)
 
 	output, err := io.ReadAll(testOut)

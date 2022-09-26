@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -14,6 +15,8 @@ import (
 	"code-intelligence.com/cifuzz/internal/installer"
 	"code-intelligence.com/cifuzz/util/fileutil"
 )
+
+var ChdirMutex sync.Mutex
 
 // RegisterTestDeps ensures that the test calling this function is rerun (despite caching) if any of the files and
 // directories (and their recursive contents) under the provided paths change.
@@ -53,7 +56,14 @@ func RegisterTestDepOnCIFuzz() {
 }
 
 // ChdirToTempDir creates and changes the working directory to new tmp dir
-func ChdirToTempDir(prefix string) string {
+func ChdirToTempDir(prefix string) (tempDir string, cleanup func()) { //nolint:nonamedreturns
+	ChdirMutex.Lock()
+	oldWd, err := os.Getwd()
+	if err != nil {
+		log.Printf("Failed to get current working directory: %+v", err)
+		os.Exit(1)
+	}
+
 	testTempDir, err := os.MkdirTemp("", prefix)
 	if err != nil {
 		log.Printf("Failed to create temp dir for tests: %+v", err)
@@ -67,7 +77,17 @@ func ChdirToTempDir(prefix string) string {
 		os.Exit(1)
 	}
 
-	return testTempDir
+	cleanup = func() {
+		err = os.Chdir(oldWd)
+		if err != nil {
+			log.Printf("Failed to change working directory back to %s: %+v", oldWd, err)
+			os.Exit(1)
+		}
+		ChdirMutex.Unlock()
+		fileutil.Cleanup(testTempDir)
+	}
+
+	return testTempDir, cleanup
 }
 
 // CheckOutput checks that the strings are contained in the reader output

@@ -13,7 +13,6 @@ import (
 	"code-intelligence.com/cifuzz/internal/cmdutils"
 	"code-intelligence.com/cifuzz/pkg/finding"
 	"code-intelligence.com/cifuzz/pkg/log"
-	"code-intelligence.com/cifuzz/util/fileutil"
 	"code-intelligence.com/cifuzz/util/stringutil"
 	"code-intelligence.com/cifuzz/util/testutil"
 )
@@ -29,8 +28,8 @@ func TestMain(m *testing.M) {
 
 func TestListFindings(t *testing.T) {
 	// Create an empty project directory
-	projectDir := testutil.ChdirToTempDir("test-list-findings-")
-	defer fileutil.Cleanup(projectDir)
+	projectDir, cleanup := testutil.ChdirToTempDir("test-list-findings-")
+	defer cleanup()
 
 	// Check that the command produces the expected error when not
 	// called below a cifuzz project directory.
@@ -64,8 +63,8 @@ func TestPrintFinding(t *testing.T) {
 	f := &finding.Finding{Name: "test_finding"}
 
 	// Create an empty project directory
-	projectDir := testutil.ChdirToTempDir("test-print-finding-")
-	defer fileutil.Cleanup(projectDir)
+	projectDir, cleanup := testutil.ChdirToTempDir("test-print-finding-")
+	defer cleanup()
 
 	// Check that the command produces the expected error when not
 	// called below a cifuzz project directory.
@@ -99,8 +98,8 @@ func TestPrintAllFindings(t *testing.T) {
 	var err error
 
 	// Create an empty project directory
-	projectDir := testutil.ChdirToTempDir("test-print-finding-")
-	defer fileutil.Cleanup(projectDir)
+	projectDir, cleanup := testutil.ChdirToTempDir("test-print-finding-")
+	defer cleanup()
 
 	// Initialize a cifuzz project
 	_, err = cmdutils.ExecuteCommand(t, initCmd.New(), os.Stdin)
