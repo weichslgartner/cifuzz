@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	builderPkg "code-intelligence.com/cifuzz/internal/builder"
 	"code-intelligence.com/cifuzz/internal/testutil"
@@ -29,5 +30,17 @@ func TestIntegration_Gradle(t *testing.T) {
 	assert.FileExists(t, filepath.Join(projectDir, "cifuzz.yaml"))
 	testutil.AddLinesToFileAtBreakPoint(t, filepath.Join(projectDir, "build.gradle"), output, "dependencies", true)
 
-	// TODO: execute create and run command
+	// Execute the create command
+	outputPath := filepath.Join("src", "MyClassFuzzTest.java")
+	testutil.RunCommand(t, projectDir, cifuzz, []string{"create", "java", "--output", outputPath})
+
+	// Check that the fuzz test was created in the correct directory
+	fuzzTestPath := filepath.Join(projectDir, outputPath)
+	require.FileExists(t, fuzzTestPath)
+
+	// Check that the findings command doesn't list any findings yet
+	findings := testutil.GetFindings(t, cifuzz, projectDir)
+	require.Empty(t, findings)
+
+	// TODO: execute run command
 }
