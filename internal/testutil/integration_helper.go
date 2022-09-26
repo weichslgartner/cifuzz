@@ -8,14 +8,20 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 
+	"github.com/alexflint/go-filemutex"
 	"github.com/otiai10/copy"
 	"github.com/stretchr/testify/require"
 
 	builderPkg "code-intelligence.com/cifuzz/internal/builder"
 	"code-intelligence.com/cifuzz/util/executil"
 )
+
+var installOnce sync.Once
+var installMutex *filemutex.FileMutex
+var installDir string
 
 // CopyTestdataDir copies the "testdata" folder in the current working directory
 // to a temporary directory called "cifuzz-<name>-testdata" and returns the path.
@@ -79,31 +85,45 @@ func AddLinesToFileAtBreakPoint(t *testing.T, filePath string, linesToAdd []stri
 func InstallCifuzzInTemp(t *testing.T) string {
 	t.Helper()
 
-	// Create installation builder
-	projectDir, err := builderPkg.FindProjectDir()
-	require.NoError(t, err)
-	targetDir := filepath.Join(projectDir, "cmd", "installer", "build")
-	err = os.RemoveAll(targetDir)
+	var err error
+	lockFile := filepath.Join(os.TempDir(), ".cifuzz-build-lock")
+	installMutex, err = filemutex.New(lockFile)
 	require.NoError(t, err)
 
-	opts := builderPkg.Options{Version: "dev", TargetDir: targetDir}
-	builder, err := builderPkg.NewCIFuzzBuilder(opts)
-	require.NoError(t, err)
-	defer builder.Cleanup()
-	err = builder.BuildCIFuzzAndDeps()
-	require.NoError(t, err)
+	err = installMutex.Lock()
 
-	// Install cifuzz
-	installDir, err := os.MkdirTemp("", "cifuzz-")
-	require.NoError(t, err)
-	installDir = filepath.Join(installDir, "cifuzz")
-	installer := filepath.Join("cmd", "installer", "installer.go")
-	installCmd := exec.Command("go", "run", "-tags", "installer", installer, "-i", installDir)
-	installCmd.Stderr = os.Stderr
-	installCmd.Dir = projectDir
-	t.Logf("Command: %s", installCmd.String())
-	err = installCmd.Run()
-	require.NoError(t, err)
+	defer func() {
+		err = installMutex.Unlock()
+		require.NoError(t, err)
+	}()
+
+	installOnce.Do(func() {
+		// Create installation builder
+		projectDir, err := builderPkg.FindProjectDir()
+		require.NoError(t, err)
+		targetDir := filepath.Join(projectDir, "cmd", "installer", "build")
+		err = os.RemoveAll(targetDir)
+		require.NoError(t, err)
+
+		opts := builderPkg.Options{Version: "dev", TargetDir: targetDir}
+		builder, err := builderPkg.NewCIFuzzBuilder(opts)
+		require.NoError(t, err)
+		defer builder.Cleanup()
+		err = builder.BuildCIFuzzAndDeps()
+		require.NoError(t, err)
+
+		// Install cifuzz
+		tempDir, err := os.MkdirTemp("", "cifuzz-")
+		require.NoError(t, err)
+		installDir = filepath.Join(tempDir, "cifuzz")
+		installer := filepath.Join("cmd", "installer", "installer.go")
+		installCmd := exec.Command("go", "run", "-tags", "installer", installer, "-i", installDir)
+		installCmd.Stderr = os.Stderr
+		installCmd.Dir = projectDir
+		t.Logf("Command: %s", installCmd.String())
+		err = installCmd.Run()
+		require.NoError(t, err)
+	})
 
 	return installDir
 }
