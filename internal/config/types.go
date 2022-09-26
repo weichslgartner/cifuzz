@@ -3,7 +3,8 @@ package config
 type FuzzTestType string
 
 const (
-	CPP FuzzTestType = "cpp"
+	CPP  FuzzTestType = "cpp"
+	JAVA FuzzTestType = "java"
 )
 
 type Engine string

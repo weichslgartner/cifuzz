@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/hectane/go-acl"
@@ -30,11 +31,21 @@ func TestCreate(t *testing.T) {
 	projectDir, err := os.MkdirTemp(baseTempDir, "project-")
 	require.NoError(t, err)
 
+	// Test .cpp files
 	stubFile := filepath.Join(projectDir, "fuzz_test.cpp")
 	err = Create(stubFile, config.CPP)
 	assert.NoError(t, err)
 
 	exists, err := fileutil.Exists(stubFile)
+	assert.NoError(t, err)
+	assert.True(t, exists)
+
+	// Test .java files
+	stubFile = filepath.Join(projectDir, "FuzzTestCase.java")
+	err = Create(stubFile, config.JAVA)
+	assert.NoError(t, err)
+
+	exists, err = fileutil.Exists(stubFile)
 	assert.NoError(t, err)
 	assert.True(t, exists)
 }
@@ -43,11 +54,21 @@ func TestCreate_Exists(t *testing.T) {
 	projectDir, err := os.MkdirTemp(baseTempDir, "project-")
 	require.NoError(t, err)
 
+	// Test .cpp files
 	stubFile := filepath.Join(projectDir, "fuzz_test.cpp")
 	err = os.WriteFile(stubFile, []byte("TEST"), 0644)
 	assert.NoError(t, err)
 
 	err = Create(stubFile, config.CPP)
+	assert.Error(t, err)
+	assert.ErrorIs(t, err, os.ErrExist)
+
+	// Test .java files
+	stubFile = filepath.Join(projectDir, "FuzzTestCase.java")
+	err = os.WriteFile(stubFile, []byte("TEST"), 0644)
+	assert.NoError(t, err)
+
+	err = Create(stubFile, config.JAVA)
 	assert.Error(t, err)
 	assert.ErrorIs(t, err, os.ErrExist)
 }
@@ -59,8 +80,15 @@ func TestCreate_NoPerm(t *testing.T) {
 	err = acl.Chmod(projectDir, 0555)
 	require.NoError(t, err)
 
+	// Test .cpp files
 	stubFile := filepath.Join(projectDir, "fuzz_test.cpp")
 	err = Create(stubFile, config.CPP)
+	assert.Error(t, err)
+	assert.ErrorIs(t, err, os.ErrPermission)
+
+	// Test .java files
+	stubFile = filepath.Join(projectDir, "MyFuzzTest.java")
+	err = Create(stubFile, config.JAVA)
 	assert.Error(t, err)
 	assert.ErrorIs(t, err, os.ErrPermission)
 }
@@ -71,6 +99,7 @@ func TestSuggestFilename(t *testing.T) {
 	err = os.Chdir(projectDir)
 	require.NoError(t, err)
 
+	// Test .cpp files
 	filename1, err := FuzzTestFilename(config.CPP)
 	assert.NoError(t, err)
 	assert.Equal(t, filepath.Join(".", "my_fuzz_test_1.cpp"), filename1)
@@ -81,4 +110,37 @@ func TestSuggestFilename(t *testing.T) {
 	filename2, err := FuzzTestFilename(config.CPP)
 	assert.NoError(t, err)
 	assert.Equal(t, filepath.Join(".", "my_fuzz_test_2.cpp"), filename2)
+
+	// Test .java files
+	filename3, err := FuzzTestFilename(config.JAVA)
+	assert.NoError(t, err)
+	assert.Equal(t, filepath.Join(".", "MyClassFuzzTest1.java"), filename3)
+
+	err = os.WriteFile(filename3, []byte("TEST"), 0644)
+	require.NoError(t, err)
+
+	filename4, err := FuzzTestFilename(config.JAVA)
+	assert.NoError(t, err)
+	assert.Equal(t, filepath.Join(".", "MyClassFuzzTest2.java"), filename4)
+}
+
+func TestCreateJavaFileAndClassName(t *testing.T) {
+	projectDir, err := os.MkdirTemp(baseTempDir, "project-")
+	require.NoError(t, err)
+	err = os.Chdir(projectDir)
+	require.NoError(t, err)
+
+	// Test .java files
+	stubName := "MyOwnPersonalFuzzTest.java"
+	stubFile := filepath.Join(projectDir, stubName)
+	err = Create(stubFile, config.JAVA)
+	assert.NoError(t, err)
+
+	exists, err := fileutil.Exists(stubFile)
+	assert.NoError(t, err)
+	assert.True(t, exists)
+
+	testFile, err := os.ReadFile(stubFile)
+	assert.NoError(t, err)
+	assert.True(t, strings.Contains(string(testFile), "class "+strings.TrimSuffix(stubName, ".java")))
 }

@@ -32,6 +32,7 @@ type createCmd struct {
 // map of supported test types -> label:value
 var supportedTestTypes = map[string]string{
 	"C/C++": string(config.CPP),
+	"Java":  string(config.JAVA),
 }
 
 func New(projectConfig *config.Config) *cobra.Command {
@@ -152,11 +153,16 @@ and $FUZZ_TEST_LDFLAGS to the linker.`)
 
 func (c *createCmd) checkDependencies() (bool, error) {
 	deps := []dependencies.Key{}
-	if c.opts.testType == config.CPP {
+
+	switch c.opts.testType {
+	case config.CPP:
 		deps = append(deps, dependencies.CLANG)
 	}
-	if c.config.BuildSystem == config.BuildSystemCMake {
+
+	switch c.config.BuildSystem {
+	case config.BuildSystemCMake:
 		deps = append(deps, dependencies.CMAKE)
 	}
+
 	return dependencies.Check(deps, dependencies.Default, runfiles.Finder)
 }

@@ -47,6 +47,32 @@ func TestOk(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestOkMaven(t *testing.T) {
+	testDir, cleanup := testutil.BootstrapExampleProjectForTest("create-cmd-test", config.BuildSystemMaven)
+	defer cleanup()
+
+	args := []string{
+		"java",
+		"--output",
+		filepath.Join(testDir, "FuzzTestCase.java"),
+	}
+	_, err := cmdutils.ExecuteCommand(t, New(config.NewConfig()), os.Stdin, args...)
+	assert.NoError(t, err)
+}
+
+func TestOkGradle(t *testing.T) {
+	testDir, cleanup := testutil.BootstrapExampleProjectForTest("create-cmd-test", config.BuildSystemGradle)
+	defer cleanup()
+
+	args := []string{
+		"java",
+		"--output",
+		filepath.Join(testDir, "FuzzTestCase.java"),
+	}
+	_, err := cmdutils.ExecuteCommand(t, New(config.NewConfig()), os.Stdin, args...)
+	assert.NoError(t, err)
+}
+
 func TestInvalidType(t *testing.T) {
 	args := []string{
 		"foo",

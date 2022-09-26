@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/pkg/errors"
 
@@ -14,6 +15,9 @@ import (
 
 //go:embed fuzz-test.cpp.tmpl
 var cppStub []byte
+
+//go:embed fuzzTest.java.tmpl
+var javaStub []byte
 
 // Create creates a stub based for the given test type
 func Create(path string, testType config.FuzzTestType) error {
@@ -30,6 +34,9 @@ func Create(path string, testType config.FuzzTestType) error {
 	switch testType {
 	case config.CPP:
 		content = cppStub
+	case config.JAVA:
+		baseName := strings.TrimSuffix(filepath.Base(path), ".java")
+		content = []byte(strings.Replace(string(javaStub), "__CLASS_NAME__", baseName, 1))
 	}
 
 	// write stub
@@ -42,24 +49,31 @@ func Create(path string, testType config.FuzzTestType) error {
 }
 
 // FuzzTestFilename returns a proposal for a filename,
-// depending on the test type and given directory
+// depending on the test type and given directory.
+// The filename should follow the conventions of the type.
 func FuzzTestFilename(testType config.FuzzTestType) (string, error) {
-	var basename, ext, filename string
+	var filePattern, basename, ext, filename string
 
 	switch testType {
 	case config.CPP:
-		ext = "cpp"
 		basename = "my_fuzz_test"
+		ext = "cpp"
+		filePattern = "%s_%d.%s"
+	case config.JAVA:
+		basename = "MyClassFuzzTest"
+		ext = "java"
+		filePattern = "%s%d.%s"
 	default:
 		return "", errors.New("unable to suggest filename: unknown test type")
 	}
 
 	for counter := 1; ; counter++ {
-		filename = filepath.Join(".", fmt.Sprintf("%s_%d.%s", basename, counter, ext))
+		filename = filepath.Join(".", fmt.Sprintf(filePattern, basename, counter, ext))
 		exists, err := fileutil.Exists(filename)
 		if err != nil {
 			return "", err
 		}
+
 		if !exists {
 			return filename, nil
 		}
