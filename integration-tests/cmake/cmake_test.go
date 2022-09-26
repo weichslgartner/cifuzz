@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net"
@@ -30,7 +29,6 @@ import (
 	"code-intelligence.com/cifuzz/internal/cmd/run/report_handler/stacktrace"
 	testutil_int "code-intelligence.com/cifuzz/internal/testutil"
 	"code-intelligence.com/cifuzz/pkg/artifact"
-	"code-intelligence.com/cifuzz/pkg/finding"
 	"code-intelligence.com/cifuzz/util/envutil"
 	"code-intelligence.com/cifuzz/util/executil"
 	"code-intelligence.com/cifuzz/util/fileutil"
@@ -80,7 +78,7 @@ func TestIntegration_CMake_InitCreateRunCoverageBundle(t *testing.T) {
 	}
 
 	// Check that the findings command doesn't list any findings yet
-	findings := getFindings(t, cifuzz, dir)
+	findings := testutil_int.GetFindings(t, cifuzz, dir)
 	require.Empty(t, findings)
 
 	// Run the (empty) fuzz test
@@ -101,7 +99,7 @@ func TestIntegration_CMake_InitCreateRunCoverageBundle(t *testing.T) {
 	})
 
 	// Check that the findings command lists the finding
-	findings = getFindings(t, cifuzz, dir)
+	findings = testutil_int.GetFindings(t, cifuzz, dir)
 	require.Len(t, findings, 1)
 	require.Contains(t, findings[0].Details, "heap-use-after-free")
 	// TODO: This check currently fails on macOS because there
@@ -637,16 +635,4 @@ func startMockServer(t *testing.T, projectName, artifactsName string) *mockServe
 	}()
 
 	return server
-}
-
-func getFindings(t *testing.T, cifuzz string, dir string) []*finding.Finding {
-	cmd := executil.Command(cifuzz, "findings", "--json")
-	cmd.Dir = dir
-	output, err := cmd.Output()
-	require.NoError(t, err)
-
-	var findings []*finding.Finding
-	err = json.Unmarshal(output, &findings)
-	require.NoError(t, err)
-	return findings
 }

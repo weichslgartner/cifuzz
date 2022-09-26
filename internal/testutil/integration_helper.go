@@ -2,6 +2,7 @@ package testutil
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -16,31 +17,13 @@ import (
 	"github.com/stretchr/testify/require"
 
 	builderPkg "code-intelligence.com/cifuzz/internal/builder"
+	"code-intelligence.com/cifuzz/pkg/finding"
 	"code-intelligence.com/cifuzz/util/executil"
 )
 
 var installOnce sync.Once
 var installMutex *filemutex.FileMutex
 var installDir string
-
-// CopyTestdataDir copies the "testdata" folder in the current working directory
-// to a temporary directory called "cifuzz-<name>-testdata" and returns the path.
-func CopyTestdataDir(t *testing.T, name string) string {
-	cwd, err := os.Getwd()
-	require.NoError(t, err)
-
-	dir, err := os.MkdirTemp("", fmt.Sprintf("cifuzz-%s-testdata-", name))
-	require.NoError(t, err)
-
-	// Get the path to the testdata dir
-	testDataDir := filepath.Join(cwd, "testdata")
-
-	// Copy the testdata dir to the temporary directory
-	err = copy.Copy(testDataDir, dir)
-	require.NoError(t, err)
-
-	return dir
-}
 
 // AddLinesToFileAtBreakPoint adds the given lines before or after the breakpoint
 // to the file at the given path.
@@ -78,6 +61,37 @@ func AddLinesToFileAtBreakPoint(t *testing.T, filePath string, linesToAdd []stri
 	require.NoError(t, err)
 	_, err = f.WriteString(strings.Join(lines, "\n"))
 	require.NoError(t, err)
+}
+
+// CopyTestdataDir copies the "testdata" folder in the current working directory
+// to a temporary directory called "cifuzz-<name>-testdata" and returns the path.
+func CopyTestdataDir(t *testing.T, name string) string {
+	cwd, err := os.Getwd()
+	require.NoError(t, err)
+
+	dir, err := os.MkdirTemp("", fmt.Sprintf("cifuzz-%s-testdata-", name))
+	require.NoError(t, err)
+
+	// Get the path to the testdata dir
+	testDataDir := filepath.Join(cwd, "testdata")
+
+	// Copy the testdata dir to the temporary directory
+	err = copy.Copy(testDataDir, dir)
+	require.NoError(t, err)
+
+	return dir
+}
+
+func GetFindings(t *testing.T, cifuzz string, dir string) []*finding.Finding {
+	cmd := executil.Command(cifuzz, "findings", "--json")
+	cmd.Dir = dir
+	output, err := cmd.Output()
+	require.NoError(t, err)
+
+	var findings []*finding.Finding
+	err = json.Unmarshal(output, &findings)
+	require.NoError(t, err)
+	return findings
 }
 
 // InstallCifuzzInTemp creates an installation builder and
