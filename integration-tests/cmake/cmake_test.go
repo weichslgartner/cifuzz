@@ -422,8 +422,8 @@ func testBundle(t *testing.T, dir string, cifuzz string) {
 	tempDir, err := os.MkdirTemp("", "cifuzz-archive-*")
 	require.NoError(t, err)
 	defer fileutil.Cleanup(tempDir)
-	archivePath := filepath.Join(tempDir, "parser_fuzz_test.tar.gz")
-	defer fileutil.Cleanup(archivePath)
+	bundlePath := filepath.Join(tempDir, "parser_fuzz_test.tar.gz")
+	defer fileutil.Cleanup(bundlePath)
 
 	// Create a dictionary
 	dictPath := filepath.Join(tempDir, "some_dict")
@@ -438,7 +438,7 @@ func testBundle(t *testing.T, dir string, cifuzz string) {
 
 	// Bundle all fuzz tests into an archive.
 	cmd := executil.Command(cifuzz, "bundle",
-		"-o", archivePath,
+		"-o", bundlePath,
 		"--dict", dictPath,
 		"--engine-arg", "arg1",
 		"--engine-arg", "arg2",
@@ -455,12 +455,12 @@ func testBundle(t *testing.T, dir string, cifuzz string) {
 	cmd.Stderr = os.Stderr
 	err = cmd.Run()
 	require.NoError(t, err)
-	require.FileExists(t, archivePath)
+	require.FileExists(t, bundlePath)
 
 	// Extract the archive into a new temporary directory.
 	archiveDir, err := os.MkdirTemp("", "cifuzz-extracted-archive-*")
 	require.NoError(t, err)
-	archiveFile, err := os.Open(archivePath)
+	archiveFile, err := os.Open(bundlePath)
 	require.NoError(t, err)
 	err = artifact.ExtractArchiveForTestsOnly(archiveFile, archiveDir)
 	require.NoError(t, err)
@@ -538,6 +538,30 @@ func testBundle(t *testing.T, dir string, cifuzz string) {
 	err = cmd.Run()
 	require.NoError(t, err)
 	require.FileExists(t, coverageProfile)
+
+	if runtime.GOOS == "linux" {
+		// Try to use the artifacts to start a remote run on a mock server
+		projectName := "test-project"
+		artifactsName := "test-artifacts-123"
+		token := "test-token"
+		server := startMockServer(t, projectName, artifactsName)
+		cmd = executil.Command(cifuzz, "remote-run",
+			"--bundle", bundlePath,
+			"--project", projectName,
+			"--server", server.address,
+		)
+		cmd.Env, err = envutil.Setenv(os.Environ(), "CIFUZZ_API_TOKEN", token)
+		require.NoError(t, err)
+		cmd.Dir = dir
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		t.Logf("Command: %s", cmd.String())
+		err = cmd.Run()
+		require.NoError(t, err)
+		require.FileExists(t, bundlePath)
+		require.True(t, server.artifactsUploaded)
+		require.True(t, server.runStarted)
+	}
 }
 
 func testRemoteRun(t *testing.T, dir string, cifuzz string) {
@@ -551,8 +575,6 @@ func testRemoteRun(t *testing.T, dir string, cifuzz string) {
 	tempDir, err := os.MkdirTemp("", "cifuzz-archive-*")
 	require.NoError(t, err)
 	defer fileutil.Cleanup(tempDir)
-	archivePath := filepath.Join(tempDir, "parser_fuzz_test.tar.gz")
-	defer fileutil.Cleanup(archivePath)
 
 	// Create a dictionary
 	dictPath := filepath.Join(tempDir, "some_dict")
@@ -565,9 +587,8 @@ func testRemoteRun(t *testing.T, dir string, cifuzz string) {
 	err = fileutil.Touch(filepath.Join(seedCorpusDir, "empty"))
 	require.NoError(t, err)
 
-	// Bundle all fuzz tests into an archive.
+	// Try to start a remote run on our mock server
 	cmd := executil.Command(cifuzz, "remote-run",
-		"-o", archivePath,
 		"--dict", dictPath,
 		"--engine-arg", "arg1",
 		"--engine-arg", "arg2",
@@ -586,7 +607,6 @@ func testRemoteRun(t *testing.T, dir string, cifuzz string) {
 	t.Logf("Command: %s", cmd.String())
 	err = cmd.Run()
 	require.NoError(t, err)
-	require.FileExists(t, archivePath)
 
 	require.True(t, server.artifactsUploaded)
 	require.True(t, server.runStarted)
@@ -621,9 +641,10 @@ func startMockServer(t *testing.T, projectName, artifactsName string) *mockServe
 		require.Fail(t, "Unexpected request", stringutil.PrettyString(req))
 	}
 
-	http.HandleFunc(fmt.Sprintf("/v2/projects/%s/artifacts/import", projectName), handleUpload)
-	http.HandleFunc(fmt.Sprintf("/v1/%s:run", artifactsName), handleStartRun)
-	http.HandleFunc("/", handleDefault)
+	mux := http.NewServeMux()
+	mux.HandleFunc(fmt.Sprintf("/v2/projects/%s/artifacts/import", projectName), handleUpload)
+	mux.HandleFunc(fmt.Sprintf("/v1/%s:run", artifactsName), handleStartRun)
+	mux.HandleFunc("/", handleDefault)
 
 	listener, err := net.Listen("tcp4", ":0")
 	require.NoError(t, err)
@@ -631,7 +652,7 @@ func startMockServer(t *testing.T, projectName, artifactsName string) *mockServe
 	server.address = fmt.Sprintf("http://127.0.0.1:%d", listener.Addr().(*net.TCPAddr).Port)
 
 	go func() {
-		err = http.Serve(listener, nil)
+		err = http.Serve(listener, mux)
 		require.NoError(t, err)
 	}()
 

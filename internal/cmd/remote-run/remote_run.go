@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"syscall"
@@ -27,6 +28,7 @@ import (
 	"code-intelligence.com/cifuzz/internal/config"
 	"code-intelligence.com/cifuzz/pkg/dialog"
 	"code-intelligence.com/cifuzz/pkg/log"
+	"code-intelligence.com/cifuzz/util/fileutil"
 	"code-intelligence.com/cifuzz/util/stringutil"
 )
 
@@ -39,6 +41,7 @@ type artifact struct {
 
 type remoteRunOpts struct {
 	bundler.Opts `mapstructure:",squash"`
+	BundlePath   string `mapstructure:"artifacts-path"`
 	ProjectName  string `mapstructure:"project"`
 	Server       string `mapstructure:"server"`
 }
@@ -67,9 +70,14 @@ func newWithOptions(opts *remoteRunOpts) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "remote-run [flags] [<fuzz test>]...",
 		Short: "Build fuzz tests and run them on a remote fuzzing server",
-		Long: `This command builds fuzz tests, bundles all runtime artifacts into a
-self-contained archive and uploads that to a remote fuzzing server to
-start a remote fuzzing run.`,
+		Long: `
+This command builds fuzz tests, packages all runtime artifacts into a
+bundle and uploads that to a remote fuzzing server to start a remote
+fuzzing run.
+
+If the --bundle flag is used, building and bundling is skipped and the
+specified bundle is uploaded to start a remote fuzzing run instead.
+`,
 		ValidArgsFunction: completion.ValidFuzzTests,
 		Args:              cobra.ArbitraryArgs,
 		PreRunE: func(cmd *cobra.Command, args []string) error {
@@ -77,6 +85,7 @@ start a remote fuzzing run.`,
 			// function, because that would re-bind viper keys which
 			// were bound to the flags of other commands before.
 			bindFlags()
+			cmdutils.ViperMustBindPFlag("bundle", cmd.Flags().Lookup("bundle"))
 			cmdutils.ViperMustBindPFlag("project", cmd.Flags().Lookup("project"))
 			cmdutils.ViperMustBindPFlag("server", cmd.Flags().Lookup("server"))
 
@@ -125,7 +134,7 @@ https://github.com/CodeIntelligenceTesting/cifuzz/issues`, system)
 		cmdutils.AddSeedCorpusFlag,
 		cmdutils.AddTimeoutFlag,
 	)
-	cmd.Flags().StringVarP(&opts.OutputPath, "output", "o", "", "Output path of the artifacts archive (.tar.gz)")
+	cmd.Flags().StringVar(&opts.BundlePath, "bundle", "", "Path of an existing bundle to start a remote run with.")
 	// TODO: Make the project name more accessible in the web app (currently
 	//       it's only shown in the URL)
 	cmd.Flags().StringP("project", "p", "", `The name of the CI Fuzz project you want to start a fuzzing run for,
@@ -183,13 +192,23 @@ your account at %s/dashboard/settings/account.`+"\n", c.opts.Server)
 		}
 	}
 
-	b := bundler.NewBundler(&c.opts.Opts)
-	err = b.Bundle()
-	if err != nil {
-		return err
+	if c.opts.BundlePath == "" {
+		tempDir, err := os.MkdirTemp("", "cifuzz-bundle-")
+		if err != nil {
+			return errors.WithStack(err)
+		}
+		defer fileutil.Cleanup(tempDir)
+		bundlePath := filepath.Join(tempDir, "fuzz_tests.tar.gz")
+		c.opts.BundlePath = bundlePath
+		c.opts.Opts.OutputPath = bundlePath
+		b := bundler.NewBundler(&c.opts.Opts)
+		err = b.Bundle()
+		if err != nil {
+			return err
+		}
 	}
 
-	artifact, err := c.uploadArtifacts(b.Opts.OutputPath, token)
+	artifact, err := c.uploadBundle(c.opts.BundlePath, token)
 	if err != nil {
 		return err
 	}
@@ -228,7 +247,7 @@ func (c *runRemoteCmd) selectProject(token string) (string, error) {
 	return projectName, nil
 }
 
-func (c *runRemoteCmd) uploadArtifacts(path string, token string) (*artifact, error) {
+func (c *runRemoteCmd) uploadBundle(path string, token string) (*artifact, error) {
 	signalHandlerCtx, cancelSignalHandler := context.WithCancel(context.Background())
 	routines, routinesCtx := errgroup.WithContext(signalHandlerCtx)
 
@@ -308,7 +327,7 @@ func (c *runRemoteCmd) uploadArtifacts(path string, token string) (*artifact, er
 		return nil, errors.WithStack(err)
 	}
 	if resp.StatusCode != 200 {
-		err := errors.Errorf("Uploading artifacts failed with %v", resp.Status)
+		err := errors.Errorf("Uploading bundle failed with %v", resp.Status)
 		log.Error(err)
 		return nil, cmdutils.WrapSilentError(err)
 	}
@@ -317,7 +336,7 @@ func (c *runRemoteCmd) uploadArtifacts(path string, token string) (*artifact, er
 	err = json.Unmarshal(body, artifact)
 	if err != nil {
 		err = errors.WithStack(err)
-		log.Errorf(err, "Failed to parse response from upload artifacts API call: %s", err.Error())
+		log.Errorf(err, "Failed to parse response from upload bundle API call: %s", err.Error())
 		return nil, cmdutils.WrapSilentError(err)
 	}
 
