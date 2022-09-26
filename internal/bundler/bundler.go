@@ -261,7 +261,7 @@ func (b *Bundler) buildAllVariants() ([]map[string]*build.Result, error) {
 	}
 
 	var allVariantBuildResults []map[string]*build.Result
-	for _, variant := range configureVariants {
+	for i, variant := range configureVariants {
 		builder, err := cmake.NewBuilder(&cmake.BuilderOptions{
 			ProjectDir: b.Opts.ProjectDir,
 			Engine:     variant.Engine,
@@ -284,7 +284,12 @@ func (b *Bundler) buildAllVariants() ([]map[string]*build.Result, error) {
 		} else {
 			typeDisplayString = "fuzzing"
 		}
-		log.Infof("\nBuilding for %s...", typeDisplayString)
+		// Print a newline to separate the build logs unless this is the
+		// first variant build
+		if i > 0 {
+			log.Print()
+		}
+		log.Infof("Building for %s...", typeDisplayString)
 
 		err = builder.Configure()
 		if err != nil {
