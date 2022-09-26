@@ -156,6 +156,7 @@ your account at %s/dashboard/settings/account.`+"\n", c.opts.Server)
 			if err != nil {
 				return errors.WithStack(err)
 			}
+			log.Print()
 			token = strings.TrimSpace(token)
 		}
 
