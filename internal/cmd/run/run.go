@@ -95,7 +95,7 @@ func (opts *runOptions) validate() error {
 type runCmd struct {
 	*cobra.Command
 	opts *runOptions
-	
+
 	reportHandler *report_handler.ReportHandler
 }
 
@@ -134,12 +134,11 @@ depends on the build system configured for the project:
 			// were bound to the flags of other commands before.
 			bindFlags()
 
-			projectDir, err := config.FindAndParseProjectConfig(opts)
+			err := config.FindAndParseProjectConfig(opts)
 			if err != nil {
 				log.Errorf(err, "Failed to parse cifuzz.yaml: %v", err.Error())
 				return cmdutils.WrapSilentError(err)
 			}
-			opts.ProjectDir = projectDir
 
 			opts.fuzzTest = args[0]
 			return opts.validate()
@@ -159,6 +158,7 @@ depends on the build system configured for the project:
 		cmdutils.AddEngineArgFlag,
 		cmdutils.AddFuzzTestArgFlag,
 		cmdutils.AddPrintJSONFlag,
+		cmdutils.AddProjectDirFlag,
 		cmdutils.AddSeedCorpusFlag,
 		cmdutils.AddTimeoutFlag,
 		cmdutils.AddUseSandboxFlag,

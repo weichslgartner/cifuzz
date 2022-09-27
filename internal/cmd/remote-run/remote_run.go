@@ -102,12 +102,11 @@ https://github.com/CodeIntelligenceTesting/cifuzz/issues`, system)
 				return cmdutils.WrapSilentError(err)
 			}
 
-			projectDir, err := config.FindAndParseProjectConfig(opts)
+			err := config.FindAndParseProjectConfig(opts)
 			if err != nil {
 				log.Errorf(err, "Failed to parse cifuzz.yaml: %v", err.Error())
 				return cmdutils.WrapSilentError(err)
 			}
-			opts.ProjectDir = projectDir
 			opts.FuzzTests = args
 
 			if opts.ProjectName != "" && !strings.HasPrefix(opts.ProjectName, "projects/") {
@@ -131,6 +130,7 @@ https://github.com/CodeIntelligenceTesting/cifuzz/issues`, system)
 		cmdutils.AddDictFlag,
 		cmdutils.AddEngineArgFlag,
 		cmdutils.AddFuzzTestArgFlag,
+		cmdutils.AddProjectDirFlag,
 		cmdutils.AddSeedCorpusFlag,
 		cmdutils.AddTimeoutFlag,
 	)

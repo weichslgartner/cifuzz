@@ -69,7 +69,7 @@ Missing files are generated automatically.
 func (c *integrateCmd) run() error {
 	var err error
 
-	projectDir, err := config.FindProjectDir()
+	projectDir, err := config.FindConfigDir()
 	if errors.Is(err, os.ErrNotExist) {
 		// The project directory doesn't exist, this is an expected
 		// error, so we print it and return a silent error to avoid

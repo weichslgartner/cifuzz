@@ -113,6 +113,15 @@ func AddPrintJSONFlag(cmd *cobra.Command) func() {
 	}
 }
 
+func AddProjectDirFlag(cmd *cobra.Command) func() {
+	cmd.Flags().String("project-dir", "",
+		"The project root which is the parent for all the project sources.\n"+
+			"Defaults to the directory containing the cifuzz.yaml.")
+	return func() {
+		ViperMustBindPFlag("project-dir", cmd.Flags().Lookup("project-dir"))
+	}
+}
+
 func AddSeedCorpusFlag(cmd *cobra.Command) func() {
 	// TODO(afl): Also link to https://aflplus.plus/docs/fuzzing_in_depth/#a-collecting-inputs
 	cmd.Flags().StringArrayP("seed-corpus", "s", nil,

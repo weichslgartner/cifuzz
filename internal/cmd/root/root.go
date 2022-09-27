@@ -44,7 +44,7 @@ func New() (*cobra.Command, error) {
 			}
 
 			if cmdutils.NeedsConfig(cmd) {
-				_, err = config.FindProjectDir()
+				_, err = config.FindConfigDir()
 				if errors.Is(err, os.ErrNotExist) {
 					// The project directory doesn't exist, this is an expected
 					// error, so we print it and return a silent error to avoid

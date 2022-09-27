@@ -13,7 +13,8 @@ import (
 )
 
 type reloadOpts struct {
-	config.ProjectConfig `mapstructure:",squash"`
+	BuildSystem string `mapstructure:"build-system"`
+	ProjectDir  string `mapstructure:"project-dir"`
 }
 
 // TODO: The reload command allows to reload the fuzz test names used
@@ -30,6 +31,7 @@ func New() *cobra.Command {
 }
 
 func newWithOptions(opts *reloadOpts) *cobra.Command {
+	var bindFlags func()
 	cmd := &cobra.Command{
 		Use:   "reload [flags]",
 		Short: "Reload fuzz test metadata",
@@ -37,12 +39,15 @@ func newWithOptions(opts *reloadOpts) *cobra.Command {
 		Long: "",
 		Args: cobra.NoArgs,
 		PreRunE: func(cmd *cobra.Command, args []string) error {
-			projectDir, err := config.FindAndParseProjectConfig(opts)
+			// Bind viper keys to flags. We can't do this in the New
+			// function, because that would re-bind viper keys which
+			// were bound to the flags of other commands before.
+			bindFlags()
+			err := config.FindAndParseProjectConfig(opts)
 			if err != nil {
 				log.Errorf(err, "Failed to parse cifuzz.yaml: %v", err.Error())
 				return cmdutils.WrapSilentError(err)
 			}
-			opts.ProjectDir = projectDir
 			return nil
 		},
 		RunE: func(c *cobra.Command, args []string) error {
@@ -50,6 +55,14 @@ func newWithOptions(opts *reloadOpts) *cobra.Command {
 			return cmd.run()
 		},
 	}
+
+	// Note: If a flag should be configurable via viper as well (i.e.
+	//       via cifuzz.yaml and CIFUZZ_* environment variables), bind
+	//       it to viper in the PreRun function.
+	bindFlags = cmdutils.AddFlags(cmd,
+		cmdutils.AddProjectDirFlag,
+	)
+
 	return cmd
 }
 

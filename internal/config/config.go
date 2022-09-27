@@ -39,10 +39,10 @@ const projectConfigFile = "cifuzz.yaml"
 var projectConfigTemplate string
 
 // CreateProjectConfig creates a new project config in the given directory
-func CreateProjectConfig(projectDir string) (string, error) {
+func CreateProjectConfig(configDir string) (string, error) {
 
 	// try to open the target file, returns error if already exists
-	configpath := filepath.Join(projectDir, projectConfigFile)
+	configpath := filepath.Join(configDir, projectConfigFile)
 	f, err := os.OpenFile(configpath, os.O_CREATE|os.O_WRONLY|os.O_EXCL, 0644)
 	if err != nil {
 		if errors.Is(err, os.ErrExist) {
@@ -70,24 +70,22 @@ func CreateProjectConfig(projectDir string) (string, error) {
 	return configpath, nil
 }
 
-func FindAndParseProjectConfig(opts interface{}) (string, error) {
-	var err error
-
-	projectDir, err := FindProjectDir()
+func FindAndParseProjectConfig(opts interface{}) error {
+	configDir, err := FindConfigDir()
 	if err != nil {
-		return "", err
+		return err
 	}
 
-	err = ParseProjectConfig(projectDir, opts)
+	err = ParseProjectConfig(configDir, opts)
 	if err != nil {
-		return "", err
+		return err
 	}
 
-	return projectDir, nil
+	return nil
 }
 
-func ParseProjectConfig(projectDir string, opts interface{}) error {
-	configpath := filepath.Join(projectDir, projectConfigFile)
+func ParseProjectConfig(configDir string, opts interface{}) error {
+	configpath := filepath.Join(configDir, projectConfigFile)
 	viper.SetConfigFile(configpath)
 
 	// Set defaults
@@ -117,23 +115,31 @@ func ParseProjectConfig(projectDir string, opts interface{}) error {
 	// automatically.
 	v := reflect.ValueOf(opts).Elem().FieldByName("BuildSystem")
 	if v.IsValid() && v.String() == "" {
-		buildSystem, err := DetermineBuildSystem(projectDir)
+		buildSystem, err := DetermineBuildSystem(configDir)
 		if err != nil {
 			return err
 		}
 		v.SetString(buildSystem)
 	}
 
+	// If the project dir was not set by the user, set it to the config dir
+	v = reflect.ValueOf(opts).Elem().FieldByName("ProjectDir")
+	if v.IsValid() && v.String() == "" {
+		v.SetString(configDir)
+	}
+
 	return nil
 }
 
-func ReadProjectConfig(projectDir string) (*ProjectConfig, error) {
+func ReadProjectConfig(configDir string) (*ProjectConfig, error) {
 	config := &ProjectConfig{}
-	err := ParseProjectConfig(projectDir, config)
+	err := ParseProjectConfig(configDir, config)
 	if err != nil {
 		return nil, err
 	}
-	config.ProjectDir = projectDir
+	if config.ProjectDir == "" {
+		config.ProjectDir = configDir
+	}
 	return config, nil
 }
 
@@ -167,7 +173,7 @@ func DetermineBuildSystem(projectDir string) (string, error) {
 	return BuildSystemOther, nil
 }
 
-func FindProjectDir() (string, error) {
+func FindConfigDir() (string, error) {
 	dir, err := os.Getwd()
 	if err != nil {
 		return "", errors.WithStack(err)

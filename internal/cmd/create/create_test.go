@@ -38,13 +38,15 @@ func TestOk(t *testing.T) {
 	testDir, cleanup := testutil.BootstrapExampleProjectForTest("create-cmd-test", config.BuildSystemCMake)
 	defer cleanup()
 
+	outputFile := filepath.Join(testDir, "fuzz-test.cpp")
 	args := []string{
 		"cpp",
-		"--output",
-		filepath.Join(testDir, "fuzz-test.cpp"),
+		"--output", outputFile,
 	}
 	_, err := cmdutils.ExecuteCommand(t, New(), os.Stdin, args...)
 	assert.NoError(t, err)
+
+	require.FileExists(t, outputFile)
 }
 
 func TestOkMaven(t *testing.T) {

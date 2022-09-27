@@ -22,7 +22,7 @@ func ValidFuzzTests(cmd *cobra.Command, args []string, toComplete string) ([]str
 	}
 
 	// Read the project config to figure out the build system
-	projectDir, err := config.FindProjectDir()
+	projectDir, err := config.FindConfigDir()
 	if err != nil {
 		log.Error(err, err.Error())
 		return nil, cobra.ShellCompDirectiveError

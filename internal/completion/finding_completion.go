@@ -20,7 +20,7 @@ func ValidFindings(cmd *cobra.Command, args []string, toComplete string) ([]stri
 	}
 
 	// Find the project directory
-	projectDir, err := config.FindProjectDir()
+	projectDir, err := config.FindConfigDir()
 	if err != nil {
 		log.Error(err, err.Error())
 		return nil, cobra.ShellCompDirectiveError

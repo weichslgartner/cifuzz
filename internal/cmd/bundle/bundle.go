@@ -33,12 +33,11 @@ If no fuzz tests are specified all fuzz tests are added to the bundle.`,
 
 			// TODO: Fail early if platform is not supported
 
-			projectDir, err := config.FindAndParseProjectConfig(opts)
+			err := config.FindAndParseProjectConfig(opts)
 			if err != nil {
 				log.Errorf(err, "Failed to parse cifuzz.yaml: %v", err.Error())
 				return cmdutils.WrapSilentError(err)
 			}
-			opts.ProjectDir = projectDir
 
 			if opts.BuildSystem != config.BuildSystemCMake {
 				err = errors.New("'cifuzz bundle' currently only supports CMake projects")
@@ -62,6 +61,7 @@ If no fuzz tests are specified all fuzz tests are added to the bundle.`,
 		cmdutils.AddDictFlag,
 		cmdutils.AddEngineArgFlag,
 		cmdutils.AddFuzzTestArgFlag,
+		cmdutils.AddProjectDirFlag,
 		cmdutils.AddSeedCorpusFlag,
 		cmdutils.AddTimeoutFlag,
 	)

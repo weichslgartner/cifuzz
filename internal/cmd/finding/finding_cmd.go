@@ -19,8 +19,8 @@ import (
 )
 
 type options struct {
-	PrintJSON  bool `mapstructure:"print-json"`
-	ProjectDir string
+	PrintJSON  bool   `mapstructure:"print-json"`
+	ProjectDir string `mapstructure:"project-dir"`
 	ShowAll    bool
 }
 
@@ -44,7 +44,7 @@ func New() *cobra.Command {
 			// function, because that would re-bind viper keys which
 			// were bound to the flags of other commands before.
 			bindFlags()
-			projectDir, err := config.FindAndParseProjectConfig(opts)
+			err := config.FindAndParseProjectConfig(opts)
 			if errors.Is(err, os.ErrNotExist) {
 				// The project directory doesn't exist, this is an expected
 				// error, so we print it and return a silent error to avoid
@@ -56,7 +56,6 @@ func New() *cobra.Command {
 				log.Errorf(err, "Failed to parse cifuzz.yaml: %v", err.Error())
 				return cmdutils.WrapSilentError(err)
 			}
-			opts.ProjectDir = projectDir
 			return nil
 		},
 		RunE: func(c *cobra.Command, args []string) error {
@@ -68,7 +67,11 @@ func New() *cobra.Command {
 	// Note: If a flag should be configurable via viper as well (i.e.
 	//       via cifuzz.yaml and CIFUZZ_* environment variables), bind
 	//       it to viper in the PreRun function.
-	bindFlags = cmdutils.AddPrintJSONFlag(cmd)
+	bindFlags = cmdutils.AddFlags(cmd,
+		cmdutils.AddPrintJSONFlag,
+		cmdutils.AddProjectDirFlag,
+	)
+
 	cmd.Flags().BoolVar(&opts.ShowAll, "all", false, "Show all findings")
 
 	return cmd

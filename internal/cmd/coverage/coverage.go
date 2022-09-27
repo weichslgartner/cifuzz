@@ -127,12 +127,11 @@ Write out an lcov trace file:
 			cmdutils.ViperMustBindPFlag("format", cmd.Flags().Lookup("format"))
 			cmdutils.ViperMustBindPFlag("output", cmd.Flags().Lookup("output"))
 
-			projectDir, err := config.FindAndParseProjectConfig(opts)
+			err := config.FindAndParseProjectConfig(opts)
 			if err != nil {
 				log.Errorf(err, "Failed to parse cifuzz.yaml: %v", err.Error())
 				return cmdutils.WrapSilentError(err)
 			}
-			opts.ProjectDir = projectDir
 
 			opts.fuzzTest = args[0]
 			return opts.validate()
@@ -149,6 +148,7 @@ Write out an lcov trace file:
 		cmdutils.AddBuildCommandFlag,
 		cmdutils.AddBuildJobsFlag,
 		cmdutils.AddFuzzTestArgFlag,
+		cmdutils.AddProjectDirFlag,
 		cmdutils.AddSeedCorpusFlag,
 		cmdutils.AddUseSandboxFlag,
 	)

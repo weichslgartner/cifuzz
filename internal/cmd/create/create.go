@@ -53,12 +53,11 @@ fuzz test via 'cifuzz run'.`,
 				opts.testType = config.FuzzTestType(args[0])
 			}
 
-			projectDir, err := config.FindAndParseProjectConfig(opts)
+			err := config.FindAndParseProjectConfig(opts)
 			if err != nil {
 				log.Errorf(err, "Failed to parse cifuzz.yaml: %v", err.Error())
 				return cmdutils.WrapSilentError(err)
 			}
-			opts.ProjectDir = projectDir
 
 			return nil
 		},
