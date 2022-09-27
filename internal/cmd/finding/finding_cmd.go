@@ -20,6 +20,7 @@ import (
 type options struct {
 	PrintJSON  bool   `mapstructure:"print-json"`
 	ProjectDir string `mapstructure:"project-dir"`
+	ConfigDir  string `mapstructure:"config-dir"`
 	ShowAll    bool
 }
 
@@ -29,7 +30,10 @@ type findingCmd struct {
 }
 
 func New() *cobra.Command {
-	opts := &options{}
+	return newWithOptions(&options{})
+}
+
+func newWithOptions(opts *options) *cobra.Command {
 	var bindFlags func()
 
 	cmd := &cobra.Command{

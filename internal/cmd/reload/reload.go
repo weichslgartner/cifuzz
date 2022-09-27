@@ -12,9 +12,10 @@ import (
 	"code-intelligence.com/cifuzz/pkg/runfiles"
 )
 
-type reloadOpts struct {
+type options struct {
 	BuildSystem string `mapstructure:"build-system"`
 	ProjectDir  string `mapstructure:"project-dir"`
+	ConfigDir   string `mapstructure:"config-dir"`
 }
 
 // TODO: The reload command allows to reload the fuzz test names used
@@ -23,14 +24,14 @@ type reloadOpts struct {
 type reloadCmd struct {
 	*cobra.Command
 
-	opts *reloadOpts
+	opts *options
 }
 
 func New() *cobra.Command {
-	return newWithOptions(&reloadOpts{})
+	return newWithOptions(&options{})
 }
 
-func newWithOptions(opts *reloadOpts) *cobra.Command {
+func newWithOptions(opts *options) *cobra.Command {
 	var bindFlags func()
 	cmd := &cobra.Command{
 		Use:   "reload [flags]",

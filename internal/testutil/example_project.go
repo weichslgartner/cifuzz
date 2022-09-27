@@ -2,11 +2,16 @@ package testutil
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"runtime"
+	"testing"
 
 	"github.com/otiai10/copy"
 	"github.com/pkg/errors"
+	"github.com/stretchr/testify/require"
+
+	"code-intelligence.com/cifuzz/internal/config"
 )
 
 // BootstrapExampleProjectForTest copies the given example project to a temporary folder
@@ -28,4 +33,16 @@ func BootstrapExampleProjectForTest(prefix, exampleName string) (tempDir string,
 	}
 
 	return tempDir, cleanup
+}
+
+func BootstrapEmptyProject(t *testing.T, prefix string) string {
+	// Create an empty directory
+	projectDir, err := os.MkdirTemp("", prefix)
+	require.NoError(t, err)
+
+	// Create an empty config file
+	_, err = config.CreateProjectConfig(projectDir)
+	require.NoError(t, err)
+
+	return projectDir
 }
