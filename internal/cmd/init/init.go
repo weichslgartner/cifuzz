@@ -21,31 +21,44 @@ var mavenSetup string
 //go:embed instructions/gradle
 var gradleSetup string
 
+type Options struct {
+	Dir string
+}
+
 func New() *cobra.Command {
-	initCmd := &cobra.Command{
+	return NewWithOptions(&Options{})
+}
+
+func NewWithOptions(opts *Options) *cobra.Command {
+	cmd := &cobra.Command{
 		Use:   "init",
 		Short: "Set up a project for use with cifuzz",
 		Long: `This command sets up a project for use with cifuzz, creating a
 'cifuzz.yaml' config file.`,
 		Args: cobra.NoArgs,
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			var err error
+			if opts.Dir == "" {
+				opts.Dir, err = os.Getwd()
+				if err != nil {
+					return errors.WithStack(err)
+				}
+			}
+			return nil
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return run()
+			return run(opts)
 		},
 	}
 
-	cmdutils.DisableConfigCheck(initCmd)
+	cmdutils.DisableConfigCheck(cmd)
 
-	return initCmd
+	return cmd
 }
 
-func run() error {
-	cwd, err := os.Getwd()
-	if err != nil {
-		return errors.WithStack(err)
-	}
-	log.Debugf("Using current working directory: %s", cwd)
-
-	configpath, err := config.CreateProjectConfig(cwd)
+func run(opts *Options) error {
+	log.Debugf("Creating config file in directory: %s", opts.Dir)
+	configpath, err := config.CreateProjectConfig(opts.Dir)
 	if err != nil {
 		// explicitly inform the user about an existing config file
 		if errors.Is(err, os.ErrExist) && configpath != "" {
@@ -57,16 +70,16 @@ func run() error {
 	}
 	log.Successf("Configuration saved in %s", configpath)
 
-	setUpAndMentionBuildSystemIntegrations(cwd)
+	setUpAndMentionBuildSystemIntegrations(opts.Dir)
 
 	log.Print(`
 Use 'cifuzz create' to create your first fuzz test.`)
 	return nil
 }
 
-func setUpAndMentionBuildSystemIntegrations(cwd string) {
+func setUpAndMentionBuildSystemIntegrations(dir string) {
 	// Printing build system instructions is best-effort: Do not fail on errors.
-	buildSystem, err := config.DetermineBuildSystem(cwd)
+	buildSystem, err := config.DetermineBuildSystem(dir)
 	if err != nil {
 		if !errors.Is(err, os.ErrNotExist) {
 			log.Debug(err)
