@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"runtime"
 	"text/template"
 	"time"
 
-	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
 
@@ -112,23 +112,13 @@ func ParseProjectConfig(projectDir string, opts interface{}) error {
 
 	// If the build system was not set by the user, try to determine it
 	// automatically.
-	// We use mapstructure.Decode to overwrite the BuildSystem field of
-	// the options struct, which is the same method viper.ReadInConfig()
-	// uses.
-	//
-	// Note that we don't set this value in viper, which would lead to
-	// DetermineBuildSystem not being called in subsequent calls to
-	// ParseProjectConfig.
-	config := &ProjectConfig{}
-	if viper.GetString("build-system") == "" {
-		config.BuildSystem, err = DetermineBuildSystem(projectDir)
+	v := reflect.ValueOf(opts).Elem().FieldByName("BuildSystem")
+	if v.IsValid() && v.String() == "" {
+		buildSystem, err := DetermineBuildSystem(projectDir)
 		if err != nil {
 			return err
 		}
-	}
-	err = mapstructure.Decode(config, opts)
-	if err != nil {
-		return errors.WithStack(err)
+		v.SetString(buildSystem)
 	}
 
 	return nil
