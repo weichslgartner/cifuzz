@@ -1,4 +1,4 @@
-package finding
+package finding_test
 
 import (
 	"fmt"
@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"code-intelligence.com/cifuzz/internal/testutil"
+	"code-intelligence.com/cifuzz/pkg/finding"
 	"code-intelligence.com/cifuzz/util/stringutil"
 )
 
@@ -26,11 +27,11 @@ func TestFinding_Save_LoadFinding(t *testing.T) {
 	testDir, err := os.MkdirTemp(testBaseDir, "save-test-")
 	require.NoError(t, err)
 
-	finding := testFinding()
-	findingDir := filepath.Join(testDir, nameFindingsDir, finding.Name)
-	jsonPath := filepath.Join(findingDir, nameJsonFile)
+	f := testFinding()
+	findingDir := filepath.Join(testDir, finding.NameFindingsDir, f.Name)
+	jsonPath := filepath.Join(findingDir, finding.NameJsonFile)
 
-	err = finding.Save(testDir)
+	err = f.Save(testDir)
 	require.NoError(t, err)
 
 	require.DirExists(t, findingDir)
@@ -40,12 +41,12 @@ func TestFinding_Save_LoadFinding(t *testing.T) {
 	bytes, err := os.ReadFile(jsonPath)
 	require.NoError(t, err)
 	actualJSON := string(bytes)
-	expectedJSON, err := stringutil.ToJsonString(finding)
+	expectedJSON, err := stringutil.ToJsonString(f)
 	require.NoError(t, err)
 	require.Equal(t, expectedJSON, actualJSON)
 
 	// Check that LoadFinding also returns the expected finding
-	loadedFinding, err := LoadFinding(testDir, finding.Name)
+	loadedFinding, err := finding.LoadFinding(testDir, f.Name)
 	require.NoError(t, err)
 	actualJSON, err = stringutil.ToJsonString(loadedFinding)
 	require.NoError(t, err)
@@ -63,43 +64,43 @@ func TestFinding_MoveInputFile(t *testing.T) {
 	err = os.WriteFile(testfile, []byte("input"), 0644)
 	require.NoError(t, err)
 
-	finding := testFinding()
-	finding.InputFile = testfile
-	finding.Logs = append(finding.Logs, fmt.Sprintf("some surrounding text, %s more text", testfile))
-	findingDir := filepath.Join(projectDir, nameFindingsDir, finding.Name)
+	f := testFinding()
+	f.InputFile = testfile
+	f.Logs = append(f.Logs, fmt.Sprintf("some surrounding text, %s more text", testfile))
+	findingDir := filepath.Join(projectDir, finding.NameFindingsDir, f.Name)
 
-	err = finding.MoveInputFile(projectDir, seedCorpusDir)
+	err = f.MoveInputFile(projectDir, seedCorpusDir)
 	require.NoError(t, err)
 
 	// Check that the input file in the finding dir was created
-	matches, err := filepath.Glob(filepath.Join(findingDir, nameCrashingInput+"*"))
+	matches, err := filepath.Glob(filepath.Join(findingDir, finding.NameCrashingInput+"*"))
 	require.NoError(t, err)
 	require.Len(t, matches, 1)
 
 	// Check that the input file was copied to the seed corpus
-	matches, err = filepath.Glob(filepath.Join(seedCorpusDir, finding.Name+"*"))
+	matches, err = filepath.Glob(filepath.Join(seedCorpusDir, f.Name+"*"))
 	require.NoError(t, err)
 	require.Len(t, matches, 1)
 
 	// Check that the log was updated
-	require.Contains(t, finding.Logs[2], nameCrashingInput)
+	require.Contains(t, f.Logs[2], finding.NameCrashingInput)
 }
 
 func TestListFindings(t *testing.T) {
-	finding := testFinding()
+	f := testFinding()
 
-	err := finding.Save(testBaseDir)
+	err := f.Save(testBaseDir)
 	require.NoError(t, err)
 
 	// Check that the finding is listed
-	findings, err := ListFindings(testBaseDir)
+	findings, err := finding.ListFindings(testBaseDir)
 	require.NoError(t, err)
 	require.Len(t, findings, 1)
-	require.Equal(t, finding, findings[0])
+	require.Equal(t, f, findings[0])
 }
 
-func testFinding() *Finding {
-	return &Finding{
+func testFinding() *finding.Finding {
+	return &finding.Finding{
 		Name: "test-name",
 		Logs: []string{
 			"Oops",
