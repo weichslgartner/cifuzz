@@ -447,9 +447,18 @@ func testBundle(t *testing.T, dir string, cifuzz string) {
 		"--timeout", "100m",
 		"--branch", "my-branch",
 		"--commit", "123456abcdef",
+		"--env", "FOO=foo",
+		// This should be set to the value from the local environment,
+		// which we set to "bar" below
+		"--env", "BAR",
+		// This should be ignored because it's not set in the local
+		// environment
+		"--env", "NO_SUCH_VARIABLE",
 		"--verbose",
 	)
 	cmd.Dir = dir
+	cmd.Env, err = envutil.Setenv(os.Environ(), "BAR", "bar")
+	require.NoError(t, err)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	err = cmd.Run()
@@ -481,6 +490,9 @@ func testBundle(t *testing.T, dir string, cifuzz string) {
 	// Verify that the metadata contain the engine args and fuzz test args
 	assert.Equal(t, []string{"-runs=0"}, metadata.Fuzzers[0].EngineOptions.Flags)
 	assert.Equal(t, []string{"arg3", "arg4"}, metadata.Fuzzers[0].FuzzTestArgs)
+
+	// Verify the metadata contains the env vars
+	require.Equal(t, []string{"FOO=foo", "BAR=bar", "NO_CIFUZZ=1"}, metadata.Fuzzers[0].EngineOptions.Env)
 
 	var parserFuzzer *artifact.Fuzzer
 	var parserCoverage *artifact.Fuzzer

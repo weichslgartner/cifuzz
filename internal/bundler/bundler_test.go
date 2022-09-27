@@ -61,7 +61,9 @@ func TestAssembleArtifacts_Fuzzing(t *testing.T) {
 		RuntimeDeps: runtimeDeps,
 	}
 
-	b := NewBundler(&Opts{})
+	b := NewBundler(&Opts{
+		Env: []string{"FOO=foo"},
+	})
 	fuzzers, manifest, systemDeps, err := b.assembleArtifacts(fuzzTest, buildResult, projectDir, tempDir)
 	require.NoError(t, err)
 
@@ -74,7 +76,7 @@ func TestAssembleArtifacts_Fuzzing(t *testing.T) {
 		ProjectDir:    projectDir,
 		Seeds:         filepath.Join("libfuzzer", "address", "some_fuzz_test", "seeds"),
 		LibraryPaths:  []string{filepath.Join("libfuzzer", "address", "some_fuzz_test", "external_libs")},
-		EngineOptions: artifact.EngineOptions{Env: []string{"NO_CIFUZZ=1"}},
+		EngineOptions: artifact.EngineOptions{Env: []string{"FOO=foo", "NO_CIFUZZ=1"}},
 	}, *fuzzers[0])
 
 	require.Equal(t, map[string]string{

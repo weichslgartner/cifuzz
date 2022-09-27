@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/spf13/viper"
@@ -107,4 +108,30 @@ func TestCMakeMissing(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Contains(t, string(output), fmt.Sprintf(dependencies.MESSAGE_MISSING, "cmake"))
+}
+
+func TestEnvVarsSetInConfigFile(t *testing.T) {
+	projectDir := testutil.BootstrapEmptyProject(t, "bundle-test-")
+	configFileContent := `env:
+  - FOO=foo
+  - BAR
+  - NO_SUCH_VARIABLE
+`
+	err := os.WriteFile(filepath.Join(projectDir, "cifuzz.yaml"), []byte(configFileContent), 0644)
+	require.NoError(t, err)
+
+	err = os.Setenv("BAR", "bar")
+	require.NoError(t, err)
+
+	opts := &bundler.Opts{
+		ProjectDir:  projectDir,
+		ConfigDir:   projectDir,
+		BuildSystem: config.BuildSystemCMake,
+	}
+
+	cmd := newWithOptions(opts)
+	err = cmd.PreRunE(cmd, nil)
+	require.NoError(t, err)
+
+	require.Equal(t, []string{"FOO=foo", "BAR=bar"}, opts.Env)
 }

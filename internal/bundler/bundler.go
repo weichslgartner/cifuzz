@@ -25,6 +25,7 @@ import (
 	"code-intelligence.com/cifuzz/pkg/log"
 	"code-intelligence.com/cifuzz/pkg/runfiles"
 	"code-intelligence.com/cifuzz/pkg/vcs"
+	"code-intelligence.com/cifuzz/util/envutil"
 	"code-intelligence.com/cifuzz/util/fileutil"
 	"code-intelligence.com/cifuzz/util/sliceutil"
 )
@@ -73,10 +74,12 @@ type Opts struct {
 	Commit         string        `mapstructure:"commit"`
 	Dictionary     string        `mapstructure:"dict"`
 	EngineArgs     []string      `mapstructure:"engine-args"`
+	Env            []string      `mapstructure:"env"`
 	FuzzTestArgs   []string      `mapstructure:"fuzz-test-args"`
 	SeedCorpusDirs []string      `mapstructure:"seed-corpus-dirs"`
 	Timeout        time.Duration `mapstructure:"timeout"`
 	ProjectDir     string        `mapstructure:"project-dir"`
+	ConfigDir      string        `mapstructure:"config-dir"`
 
 	// Fields which are not configurable via viper (i.e. via cifuzz.yaml
 	// and CIFUZZ_* environment variables), by setting
@@ -110,6 +113,25 @@ func (opts *Opts) Validate() error {
 		msg := fmt.Sprintf("invalid argument %q for \"--timeout\" flag: timeout can't be less than a second", opts.Timeout)
 		return cmdutils.WrapIncorrectUsageError(errors.New(msg))
 	}
+
+	// If an env var doesn't contain a "=", it means the user wants to
+	// use the value from the current environment
+	var env []string
+	for _, e := range opts.Env {
+		if strings.Contains(e, "=") {
+			// The environment variable contains a "=", so we use it
+			env = append(env, e)
+			continue
+		}
+		if os.Getenv(e) == "" {
+			// The variable does not contain a "=" and is not set in the
+			// current environment, so we ignore it
+			continue
+		}
+		// Use the variable with the value from the current environment
+		env = append(env, fmt.Sprintf("%s=%s", e, os.Getenv(e)))
+	}
+	opts.Env = env
 
 	return nil
 }
@@ -482,16 +504,21 @@ depsLoop:
 		}
 	}
 
+	// Set NO_CIFUZZ=1 to avoid that remotely executed fuzz tests try
+	// to start cifuzz
+	env, err := envutil.Setenv(b.Opts.Env, "NO_CIFUZZ", "1")
+	if err != nil {
+		return
+	}
+
 	baseFuzzerInfo := artifact.Fuzzer{
 		Target:     fuzzTest,
 		Path:       fuzzTestArchivePath,
 		ProjectDir: projectDir,
 		Dictionary: archiveDict,
 		Seeds:      archiveSeedsDir,
-		// Set NO_CIFUZZ=1 to avoid that remotely executed fuzz tests try
-		// to start cifuzz
 		EngineOptions: artifact.EngineOptions{
-			Env:   []string{"NO_CIFUZZ=1"},
+			Env:   env,
 			Flags: b.Opts.EngineArgs,
 		},
 		FuzzTestArgs: b.Opts.FuzzTestArgs,

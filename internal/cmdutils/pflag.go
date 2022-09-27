@@ -97,6 +97,16 @@ func AddEngineArgFlag(cmd *cobra.Command) func() {
 	}
 }
 
+func AddEnvFlag(cmd *cobra.Command) func() {
+	cmd.Flags().StringArray("env", nil,
+		"Set environment variable, e.g. '--env `VAR=value`'.\n"+
+			"To use the value of VAR in the local environment, use '--env VAR'.\n"+
+			"This flag can be used multiple times.")
+	return func() {
+		ViperMustBindPFlag("env", cmd.Flags().Lookup("env"))
+	}
+}
+
 func AddFuzzTestArgFlag(cmd *cobra.Command) func() {
 	cmd.Flags().StringArray("fuzz-test-arg", nil,
 		"Command-line `argument` to pass to the fuzz test.\n"+
