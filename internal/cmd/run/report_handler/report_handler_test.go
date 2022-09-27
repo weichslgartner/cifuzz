@@ -12,10 +12,10 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"code-intelligence.com/cifuzz/internal/cmd/run/report_handler/metrics"
+	"code-intelligence.com/cifuzz/internal/testutil"
 	"code-intelligence.com/cifuzz/pkg/finding"
 	"code-intelligence.com/cifuzz/pkg/log"
 	"code-intelligence.com/cifuzz/pkg/report"
-	"code-intelligence.com/cifuzz/util/testutil"
 )
 
 var logOutput io.ReadWriter

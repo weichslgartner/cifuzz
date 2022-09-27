@@ -15,10 +15,10 @@ import (
 	builderPkg "code-intelligence.com/cifuzz/internal/builder"
 	initCmd "code-intelligence.com/cifuzz/internal/cmd/init"
 	"code-intelligence.com/cifuzz/internal/cmdutils"
+	"code-intelligence.com/cifuzz/internal/testutil"
 	"code-intelligence.com/cifuzz/pkg/log"
 	"code-intelligence.com/cifuzz/pkg/mocks"
 	"code-intelligence.com/cifuzz/util/fileutil"
-	"code-intelligence.com/cifuzz/util/testutil"
 )
 
 var logOutput io.ReadWriter

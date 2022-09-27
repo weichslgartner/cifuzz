@@ -16,11 +16,10 @@ import (
 	"github.com/stretchr/testify/require"
 
 	builderPkg "code-intelligence.com/cifuzz/internal/builder"
-	testutil_int "code-intelligence.com/cifuzz/internal/testutil"
+	"code-intelligence.com/cifuzz/internal/testutil"
 	"code-intelligence.com/cifuzz/util/executil"
 	"code-intelligence.com/cifuzz/util/fileutil"
 	"code-intelligence.com/cifuzz/util/stringutil"
-	"code-intelligence.com/cifuzz/util/testutil"
 )
 
 var expectedFinding = regexp.MustCompile(`heap buffer overflow in exploreMe`)
@@ -35,7 +34,7 @@ func TestIntegration_Make_RunCoverage(t *testing.T) {
 	}
 	testutil.RegisterTestDepOnCIFuzz()
 
-	installDir := testutil_int.InstallCifuzzInTemp(t)
+	installDir := testutil.InstallCifuzzInTemp(t)
 	dir := copyMakeExampleDir(t, filepath.Join("examples", "other"))
 	defer fileutil.Cleanup(dir)
 	t.Logf("executing make integration test in %s", dir)
@@ -55,7 +54,7 @@ func TestIntegration_Make_DetailedCoverage(t *testing.T) {
 	}
 	testutil.RegisterTestDepOnCIFuzz()
 
-	installDir := testutil_int.InstallCifuzzInTemp(t)
+	installDir := testutil.InstallCifuzzInTemp(t)
 
 	dir := copyMakeExampleDir(t, filepath.Join("integration-tests", "make", "testdata", "coverage"))
 	defer fileutil.Cleanup(dir)

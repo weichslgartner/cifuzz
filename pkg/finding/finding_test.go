@@ -8,8 +8,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"code-intelligence.com/cifuzz/internal/testutil"
 	"code-intelligence.com/cifuzz/util/stringutil"
-	"code-intelligence.com/cifuzz/util/testutil"
 )
 
 var testBaseDir string

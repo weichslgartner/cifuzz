@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"code-intelligence.com/cifuzz/internal/cmdutils"
-	"code-intelligence.com/cifuzz/util/testutil"
+	"code-intelligence.com/cifuzz/internal/testutil"
 )
 
 func TestMain(m *testing.M) {

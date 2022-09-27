@@ -11,10 +11,10 @@ import (
 
 	initCmd "code-intelligence.com/cifuzz/internal/cmd/init"
 	"code-intelligence.com/cifuzz/internal/cmdutils"
+	"code-intelligence.com/cifuzz/internal/testutil"
 	"code-intelligence.com/cifuzz/pkg/finding"
 	"code-intelligence.com/cifuzz/pkg/log"
 	"code-intelligence.com/cifuzz/util/stringutil"
-	"code-intelligence.com/cifuzz/util/testutil"
 )
 
 var logOutput io.ReadWriter

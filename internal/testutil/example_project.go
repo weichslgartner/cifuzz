@@ -7,14 +7,12 @@ import (
 
 	"github.com/otiai10/copy"
 	"github.com/pkg/errors"
-
-	"code-intelligence.com/cifuzz/util/testutil"
 )
 
 // BootstrapExampleProjectForTest copies the given example project to a temporary folder
 // and changes into that directory.
 func BootstrapExampleProjectForTest(prefix, exampleName string) (tempDir string, cleanup func()) { //nolint:nonamedreturns
-	tempDir, cleanup = testutil.ChdirToTempDir(prefix)
+	tempDir, cleanup = ChdirToTempDir(prefix)
 
 	_, thisFile, _, ok := runtime.Caller(0)
 	if !ok {

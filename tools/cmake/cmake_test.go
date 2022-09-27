@@ -18,8 +18,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	builderPkg "code-intelligence.com/cifuzz/internal/builder"
+	"code-intelligence.com/cifuzz/internal/testutil"
 	"code-intelligence.com/cifuzz/util/fileutil"
-	"code-intelligence.com/cifuzz/util/testutil"
 )
 
 const cifuzzCmakeBuildType = "RelWithDebInfo"
