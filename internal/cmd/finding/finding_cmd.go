@@ -21,7 +21,6 @@ type options struct {
 	PrintJSON  bool   `mapstructure:"print-json"`
 	ProjectDir string `mapstructure:"project-dir"`
 	ConfigDir  string `mapstructure:"config-dir"`
-	ShowAll    bool
 }
 
 type findingCmd struct {
@@ -68,34 +67,10 @@ func newWithOptions(opts *options) *cobra.Command {
 		cmdutils.AddProjectDirFlag,
 	)
 
-	cmd.Flags().BoolVar(&opts.ShowAll, "all", false, "Show all findings")
-
 	return cmd
 }
 
 func (cmd *findingCmd) run(args []string) error {
-	if cmd.opts.ShowAll {
-		findings, err := finding.ListFindings(cmd.opts.ProjectDir)
-		if err != nil {
-			return err
-		}
-
-		if len(findings) == 0 {
-			log.Print("This project doesn't have any findings yet")
-			return nil
-		}
-
-		for _, f := range findings {
-			err = cmd.printFinding(f)
-			if err != nil {
-				return err
-			}
-			// Print a newline to separate the findings
-			_, _ = fmt.Fprintln(cmd.OutOrStdout())
-		}
-		return nil
-	}
-
 	if len(args) == 0 {
 		// If called without arguments, `cifuzz findings` lists short
 		// descriptions of all findings
