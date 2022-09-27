@@ -26,13 +26,6 @@ const (
 
 var buildSystemTypes = []string{BuildSystemCMake, BuildSystemMaven, BuildSystemGradle, BuildSystemOther}
 
-type ProjectConfig struct {
-	LastUpdated string
-	BuildSystem string `mapstructure:"build-system"`
-
-	ProjectDir string
-}
-
 const projectConfigFile = "cifuzz.yaml"
 
 //go:embed cifuzz.yaml.tmpl
@@ -52,8 +45,8 @@ func CreateProjectConfig(configDir string) (string, error) {
 	}
 
 	// setup config struct with (default) values
-	config := ProjectConfig{
-		LastUpdated: time.Now().Format("2006-01-02"),
+	config := struct{ LastUpdated string }{
+		time.Now().Format("2006-01-02"),
 	}
 
 	// parse the template and write it to config file
@@ -129,18 +122,6 @@ func ParseProjectConfig(configDir string, opts interface{}) error {
 	}
 
 	return nil
-}
-
-func ReadProjectConfig(configDir string) (*ProjectConfig, error) {
-	config := &ProjectConfig{}
-	err := ParseProjectConfig(configDir, config)
-	if err != nil {
-		return nil, err
-	}
-	if config.ProjectDir == "" {
-		config.ProjectDir = configDir
-	}
-	return config, nil
 }
 
 func ValidateBuildSystem(buildSystem string) error {

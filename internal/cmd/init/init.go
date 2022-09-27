@@ -66,7 +66,7 @@ Use 'cifuzz create' to create your first fuzz test.`)
 
 func setUpAndMentionBuildSystemIntegrations(cwd string) {
 	// Printing build system instructions is best-effort: Do not fail on errors.
-	cfg, err := config.ReadProjectConfig(cwd)
+	buildSystem, err := config.DetermineBuildSystem(cwd)
 	if err != nil {
 		if !errors.Is(err, os.ErrNotExist) {
 			log.Debug(err)
@@ -74,7 +74,7 @@ func setUpAndMentionBuildSystemIntegrations(cwd string) {
 		return
 	}
 
-	switch cfg.BuildSystem {
+	switch buildSystem {
 	case config.BuildSystemCMake:
 		// Note: We set NO_SYSTEM_ENVIRONMENT_PATH to avoid that the
 		// system-wide cmake package takes precedence over a package

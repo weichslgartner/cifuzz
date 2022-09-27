@@ -92,43 +92,41 @@ func TestCreateProjectConfig_Exists(t *testing.T) {
 	assert.True(t, exists)
 }
 
-func TestReadProjectConfig(t *testing.T) {
-	projectDir, err := os.MkdirTemp(baseTempDir, "project-")
-	require.NoError(t, err)
-	defer fileutil.Cleanup(projectDir)
-
-	configFile := filepath.Join(projectDir, "cifuzz.yaml")
-	err = os.WriteFile(configFile, []byte("build-system: "), 0644)
-	require.NoError(t, err)
-
-	config, err := ReadProjectConfig(projectDir)
-	require.NoError(t, err)
-
-	require.Equal(t, BuildSystemOther, config.BuildSystem)
-}
-
 func TestParseProjectConfig(t *testing.T) {
 	projectDir, err := os.MkdirTemp(baseTempDir, "project-")
 	require.NoError(t, err)
 	defer fileutil.Cleanup(projectDir)
 
+	opts := &struct {
+		BuildSystem string `mapstructure:"build-system"`
+	}{}
+
 	configFile := filepath.Join(projectDir, "cifuzz.yaml")
+	err = os.WriteFile(configFile, []byte("build-system: "), 0644)
+	require.NoError(t, err)
+
+	err = ParseProjectConfig(projectDir, opts)
+	require.NoError(t, err)
+	require.Equal(t, BuildSystemOther, opts.BuildSystem)
+
+	// Set the build system to cmake
 	err = os.WriteFile(configFile, []byte("build-system: cmake"), 0644)
 	require.NoError(t, err)
+
+	// Check that ParseProjectConfig now sets the build system to cmake
+	err = ParseProjectConfig(projectDir, opts)
+	require.NoError(t, err)
+	require.Equal(t, BuildSystemCMake, opts.BuildSystem)
+}
+
+func TestParseProjectConfigCMake(t *testing.T) {
+	projectDir, err := os.MkdirTemp(baseTempDir, "project-")
+	require.NoError(t, err)
+	defer fileutil.Cleanup(projectDir)
 
 	opts := &struct {
 		BuildSystem string `mapstructure:"build-system"`
 	}{}
-	err = ParseProjectConfig(projectDir, opts)
-	require.NoError(t, err)
-
-	require.Equal(t, BuildSystemCMake, opts.BuildSystem)
-}
-
-func TestReadProjectConfigCMake(t *testing.T) {
-	projectDir, err := os.MkdirTemp(baseTempDir, "project-")
-	require.NoError(t, err)
-	defer fileutil.Cleanup(projectDir)
 
 	configFile := filepath.Join(projectDir, "cifuzz.yaml")
 	err = os.WriteFile(configFile, []byte("build-system: "), 0644)
@@ -139,10 +137,10 @@ func TestReadProjectConfigCMake(t *testing.T) {
 	err = os.WriteFile(filepath.Join(projectDir, "CMakeLists.txt"), []byte{}, 0644)
 	require.NoError(t, err)
 
-	config, err := ReadProjectConfig(projectDir)
+	err = ParseProjectConfig(projectDir, opts)
 	require.NoError(t, err)
 
-	require.Equal(t, BuildSystemCMake, config.BuildSystem)
+	require.Equal(t, BuildSystemCMake, opts.BuildSystem)
 }
 
 func TestDetermineBuildSystem_CMake(t *testing.T) {

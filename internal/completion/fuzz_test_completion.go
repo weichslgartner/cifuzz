@@ -22,19 +22,18 @@ func ValidFuzzTests(cmd *cobra.Command, args []string, toComplete string) ([]str
 	}
 
 	// Read the project config to figure out the build system
-	projectDir, err := config.FindConfigDir()
-	if err != nil {
-		log.Error(err, err.Error())
-		return nil, cobra.ShellCompDirectiveError
-	}
-	conf, err := config.ReadProjectConfig(projectDir)
+	conf := struct {
+		BuildSystem string `mapstructure:"build-system"`
+		ProjectDir  string `mapstructure:"project-dir"`
+	}{}
+	err = config.FindAndParseProjectConfig(&conf)
 	if err != nil {
 		log.Error(err, err.Error())
 		return nil, cobra.ShellCompDirectiveError
 	}
 
 	if conf.BuildSystem == config.BuildSystemCMake {
-		return validCMakeFuzzTests(projectDir)
+		return validCMakeFuzzTests(conf.ProjectDir)
 	} else if conf.BuildSystem == config.BuildSystemOther {
 		// For other build systems, the <fuzz test> argument must be
 		// the path to the fuzz test executable, so we use file

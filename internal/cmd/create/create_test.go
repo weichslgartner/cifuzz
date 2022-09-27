@@ -100,9 +100,7 @@ func TestCMakeMissing(t *testing.T) {
 	}
 
 	opts := &createOpts{
-		ProjectConfig: config.ProjectConfig{
-			BuildSystem: config.BuildSystemCMake,
-		},
+		BuildSystem: config.BuildSystemCMake,
 	}
 
 	_, err := cmdutils.ExecuteCommand(t, newWithOptions(opts), os.Stdin, args...)
@@ -129,9 +127,7 @@ func TestClangVersion(t *testing.T) {
 	}
 
 	opts := &createOpts{
-		ProjectConfig: config.ProjectConfig{
-			BuildSystem: config.BuildSystemCMake,
-		},
+		BuildSystem: config.BuildSystemCMake,
 	}
 
 	_, err := cmdutils.ExecuteCommand(t, newWithOptions(opts), os.Stdin, args...)

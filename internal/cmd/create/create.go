@@ -18,7 +18,7 @@ import (
 )
 
 type createOpts struct {
-	config.ProjectConfig `mapstructure:",squash"`
+	BuildSystem string `mapstructure:"build-system"`
 
 	outputPath string
 	testType   config.FuzzTestType

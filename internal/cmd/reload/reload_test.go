@@ -41,9 +41,9 @@ func TestClangMissing(t *testing.T) {
 	deps := dependencies.CreateTestDeps(t, []dependencies.Key{dependencies.CLANG, dependencies.CMAKE})
 	dependencies.OverwriteInstalledWithFalse(deps[dependencies.CLANG])
 
-	opts := &reloadOpts{ProjectConfig: config.ProjectConfig{
+	opts := &reloadOpts{
 		BuildSystem: config.BuildSystemCMake,
-	}}
+	}
 
 	_, err := cmdutils.ExecuteCommand(t, newWithOptions(opts), os.Stdin)
 	require.Error(t, err)
@@ -57,9 +57,9 @@ func TestCMakeMissing(t *testing.T) {
 	deps := dependencies.CreateTestDeps(t, []dependencies.Key{dependencies.CLANG, dependencies.CMAKE})
 	dependencies.OverwriteInstalledWithFalse(deps[dependencies.CMAKE])
 
-	opts := &reloadOpts{ProjectConfig: config.ProjectConfig{
+	opts := &reloadOpts{
 		BuildSystem: config.BuildSystemCMake,
-	}}
+	}
 
 	_, err := cmdutils.ExecuteCommand(t, newWithOptions(opts), os.Stdin)
 	require.Error(t, err)
@@ -75,9 +75,9 @@ func TestWrongCMakeVersion(t *testing.T) {
 	dep := deps[dependencies.CMAKE]
 	version := dependencies.OverwriteGetVersionWith0(dep)
 
-	opts := &reloadOpts{ProjectConfig: config.ProjectConfig{
+	opts := &reloadOpts{
 		BuildSystem: config.BuildSystemCMake,
-	}}
+	}
 
 	_, err := cmdutils.ExecuteCommand(t, newWithOptions(opts), os.Stdin)
 	require.Error(t, err)
