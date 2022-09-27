@@ -64,9 +64,18 @@ func CreateProjectConfig(configDir string) (string, error) {
 }
 
 func FindAndParseProjectConfig(opts interface{}) error {
-	configDir, err := FindConfigDir()
-	if err != nil {
-		return err
+	var configDir string
+	var err error
+
+	// If a config dir is set in the options, use that
+	v := reflect.ValueOf(opts).Elem().FieldByName("ConfigDir")
+	if v.IsValid() && v.String() != "" {
+		configDir = v.String()
+	} else {
+		configDir, err = FindConfigDir()
+		if err != nil {
+			return err
+		}
 	}
 
 	err = ParseProjectConfig(configDir, opts)
