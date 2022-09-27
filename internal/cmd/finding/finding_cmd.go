@@ -2,7 +2,6 @@ package finding
 
 import (
 	"fmt"
-	"os"
 	"strings"
 	"text/tabwriter"
 
@@ -45,13 +44,6 @@ func New() *cobra.Command {
 			// were bound to the flags of other commands before.
 			bindFlags()
 			err := config.FindAndParseProjectConfig(opts)
-			if errors.Is(err, os.ErrNotExist) {
-				// The project directory doesn't exist, this is an expected
-				// error, so we print it and return a silent error to avoid
-				// printing a stack trace
-				log.Error(err, fmt.Sprintf("%s\nUse 'cifuzz init' to set up a project for use with cifuzz.", err.Error()))
-				return cmdutils.WrapSilentError(err)
-			}
 			if err != nil {
 				log.Errorf(err, "Failed to parse cifuzz.yaml: %v", err.Error())
 				return cmdutils.WrapSilentError(err)
