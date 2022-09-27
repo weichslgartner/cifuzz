@@ -107,6 +107,24 @@ func TestReadProjectConfig(t *testing.T) {
 	require.Equal(t, BuildSystemOther, config.BuildSystem)
 }
 
+func TestParseProjectConfig(t *testing.T) {
+	projectDir, err := os.MkdirTemp(baseTempDir, "project-")
+	require.NoError(t, err)
+	defer fileutil.Cleanup(projectDir)
+
+	configFile := filepath.Join(projectDir, "cifuzz.yaml")
+	err = os.WriteFile(configFile, []byte("build-system: cmake"), 0644)
+	require.NoError(t, err)
+
+	opts := &struct {
+		BuildSystem string `mapstructure:"build-system"`
+	}{}
+	err = ParseProjectConfig(projectDir, opts)
+	require.NoError(t, err)
+
+	require.Equal(t, BuildSystemCMake, opts.BuildSystem)
+}
+
 func TestReadProjectConfigCMake(t *testing.T) {
 	projectDir, err := os.MkdirTemp(baseTempDir, "project-")
 	require.NoError(t, err)

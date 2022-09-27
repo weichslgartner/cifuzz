@@ -68,7 +68,7 @@ func CreateProjectConfig(projectDir string) (string, error) {
 	return configpath, nil
 }
 
-func ParseProjectConfig(opts interface{}) (string, error) {
+func FindAndParseProjectConfig(opts interface{}) (string, error) {
 	var err error
 
 	// Also read settings from environment variables
@@ -80,12 +80,20 @@ func ParseProjectConfig(opts interface{}) (string, error) {
 		return "", err
 	}
 
+	err = ParseProjectConfig(projectDir, opts)
+	if err != nil {
+		return "", err
+	}
+	return projectDir, nil
+}
+
+func ParseProjectConfig(projectDir string, opts interface{}) error {
 	configpath := filepath.Join(projectDir, projectConfigFile)
 	viper.SetConfigFile(configpath)
 
-	err = viper.ReadInConfig()
+	err := viper.ReadInConfig()
 	if err != nil {
-		return "", errors.WithStack(err)
+		return errors.WithStack(err)
 	}
 
 	// viper.Unmarshal doesn't return an error if the timeout value is
@@ -93,13 +101,13 @@ func ParseProjectConfig(opts interface{}) (string, error) {
 	if viper.GetString("timeout") != "" {
 		_, err = time.ParseDuration(viper.GetString("timeout"))
 		if err != nil {
-			return "", errors.WithStack(fmt.Errorf("error decoding 'timeout': %w", err))
+			return errors.WithStack(fmt.Errorf("error decoding 'timeout': %w", err))
 		}
 	}
 
 	err = viper.Unmarshal(opts)
 	if err != nil {
-		return "", errors.WithStack(err)
+		return errors.WithStack(err)
 	}
 
 	// If the build system was not set by the user, try to determine it
@@ -115,15 +123,15 @@ func ParseProjectConfig(opts interface{}) (string, error) {
 	if viper.GetString("build-system") == "" {
 		config.BuildSystem, err = DetermineBuildSystem(projectDir)
 		if err != nil {
-			return "", err
+			return err
 		}
 	}
 	err = mapstructure.Decode(config, opts)
 	if err != nil {
-		return "", errors.WithStack(err)
+		return errors.WithStack(err)
 	}
 
-	return projectDir, nil
+	return nil
 }
 
 func ReadProjectConfig(projectDir string) (*ProjectConfig, error) {

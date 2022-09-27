@@ -37,7 +37,7 @@ If no fuzz tests are specified all fuzz tests are added to the bundle.`,
 			cmdutils.ViperMustBindPFlag("branch", cmd.Flags().Lookup("branch"))
 			cmdutils.ViperMustBindPFlag("commit", cmd.Flags().Lookup("commit"))
 
-			projectDir, err := config.ParseProjectConfig(opts)
+			projectDir, err := config.FindAndParseProjectConfig(opts)
 			if err != nil {
 				log.Errorf(err, "Failed to parse cifuzz.yaml: %v", err.Error())
 				return cmdutils.WrapSilentError(err)

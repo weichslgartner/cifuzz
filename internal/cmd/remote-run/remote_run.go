@@ -96,7 +96,7 @@ https://github.com/CodeIntelligenceTesting/cifuzz/issues`, system)
 				return cmdutils.WrapSilentError(err)
 			}
 
-			projectDir, err := config.ParseProjectConfig(opts)
+			projectDir, err := config.FindAndParseProjectConfig(opts)
 			if err != nil {
 				log.Errorf(err, "Failed to parse cifuzz.yaml: %v", err.Error())
 				return cmdutils.WrapSilentError(err)

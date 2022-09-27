@@ -142,7 +142,7 @@ depends on the build system configured for the project:
 			cmdutils.ViperMustBindPFlag("use-sandbox", cmd.Flags().Lookup("use-sandbox"))
 			cmdutils.ViperMustBindPFlag("print-json", cmd.Flags().Lookup("json"))
 
-			projectDir, err := config.ParseProjectConfig(opts)
+			projectDir, err := config.FindAndParseProjectConfig(opts)
 			if err != nil {
 				log.Errorf(err, "Failed to parse cifuzz.yaml: %v", err.Error())
 				return cmdutils.WrapSilentError(err)
