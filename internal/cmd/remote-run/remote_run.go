@@ -385,7 +385,11 @@ func (c *runRemoteCmd) startRemoteFuzzingRun(artifact *artifact, token string) e
 	//       shows details about the run, but currently details are only
 	//       shown on the "<fuzz target>/edit" page, which lists all runs
 	//       of the fuzz target.
-	log.Successf("Successfully started fuzzing run. Visit %s/dashboard/%s/overview to view the fuzzing run.",
+	log.Successf(`Successfully started fuzzing run. To view findings and coverage, open:
+
+    %s/dashboard/%s/overview
+
+`,
 		c.opts.Server, campaignRunName)
 
 	return nil
