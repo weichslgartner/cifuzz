@@ -82,7 +82,7 @@ func setUpAndMentionBuildSystemIntegrations(cwd string) {
 		// installations should usually take precedence over system-wide
 		// installations).
 		//
-		// The find_package search procedude is described in
+		// The find_package search procedure is described in
 		// https://cmake.org/cmake/help/latest/command/find_package.html#config-mode-search-procedure.
 		//
 		// Without NO_SYSTEM_ENVIRONMENT_PATH, find_package looks in
@@ -101,35 +101,5 @@ func setUpAndMentionBuildSystemIntegrations(cwd string) {
 		log.Print(mavenSetup)
 	case config.BuildSystemGradle:
 		log.Print(gradleSetup)
-	}
-
-	if cfg.BuildSystem == config.BuildSystemCMake {
-		// Note: We set NO_SYSTEM_ENVIRONMENT_PATH to avoid that the
-		// system-wide cmake package takes precedence over a package
-		// from a per-user installation (which is what we want, per-user
-		// installations should usually take precedence over system-wide
-		// installations).
-		//
-		// The find_package search procedude is described in
-		// https://cmake.org/cmake/help/latest/command/find_package.html#config-mode-search-procedure.
-		//
-		// Without NO_SYSTEM_ENVIRONMENT_PATH, find_package looks in
-		// paths with prefixes from the PATH environment variable in
-		// step 5 (omitting any trailing "/bin").
-		// The PATH usually includes "/usr/local/bin", which means that
-		// find_package searches in "/usr/local/share/cifuzz" in this
-		// step, which is the path we use for a system-wide installation.
-		//
-		// The per-user directory is searched in step 6.
-		//
-		// With NO_SYSTEM_ENVIRONMENT_PATH, the system-wide installation
-		// directory is only searched in step 7.
-		log.Print(`
-Enable fuzz testing in your CMake project by adding the following lines
-to the top-level CMakeLists.txt before any add_subdirectory(...),
-add_library(...) or add_executable(...) calls:
-
-    find_package(cifuzz)
-    enable_fuzz_testing()`)
 	}
 }
