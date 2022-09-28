@@ -18,9 +18,9 @@ import (
 	"code-intelligence.com/cifuzz/util/fileutil"
 )
 
-const NameCrashingInput = "crashing-input"
-const NameJsonFile = "finding.json"
-const NameFindingsDir = ".cifuzz-findings"
+const nameCrashingInput = "crashing-input"
+const nameJsonFile = "finding.json"
+const nameFindingsDir = ".cifuzz-findings"
 const lockFile = ".lock"
 
 type Finding struct {
@@ -91,13 +91,13 @@ func (f *Finding) GetSeedPath() string {
 
 // Exists returns whether the JSON file of this finding already exists
 func (f *Finding) Exists(projectDir string) (bool, error) {
-	jsonPath := filepath.Join(projectDir, NameFindingsDir, f.Name, NameJsonFile)
+	jsonPath := filepath.Join(projectDir, nameFindingsDir, f.Name, nameJsonFile)
 	return fileutil.Exists(jsonPath)
 }
 
 func (f *Finding) Save(projectDir string) error {
-	findingDir := filepath.Join(projectDir, NameFindingsDir, f.Name)
-	jsonPath := filepath.Join(findingDir, NameJsonFile)
+	findingDir := filepath.Join(projectDir, nameFindingsDir, f.Name)
+	jsonPath := filepath.Join(findingDir, nameJsonFile)
 
 	err := os.MkdirAll(findingDir, 0755)
 	if err != nil {
@@ -130,7 +130,7 @@ func (f *Finding) saveJson(jsonPath string) error {
 func (f *Finding) MoveInputFile(projectDir, seedCorpusDir string) error {
 	// Acquire a file lock to avoid races with other cifuzz processes
 	// running in parallel
-	findingDir := filepath.Join(projectDir, NameFindingsDir, f.Name)
+	findingDir := filepath.Join(projectDir, nameFindingsDir, f.Name)
 	err := os.MkdirAll(findingDir, 0755)
 	if err != nil {
 		return errors.WithStack(err)
@@ -160,8 +160,8 @@ func (f *Finding) MoveInputFile(projectDir, seedCorpusDir string) error {
 }
 
 func (f *Finding) moveInputFile(projectDir, seedCorpusDir string) error {
-	findingDir := filepath.Join(projectDir, NameFindingsDir, f.Name)
-	path := filepath.Join(findingDir, NameCrashingInput)
+	findingDir := filepath.Join(projectDir, nameFindingsDir, f.Name)
+	path := filepath.Join(findingDir, nameCrashingInput)
 
 	// Copy the input file to the finding dir. We don't use os.Rename to
 	// avoid errors when source and target are not on the same mounted
@@ -266,7 +266,7 @@ func (f *Finding) ShortDescriptionColumns() []string {
 // ListFindings parses the JSON files of all findings and returns the
 // result.
 func ListFindings(projectDir string) ([]*Finding, error) {
-	findingsDir := filepath.Join(projectDir, NameFindingsDir)
+	findingsDir := filepath.Join(projectDir, nameFindingsDir)
 	entries, err := os.ReadDir(findingsDir)
 	if os.IsNotExist(err) {
 		return []*Finding{}, nil
@@ -296,8 +296,8 @@ func ListFindings(projectDir string) ([]*Finding, error) {
 // the result.
 // If the specified finding does not exist, a NotExistError is returned.
 func LoadFinding(projectDir, findingName string) (*Finding, error) {
-	findingDir := filepath.Join(projectDir, NameFindingsDir, findingName)
-	jsonPath := filepath.Join(findingDir, NameJsonFile)
+	findingDir := filepath.Join(projectDir, nameFindingsDir, findingName)
+	jsonPath := filepath.Join(findingDir, nameJsonFile)
 	bytes, err := os.ReadFile(jsonPath)
 	if os.IsNotExist(err) {
 		return nil, WrapNotExistError(err)
