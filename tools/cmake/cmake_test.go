@@ -245,7 +245,7 @@ func TestIntegration_RuntimeDepsInfo(t *testing.T) {
 	assert.Empty(t, extractRuntimeDeps(t, buildDir, "c_fuzz_test"))
 }
 
-const fakeCifuzzSource = `
+const fakeCIFuzzSource = `
 #include <stdio.h>
 
 int main(int argc, char **argv) {
@@ -256,7 +256,7 @@ int main(int argc, char **argv) {
 }
 `
 
-func TestIntegration_FuzzTestBinaryLaunchesCifuzz(t *testing.T) {
+func TestIntegration_FuzzTestBinaryLaunchesCIFuzz(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
@@ -281,27 +281,27 @@ func TestIntegration_FuzzTestBinaryLaunchesCifuzz(t *testing.T) {
 
 	// Verify that running the fuzz test directly executes cifuzz from the path by adding a fake cifuzz to PATH first in
 	// search order.
-	fakeCifuzzDir, err := os.MkdirTemp(baseTempDir, "")
+	fakeCIFuzzDir, err := os.MkdirTemp(baseTempDir, "")
 	require.NoError(t, err)
-	fakeCifuzzSrc := filepath.Join(fakeCifuzzDir, "cifuzz.c")
-	err = os.WriteFile(fakeCifuzzSrc, []byte(fakeCifuzzSource), 0o644)
+	fakeCIFuzzSrc := filepath.Join(fakeCIFuzzDir, "cifuzz.c")
+	err = os.WriteFile(fakeCIFuzzSrc, []byte(fakeCIFuzzSource), 0o644)
 	require.NoError(t, err)
-	var fakeCifuzz string
-	var fakeCifuzzCompileCmd *exec.Cmd
+	var fakeCIFuzz string
+	var fakeCIFuzzCompileCmd *exec.Cmd
 	if runtime.GOOS == "windows" {
-		fakeCifuzz = filepath.Join(fakeCifuzzDir, "cifuzz.exe")
-		fakeCifuzzCompileCmd = exec.Command("cl", fakeCifuzzSrc, "/Fe"+fakeCifuzz)
+		fakeCIFuzz = filepath.Join(fakeCIFuzzDir, "cifuzz.exe")
+		fakeCIFuzzCompileCmd = exec.Command("cl", fakeCIFuzzSrc, "/Fe"+fakeCIFuzz)
 	} else {
-		fakeCifuzz = filepath.Join(fakeCifuzzDir, "cifuzz")
-		fakeCifuzzCompileCmd = exec.Command("clang", fakeCifuzzSrc, "-o", fakeCifuzz)
+		fakeCIFuzz = filepath.Join(fakeCIFuzzDir, "cifuzz")
+		fakeCIFuzzCompileCmd = exec.Command("clang", fakeCIFuzzSrc, "-o", fakeCIFuzz)
 	}
-	fakeCifuzzCompileCmd.Stdout = os.Stdout
-	fakeCifuzzCompileCmd.Stderr = os.Stderr
-	err = fakeCifuzzCompileCmd.Run()
+	fakeCIFuzzCompileCmd.Stdout = os.Stdout
+	fakeCIFuzzCompileCmd.Stderr = os.Stderr
+	err = fakeCIFuzzCompileCmd.Run()
 	require.NoError(t, err)
 
 	cmd := exec.Command(string(fuzzTestPath))
-	cmd.Env = append(os.Environ(), fmt.Sprintf("PATH=%s%c%s", fakeCifuzzDir, os.PathListSeparator, os.Getenv("PATH")))
+	cmd.Env = append(os.Environ(), fmt.Sprintf("PATH=%s%c%s", fakeCIFuzzDir, os.PathListSeparator, os.Getenv("PATH")))
 	out, err := cmd.Output()
 	require.NoError(t, err)
 	require.Equal(t, "run\nc_fuzz_test\n", strings.ReplaceAll(string(out), "\r\n", "\n"))

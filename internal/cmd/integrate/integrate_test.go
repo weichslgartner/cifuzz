@@ -36,7 +36,7 @@ func TestMain(m *testing.M) {
 	m.Run()
 }
 
-func TestMissingCifuzzProject(t *testing.T) {
+func TestMissingCIFuzzProject(t *testing.T) {
 	// Check that the command produces the expected error when not
 	// called below a cifuzz project directory.
 	_, err := cmdutils.ExecuteCommand(t, New(), os.Stdin, "git")

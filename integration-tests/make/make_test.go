@@ -35,7 +35,7 @@ func TestIntegration_Make_RunCoverage(t *testing.T) {
 	}
 	testutil.RegisterTestDepOnCIFuzz()
 
-	installDir := shared.InstallCifuzzInTemp(t)
+	installDir := shared.InstallCIFuzzInTemp(t)
 	dir := copyMakeExampleDir(t, filepath.Join("examples", "other"))
 	defer fileutil.Cleanup(dir)
 	t.Logf("executing make integration test in %s", dir)
@@ -55,7 +55,7 @@ func TestIntegration_Make_DetailedCoverage(t *testing.T) {
 	}
 	testutil.RegisterTestDepOnCIFuzz()
 
-	installDir := shared.InstallCifuzzInTemp(t)
+	installDir := shared.InstallCIFuzzInTemp(t)
 
 	dir := copyMakeExampleDir(t, filepath.Join("integration-tests", "make", "testdata", "coverage"))
 	defer fileutil.Cleanup(dir)

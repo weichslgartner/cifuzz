@@ -458,11 +458,11 @@ func (c *coverageCmd) indexRawProfile(fuzzTestExecutable string) error {
 
 func (c *coverageCmd) generateHTMLReport(executable string, runtimeDeps []string) error {
 	args := []string{"show", "-format=html"}
-	ignoreCifuzzIncludesArgs, err := c.getIgnoreCifuzzIncludesArgs()
+	ignoreCIFuzzIncludesArgs, err := c.getIgnoreCIFuzzIncludesArgs()
 	if err != nil {
 		return err
 	}
-	args = append(args, ignoreCifuzzIncludesArgs...)
+	args = append(args, ignoreCIFuzzIncludesArgs...)
 	report, err := c.runLlvmCov(args, executable, runtimeDeps)
 	if err != nil {
 		return err
@@ -543,11 +543,11 @@ func (c *coverageCmd) runLlvmCov(args []string, fuzzTestExecutable string, runti
 
 func (c *coverageCmd) generateLcovReport(executable string, runtimeDeps []string) error {
 	args := []string{"export", "-format=lcov"}
-	ignoreCifuzzIncludesArgs, err := c.getIgnoreCifuzzIncludesArgs()
+	ignoreCIFuzzIncludesArgs, err := c.getIgnoreCIFuzzIncludesArgs()
 	if err != nil {
 		return err
 	}
-	args = append(args, ignoreCifuzzIncludesArgs...)
+	args = append(args, ignoreCIFuzzIncludesArgs...)
 	report, err := c.runLlvmCov(args, executable, runtimeDeps)
 	if err != nil {
 		return err
@@ -574,11 +574,11 @@ func (c *coverageCmd) generateLcovReport(executable string, runtimeDeps []string
 
 func (c *coverageCmd) lcovReportSummary(fuzzTestExecutable string, runtimeDeps []string) (string, error) {
 	args := []string{"export", "-format=lcov", "-summary-only"}
-	ignoreCifuzzIncludesArgs, err := c.getIgnoreCifuzzIncludesArgs()
+	ignoreCIFuzzIncludesArgs, err := c.getIgnoreCIFuzzIncludesArgs()
 	if err != nil {
 		return "", err
 	}
-	args = append(args, ignoreCifuzzIncludesArgs...)
+	args = append(args, ignoreCIFuzzIncludesArgs...)
 	output, err := c.runLlvmCov(args, fuzzTestExecutable, runtimeDeps)
 	if err != nil {
 		return "", err
@@ -587,7 +587,7 @@ func (c *coverageCmd) lcovReportSummary(fuzzTestExecutable string, runtimeDeps [
 	return output, nil
 }
 
-func (c *coverageCmd) getIgnoreCifuzzIncludesArgs() ([]string, error) {
+func (c *coverageCmd) getIgnoreCIFuzzIncludesArgs() ([]string, error) {
 	cifuzzIncludePath, err := runfiles.Finder.CIFuzzIncludePath()
 	if err != nil {
 		return nil, err

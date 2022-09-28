@@ -18,7 +18,7 @@ func TestIntegration_Gradle(t *testing.T) {
 	}
 
 	// Create installation builder
-	installDir := shared.InstallCifuzzInTemp(t)
+	installDir := shared.InstallCIFuzzInTemp(t)
 	cifuzz := builderPkg.CIFuzzExecutablePath(filepath.Join(installDir, "bin"))
 
 	// Copy testdata

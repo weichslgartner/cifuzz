@@ -94,9 +94,9 @@ func GetFindings(t *testing.T, cifuzz string, dir string) []*finding.Finding {
 	return findings
 }
 
-// InstallCifuzzInTemp creates an installation builder and
+// InstallCIFuzzInTemp creates an installation builder and
 // installs cifuzz in a temp folder and returns its path.
-func InstallCifuzzInTemp(t *testing.T) string {
+func InstallCIFuzzInTemp(t *testing.T) string {
 	t.Helper()
 
 	var err error
