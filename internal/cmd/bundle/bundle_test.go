@@ -43,7 +43,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestUnknownBuildSystem(t *testing.T) {
-	_, err := cmdutils.ExecuteCommand(t, newWithOptions(&bundler.Opts{}), os.Stdin)
+	_, err := cmdutils.ExecuteCommand(t, New(), os.Stdin)
 	require.Error(t, err)
 }
 
@@ -53,7 +53,7 @@ func TestClangMissing(t *testing.T) {
 	})
 	dependencies.OverwriteInstalledWithFalse(deps[dependencies.CLANG])
 
-	opts := &bundler.Opts{}
+	opts := &options{}
 	opts.BuildSystem = config.BuildSystemCMake
 
 	// clone the example project because this command needs to parse an actual
@@ -77,7 +77,7 @@ func TestClangVersion(t *testing.T) {
 	dep := deps[dependencies.CLANG]
 	version := dependencies.OverwriteGetVersionWith0(dep)
 
-	opts := &bundler.Opts{}
+	opts := &options{}
 	opts.BuildSystem = config.BuildSystemCMake
 
 	// clone the example project because this command needs to parse an actual
@@ -100,7 +100,7 @@ func TestCMakeMissing(t *testing.T) {
 	})
 	dependencies.OverwriteInstalledWithFalse(deps[dependencies.CMAKE])
 
-	opts := &bundler.Opts{}
+	opts := &options{}
 	opts.BuildSystem = config.BuildSystemCMake
 
 	// clone the example project because this command needs to parse an actual
@@ -130,11 +130,11 @@ func TestEnvVarsSetInConfigFile(t *testing.T) {
 	err = os.Setenv("BAR", "bar")
 	require.NoError(t, err)
 
-	opts := &bundler.Opts{
+	opts := &options{bundler.Opts{
 		ProjectDir:  projectDir,
 		ConfigDir:   projectDir,
 		BuildSystem: config.BuildSystemCMake,
-	}
+	}}
 
 	cmd := newWithOptions(opts)
 	err = cmd.PreRunE(cmd, nil)

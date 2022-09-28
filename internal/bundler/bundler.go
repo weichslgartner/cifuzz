@@ -12,12 +12,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/otiai10/copy"
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
 	"golang.org/x/exp/maps"
 
 	"code-intelligence.com/cifuzz/internal/build"
 	"code-intelligence.com/cifuzz/internal/build/cmake"
+	"code-intelligence.com/cifuzz/internal/build/other"
 	"code-intelligence.com/cifuzz/internal/cmdutils"
 	"code-intelligence.com/cifuzz/internal/config"
 	"code-intelligence.com/cifuzz/pkg/artifact"
@@ -69,6 +71,7 @@ func versionedLibraryRegexp(unversionedBasename string) *regexp.Regexp {
 
 type Opts struct {
 	Branch         string        `mapstructure:"branch"`
+	BuildCommand   string        `mapstructure:"build-command"`
 	BuildSystem    string        `mapstructure:"build-system"`
 	NumBuildJobs   uint          `mapstructure:"build-jobs"`
 	Commit         string        `mapstructure:"commit"`
@@ -109,6 +112,22 @@ func (opts *Opts) Validate() error {
 		}
 	}
 
+	if opts.BuildSystem == config.BuildSystemOther {
+		// To build with other build systems, a build command must be provided
+		if opts.BuildCommand == "" {
+			msg := "Flag \"build-command\" must be set when using build system type \"other\""
+			return cmdutils.WrapIncorrectUsageError(errors.New(msg))
+		}
+		// To build with other build systems, the fuzz tests need to be
+		// specified (because there is no way for us to figure out which
+		// fuzz tests exist).
+		if len(opts.FuzzTests) == 0 {
+			msg := `At least one <fuzz test> argument must be provided when using the build
+system type "other"`
+			return cmdutils.WrapIncorrectUsageError(errors.New(msg))
+		}
+	}
+
 	if opts.Timeout != 0 && opts.Timeout < time.Second {
 		msg := fmt.Sprintf("invalid argument %q for \"--timeout\" flag: timeout can't be less than a second", opts.Timeout)
 		return cmdutils.WrapIncorrectUsageError(errors.New(msg))
@@ -137,14 +156,21 @@ func (opts *Opts) Validate() error {
 }
 
 type Bundler struct {
-	Opts *Opts
+	Opts    *Opts
+	tempDir string
 }
 
 func NewBundler(opts *Opts) *Bundler {
-	return &Bundler{opts}
+	return &Bundler{Opts: opts}
 }
 
 func (b *Bundler) Bundle() error {
+	var err error
+	b.tempDir, err = os.MkdirTemp("", "cifuzz-bundle-")
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	defer fileutil.Cleanup(b.tempDir)
 
 	depsOk, err := b.checkDependencies()
 	if err != nil {
@@ -177,12 +203,6 @@ func (b *Bundler) Bundle() error {
 		return err
 	}
 
-	tempDir, err := os.MkdirTemp("", "cifuzz-bundle-*")
-	if err != nil {
-		return err
-	}
-	defer fileutil.Cleanup(tempDir)
-
 	// Add all fuzz test artifacts to the archive. There will be one "Fuzzer" metadata object for each pair of fuzz test
 	// and Builder instance.
 	var fuzzers []*artifact.Fuzzer
@@ -190,7 +210,7 @@ func (b *Bundler) Bundle() error {
 	deduplicatedSystemDeps := make(map[string]struct{})
 	for _, buildResults := range allVariantBuildResults {
 		for fuzzTest, buildResult := range buildResults {
-			fuzzTestFuzzers, fuzzTestArchiveManifest, systemDeps, err := b.assembleArtifacts(fuzzTest, buildResult, b.Opts.ProjectDir, tempDir)
+			fuzzTestFuzzers, fuzzTestArchiveManifest, systemDeps, err := b.assembleArtifacts(fuzzTest, buildResult, b.Opts.ProjectDir)
 			if err != nil {
 				return err
 			}
@@ -225,7 +245,7 @@ func (b *Bundler) Bundle() error {
 	if err != nil {
 		return err
 	}
-	metadataYamlPath := filepath.Join(tempDir, artifact.MetadataFileName)
+	metadataYamlPath := filepath.Join(b.tempDir, artifact.MetadataFileName)
 	err = os.WriteFile(metadataYamlPath, metadataYamlContent, 0644)
 	if err != nil {
 		return errors.Wrapf(err, "failed to write %s", artifact.MetadataFileName)
@@ -233,7 +253,7 @@ func (b *Bundler) Bundle() error {
 	archiveManifest[artifact.MetadataFileName] = metadataYamlPath
 
 	// The fuzzing artifact archive spec requires this directory even if it is empty.
-	workDirPath := filepath.Join(tempDir, fuzzerWorkDirPath)
+	workDirPath := filepath.Join(b.tempDir, fuzzerWorkDirPath)
 	err = os.Mkdir(workDirPath, 0755)
 	if err != nil {
 		return errors.WithStack(err)
@@ -283,6 +303,21 @@ func (b *Bundler) buildAllVariants() ([]map[string]*build.Result, error) {
 		configureVariants = append(configureVariants, coverageVariant)
 	}
 
+	switch b.Opts.BuildSystem {
+	case config.BuildSystemCMake:
+		return b.buildAllVariantsCMake(configureVariants)
+	case config.BuildSystemOther:
+		return b.buildAllVariantsOther(configureVariants)
+	default:
+		// We panic here instead of returning an error because it's a
+		// programming error if this function was called with an
+		// unsupported build system, that case should have been handled
+		// in the Opts.Validate function.
+		panic(fmt.Sprintf("Unsupported build system: %v", b.Opts.BuildSystem))
+	}
+}
+
+func (b *Bundler) buildAllVariantsCMake(configureVariants []configureVariant) ([]map[string]*build.Result, error) {
 	var allVariantBuildResults []map[string]*build.Result
 	for i, variant := range configureVariants {
 		builder, err := cmake.NewBuilder(&cmake.BuilderOptions{
@@ -301,18 +336,7 @@ func (b *Bundler) buildAllVariants() ([]map[string]*build.Result, error) {
 			return nil, err
 		}
 
-		var typeDisplayString string
-		if isCoverageBuild(builder.Sanitizers) {
-			typeDisplayString = "coverage"
-		} else {
-			typeDisplayString = "fuzzing"
-		}
-		// Print a newline to separate the build logs unless this is the
-		// first variant build
-		if i > 0 {
-			log.Print()
-		}
-		log.Infof("Building for %s...", typeDisplayString)
+		b.printBuildingMsg(variant, i)
 
 		err = builder.Configure()
 		if err != nil {
@@ -339,6 +363,114 @@ func (b *Bundler) buildAllVariants() ([]map[string]*build.Result, error) {
 	return allVariantBuildResults, nil
 }
 
+func (b *Bundler) printBuildingMsg(variant configureVariant, i int) {
+	var typeDisplayString string
+	if isCoverageBuild(variant.Sanitizers) {
+		typeDisplayString = "coverage"
+	} else {
+		typeDisplayString = "fuzzing"
+	}
+	// Print a newline to separate the build logs unless this is the
+	// first variant build
+	if i > 0 {
+		log.Print()
+	}
+	log.Infof("Building for %s...", typeDisplayString)
+}
+
+func (b *Bundler) buildAllVariantsOther(configureVariants []configureVariant) ([]map[string]*build.Result, error) {
+	var allVariantBuildResults []map[string]*build.Result
+	for i, variant := range configureVariants {
+		builder, err := other.NewBuilder(&other.BuilderOptions{
+			BuildCommand: b.Opts.BuildCommand,
+			Engine:       variant.Engine,
+			Sanitizers:   variant.Sanitizers,
+			Stdout:       b.Opts.Stdout,
+			Stderr:       b.Opts.Stderr,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		b.printBuildingMsg(variant, i)
+
+		if len(b.Opts.FuzzTests) == 0 {
+			// We panic here instead of returning an error because it's a
+			// programming error if this function was called without any
+			// fuzz tests, that case should have been handled in the
+			// Opts.Validate function.
+			panic("No fuzz tests specified")
+		}
+
+		buildResults := make(map[string]*build.Result)
+		for _, fuzzTest := range b.Opts.FuzzTests {
+			buildResult, err := builder.Build(fuzzTest)
+			if err != nil {
+				return nil, err
+			}
+
+			// To avoid that subsequent builds overwrite the artifacts
+			// from this build, we copy them to a temporary directory
+			// and adjust the paths in the build.Result struct
+			tempDir := filepath.Join(b.tempDir, fuzzTestPrefix(fuzzTest, buildResult))
+			err = b.copyArtifactsToTempdir(buildResult, tempDir)
+			if err != nil {
+				return nil, err
+			}
+			buildResults[fuzzTest] = buildResult
+		}
+		allVariantBuildResults = append(allVariantBuildResults, buildResults)
+	}
+
+	return allVariantBuildResults, nil
+}
+
+func (b *Bundler) copyArtifactsToTempdir(buildResult *build.Result, tempDir string) error {
+	fuzzTestExecutableAbsPath := buildResult.Executable
+	isBelow, err := fileutil.IsBelow(fuzzTestExecutableAbsPath, buildResult.BuildDir)
+	if err != nil {
+		return err
+	}
+	if isBelow {
+		relPath, err := filepath.Rel(buildResult.BuildDir, fuzzTestExecutableAbsPath)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+		newExecutablePath := filepath.Join(tempDir, relPath)
+		err = copy.Copy(buildResult.Executable, newExecutablePath)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+		buildResult.Executable = newExecutablePath
+	}
+
+	for i, dep := range buildResult.RuntimeDeps {
+		isBelow, err := fileutil.IsBelow(dep, buildResult.BuildDir)
+		if err != nil {
+			return err
+		}
+		if !isBelow {
+			// If the file is not below the build dir, we assume
+			// that it was not created during the build, so we
+			// don't need to copy it
+			continue
+		}
+		relPath, err := filepath.Rel(buildResult.BuildDir, dep)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+		newDepPath := filepath.Join(tempDir, relPath)
+		err = copy.Copy(dep, newDepPath)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+		buildResult.RuntimeDeps[i] = newDepPath
+	}
+	buildResult.BuildDir = tempDir
+
+	return nil
+}
+
 func (b *Bundler) checkDependencies() (bool, error) {
 	deps := []dependencies.Key{dependencies.CLANG}
 	if b.Opts.BuildSystem == config.BuildSystemCMake {
@@ -348,7 +480,7 @@ func (b *Bundler) checkDependencies() (bool, error) {
 }
 
 //nolint:nonamedreturns
-func (b *Bundler) assembleArtifacts(fuzzTest string, buildResult *build.Result, projectDir string, tempDir string) (
+func (b *Bundler) assembleArtifacts(fuzzTest string, buildResult *build.Result, projectDir string) (
 	fuzzers []*artifact.Fuzzer,
 	archiveManifest map[string]string,
 	systemDeps []string,

@@ -13,20 +13,58 @@ import (
 	"code-intelligence.com/cifuzz/internal/completion"
 	"code-intelligence.com/cifuzz/internal/config"
 	"code-intelligence.com/cifuzz/pkg/log"
+	"code-intelligence.com/cifuzz/util/sliceutil"
 )
 
-func New() *cobra.Command {
-	return newWithOptions(&bundler.Opts{})
+type options struct {
+	bundler.Opts `mapstructure:",squash"`
 }
 
-func newWithOptions(opts *bundler.Opts) *cobra.Command {
+func (opts *options) Validate() error {
+	if !sliceutil.Contains([]string{config.BuildSystemCMake, config.BuildSystemOther}, opts.BuildSystem) {
+		err := errors.Errorf(`Creating a bundle is currently not supported for %[1]s projects. If you
+are interested in using this feature with %[1]s, please file an issue at
+https://github.com/CodeIntelligenceTesting/cifuzz/issues`, strings.ToTitle(opts.BuildSystem))
+		log.Print(err.Error())
+		return cmdutils.WrapSilentError(err)
+	}
+
+	return opts.Opts.Validate()
+}
+
+func New() *cobra.Command {
+	return newWithOptions(&options{})
+}
+
+func newWithOptions(opts *options) *cobra.Command {
 	var bindFlags func()
 	cmd := &cobra.Command{
 		Use:   "bundle [flags] [<fuzz test>]...",
 		Short: "Bundles fuzz tests into an archive",
 		Long: `Bundles all runtime artifacts required by the given fuzz tests into
 a self-contained archive that can be executed by a remote fuzzing server.
-If no fuzz tests are specified all fuzz tests are added to the bundle.`,
+
+The usage of this command depends on the build system configured for the
+project:
+
+ * For CMake, <fuzz test> is the name of the fuzz test as defined in the
+   'add_fuzz_test' command in your CMakeLists.txt. Command completion for
+   the <fuzz test> argument works if the fuzz test has been built before
+   or after running 'cifuzz reload'. The '--build-command' flag is ignored.
+   If no fuzz tests are specified, all fuzz tests are added to the bundle.
+
+ * For other build systems, a command which builds the fuzz test executable
+   must be provided via the '--build-command' flag or the 'build-command'
+   setting in cifuzz.yaml. In this case, <fuzz test> is the path to the
+   fuzz test executable created by the build command. The value specified
+   for <fuzz test> is available to the build command in the FUZZ_TEST
+   environment variable. Example:
+
+       echo "build-command: make clean && make \$FUZZ_TEST" >> cifuzz.yaml
+       cifuzz bundle my_fuzz_test
+
+   Alternatively, <fuzz test> can be the name of the fuzz test executable,
+   which will then be searched for recursively in the current directory.`,
 		ValidArgsFunction: completion.ValidFuzzTests,
 		Args:              cobra.ArbitraryArgs,
 		PreRunE: func(cmd *cobra.Command, args []string) error {
@@ -62,18 +100,13 @@ https://github.com/CodeIntelligenceTesting/cifuzz/issues`, system)
 				return cmdutils.WrapSilentError(err)
 			}
 
-			if opts.BuildSystem != config.BuildSystemCMake {
-				err = errors.New("'cifuzz bundle' currently only supports CMake projects")
-				log.Error(err)
-				return cmdutils.WrapSilentError(err)
-			}
 			opts.FuzzTests = args
 			return opts.Validate()
 		},
 		RunE: func(c *cobra.Command, args []string) error {
 			opts.Stdout = c.OutOrStdout()
 			opts.Stderr = c.OutOrStderr()
-			return bundler.NewBundler(opts).Bundle()
+			return bundler.NewBundler(&opts.Opts).Bundle()
 		},
 	}
 

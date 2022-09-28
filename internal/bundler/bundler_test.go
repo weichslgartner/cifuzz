@@ -64,7 +64,8 @@ func TestAssembleArtifacts_Fuzzing(t *testing.T) {
 	b := NewBundler(&Opts{
 		Env: []string{"FOO=foo"},
 	})
-	fuzzers, manifest, systemDeps, err := b.assembleArtifacts(fuzzTest, buildResult, projectDir, tempDir)
+	b.tempDir = tempDir
+	fuzzers, manifest, systemDeps, err := b.assembleArtifacts(fuzzTest, buildResult, projectDir)
 	require.NoError(t, err)
 
 	require.Equal(t, 1, len(fuzzers))
@@ -126,7 +127,8 @@ func TestAssembleArtifacts_Coverage(t *testing.T) {
 	}
 
 	c := NewBundler(&Opts{})
-	fuzzers, manifest, systemDeps, err := c.assembleArtifacts(fuzzTest, buildResult, projectDir, tempDir)
+	c.tempDir = tempDir
+	fuzzers, manifest, systemDeps, err := c.assembleArtifacts(fuzzTest, buildResult, projectDir)
 	require.NoError(t, err)
 
 	require.Equal(t, 1, len(fuzzers))

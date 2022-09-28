@@ -115,11 +115,11 @@ depends on the build system configured for the project:
    or after running 'cifuzz reload'. The '--build-command' flag is ignored.
 
  * For other build systems, a command which builds the fuzz test executable
-   must be provided via the '--build-command' argument or the 'build-command'
-   setting in cifuzz.yaml. In this case, <fuzz test> is the path to the fuzz
-   test executable created by the build command. The value specified for
-   <fuzz test> is available to the build command in the FUZZ_TEST environment
-   variable. Example:
+   must be provided via the '--build-command' flag or the 'build-command'
+   setting in cifuzz.yaml. In this case, <fuzz test> is the path to the
+   fuzz test executable created by the build command. The value specified
+   for <fuzz test> is available to the build command in the FUZZ_TEST
+   environment variable. Example:
 
        echo "build-command: make clean && make \$FUZZ_TEST" >> cifuzz.yaml
        cifuzz run my_fuzz_test

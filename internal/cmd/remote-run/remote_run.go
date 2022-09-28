@@ -29,6 +29,7 @@ import (
 	"code-intelligence.com/cifuzz/pkg/dialog"
 	"code-intelligence.com/cifuzz/pkg/log"
 	"code-intelligence.com/cifuzz/util/fileutil"
+	"code-intelligence.com/cifuzz/util/sliceutil"
 	"code-intelligence.com/cifuzz/util/stringutil"
 )
 
@@ -47,13 +48,24 @@ type remoteRunOpts struct {
 }
 
 func (opts *remoteRunOpts) Validate() error {
-	if opts.BuildSystem != config.BuildSystemCMake {
-		err := errors.New("'cifuzz run remote' currently only supports CMake projects")
-		log.Error(err)
+	if !sliceutil.Contains([]string{config.BuildSystemCMake, config.BuildSystemOther}, opts.BuildSystem) {
+		err := errors.Errorf(`Starting a remote run is currently not supported for %[1]s projects. If you
+are interested in using this feature with %[1]s, please file an issue at
+https://github.com/CodeIntelligenceTesting/cifuzz/issues`, strings.ToTitle(opts.BuildSystem))
+		log.Print(err.Error())
 		return cmdutils.WrapSilentError(err)
 	}
 
-	return opts.Opts.Validate()
+	if opts.BundlePath == "" {
+		// We need to build a bundle, so we validate the bundler options
+		// as well
+		err := opts.Opts.Validate()
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 type runRemoteCmd struct {
