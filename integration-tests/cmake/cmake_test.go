@@ -20,12 +20,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sync/errgroup"
-	"gopkg.in/yaml.v3"
 
 	"code-intelligence.com/cifuzz/integration-tests/shared"
 	builderPkg "code-intelligence.com/cifuzz/internal/builder"
 	"code-intelligence.com/cifuzz/internal/testutil"
-	"code-intelligence.com/cifuzz/pkg/artifact"
 	"code-intelligence.com/cifuzz/pkg/parser/libfuzzer/stacktrace"
 	"code-intelligence.com/cifuzz/util/envutil"
 	"code-intelligence.com/cifuzz/util/executil"
@@ -169,7 +167,7 @@ func TestIntegration_CMake_InitCreateRunCoverageBundle(t *testing.T) {
 	}
 
 	// Run cifuzz bundle and verify the contents of the archive.
-	testBundle(t, dir, cifuzz)
+	shared.TestBundle(t, dir, cifuzz, "parser_fuzz_test")
 
 	// The remote-run command is currently only supported on Linux
 	if runtime.GOOS == "linux" {
@@ -412,173 +410,6 @@ func modifyFuzzTestToCallFunction(t *testing.T, fuzzTestPath string) {
 	defer f.Close()
 	_, err = f.WriteString("target_link_libraries(parser_fuzz_test PRIVATE parser)\n")
 	require.NoError(t, err)
-}
-
-func testBundle(t *testing.T, dir string, cifuzz string) {
-	tempDir, err := os.MkdirTemp("", "cifuzz-archive-*")
-	require.NoError(t, err)
-	defer fileutil.Cleanup(tempDir)
-	bundlePath := filepath.Join(tempDir, "parser_fuzz_test.tar.gz")
-	defer fileutil.Cleanup(bundlePath)
-
-	// Create a dictionary
-	dictPath := filepath.Join(tempDir, "some_dict")
-	err = os.WriteFile(dictPath, []byte("test-dictionary-content"), 0600)
-	require.NoError(t, err)
-
-	// Create a seed corpus directory with an empty seed
-	seedCorpusDir, err := os.MkdirTemp(tempDir, "seeds-")
-	require.NoError(t, err)
-	err = fileutil.Touch(filepath.Join(seedCorpusDir, "empty"))
-	require.NoError(t, err)
-
-	// Bundle all fuzz tests into an archive.
-	cmd := executil.Command(cifuzz, "bundle",
-		"-o", bundlePath,
-		"--dict", dictPath,
-		// Only run the fuzzer on the empty input.
-		"--engine-arg", "-runs=0",
-		"--fuzz-test-arg", "arg3",
-		"--fuzz-test-arg", "arg4",
-		"--seed-corpus", seedCorpusDir,
-		"--timeout", "100m",
-		"--branch", "my-branch",
-		"--commit", "123456abcdef",
-		"--env", "FOO=foo",
-		// This should be set to the value from the local environment,
-		// which we set to "bar" below
-		"--env", "BAR",
-		// This should be ignored because it's not set in the local
-		// environment
-		"--env", "NO_SUCH_VARIABLE",
-		"--verbose",
-	)
-	cmd.Dir = dir
-	cmd.Env, err = envutil.Setenv(os.Environ(), "BAR", "bar")
-	require.NoError(t, err)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	err = cmd.Run()
-	require.NoError(t, err)
-	require.FileExists(t, bundlePath)
-
-	// Extract the archive into a new temporary directory.
-	archiveDir, err := os.MkdirTemp("", "cifuzz-extracted-archive-*")
-	require.NoError(t, err)
-	archiveFile, err := os.Open(bundlePath)
-	require.NoError(t, err)
-	err = artifact.ExtractArchiveForTestsOnly(archiveFile, archiveDir)
-	require.NoError(t, err)
-
-	// Read the fuzzer path from the YAML.
-	metadataPath := filepath.Join(archiveDir, "cifuzz.yaml")
-	require.FileExists(t, metadataPath)
-	metadataYaml, err := os.ReadFile(metadataPath)
-	require.NoError(t, err)
-
-	metadata := &artifact.Metadata{}
-	err = yaml.Unmarshal(metadataYaml, metadata)
-	require.NoError(t, err)
-
-	// Verify code revision given by `--branch` and `--commit-sha` flags
-	assert.Equal(t, "my-branch", metadata.CodeRevision.Git.Branch)
-	assert.Equal(t, "123456abcdef", metadata.CodeRevision.Git.Commit)
-
-	// Verify that the metadata contain the engine args and fuzz test args
-	assert.Equal(t, []string{"-runs=0"}, metadata.Fuzzers[0].EngineOptions.Flags)
-	assert.Equal(t, []string{"arg3", "arg4"}, metadata.Fuzzers[0].FuzzTestArgs)
-
-	// Verify the metadata contains the env vars
-	require.Equal(t, []string{"FOO=foo", "BAR=bar", "NO_CIFUZZ=1"}, metadata.Fuzzers[0].EngineOptions.Env)
-
-	var parserFuzzer *artifact.Fuzzer
-	var parserCoverage *artifact.Fuzzer
-	for _, fuzzer := range metadata.Fuzzers {
-		if fuzzer.Target == "parser_fuzz_test" {
-			if fuzzer.Engine == "LIBFUZZER" {
-				parserFuzzer = fuzzer
-			} else if fuzzer.Engine == "LLVM_COV" {
-				parserCoverage = fuzzer
-			}
-		}
-	}
-
-	require.NotNil(t, parserFuzzer)
-	fuzzerPath := filepath.Join(archiveDir, parserFuzzer.Path)
-	require.FileExists(t, fuzzerPath)
-
-	// Run the fuzzer on the empty input to verify that it finds all its runtime dependencies.
-	cmd = executil.Command(fuzzerPath, parserFuzzer.EngineOptions.Flags...)
-	cmd.Dir = filepath.Join(archiveDir, "work_dir")
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	cmd.Env = append(os.Environ(), parserFuzzer.EngineOptions.Env...)
-	err = cmd.Run()
-	assert.NoError(t, err)
-
-	// Verify that the dictionary has been packaged with the fuzzer.
-	dictPath = filepath.Join(archiveDir, parserFuzzer.Dictionary)
-	require.FileExists(t, dictPath)
-	content, err := os.ReadFile(dictPath)
-	require.NoError(t, err)
-	assert.Equal(t, "test-dictionary-content", string(content))
-
-	// Verify that the seed corpus has been packaged with the fuzzer.
-	seedCorpusPath := filepath.Join(archiveDir, parserFuzzer.Seeds)
-	require.DirExists(t, seedCorpusPath)
-	assert.FileExists(t, filepath.Join(seedCorpusPath, "parser_fuzz_test_inputs", "some_seed"))
-	// Check that the empty seed from the user-specified seed corpus
-	// was copied into the archive
-	assert.FileExists(t, filepath.Join(seedCorpusPath, filepath.Base(seedCorpusDir), "empty"))
-
-	// Verify that the maximum runtime has been set
-	assert.Equal(t, uint(6000), parserFuzzer.MaxRunTime)
-
-	if runtime.GOOS == "windows" {
-		// There are no coverage builds on Windows.
-		return
-	}
-	// Verify that a coverage build has been added to the archive.
-	require.NotNil(t, parserCoverage)
-	fuzzerPath = filepath.Join(archiveDir, parserCoverage.Path)
-	require.FileExists(t, fuzzerPath)
-
-	// Run the coverage build, which uses the replayer, on the seed corpus and verify that it creates a coverage
-	// profile.
-	coverageProfile := filepath.Join(archiveDir, "profile.lcov")
-	cmd = executil.Command(fuzzerPath, append(parserCoverage.EngineOptions.Flags, seedCorpusPath)...)
-	cmd.Dir = filepath.Join(archiveDir, "work_dir")
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	cmd.Env = append(os.Environ(), "LLVM_PROFILE_FILE="+coverageProfile)
-	cmd.Env = append(cmd.Env, parserCoverage.EngineOptions.Env...)
-	err = cmd.Run()
-	assert.NoError(t, err)
-	assert.FileExists(t, coverageProfile)
-
-	if runtime.GOOS == "linux" {
-		// Try to use the artifacts to start a remote run on a mock server
-		projectName := "test-project"
-		artifactsName := "test-artifacts-123"
-		token := "test-token"
-		server := shared.StartMockServer(t, projectName, artifactsName)
-		cmd = executil.Command(cifuzz, "remote-run",
-			"--bundle", bundlePath,
-			"--project", projectName,
-			"--server", server.Address,
-		)
-		cmd.Env, err = envutil.Setenv(os.Environ(), "CIFUZZ_API_TOKEN", token)
-		require.NoError(t, err)
-		cmd.Dir = dir
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		t.Logf("Command: %s", cmd.String())
-		err = cmd.Run()
-		require.NoError(t, err)
-		require.FileExists(t, bundlePath)
-		require.True(t, server.ArtifactsUploaded)
-		require.True(t, server.RunStarted)
-	}
 }
 
 func testRemoteRun(t *testing.T, dir string, cifuzz string) {

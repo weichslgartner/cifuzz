@@ -64,6 +64,26 @@ func TestIntegration_Other_DetailedCoverage(t *testing.T) {
 	createAndVerifyLcovCoverageReport(t, cifuzz, dir, "crashing_fuzz_test")
 }
 
+func TestIntegration_Other_Bundle(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
+	if runtime.GOOS == "windows" {
+		t.Skip("Other build systems are currently only supported on Unix")
+	}
+
+	testutil.RegisterTestDepOnCIFuzz()
+
+	installDir := shared.InstallCIFuzzInTemp(t)
+	dir := shared.CopyTestdataDir(t, "other")
+	defer fileutil.Cleanup(dir)
+	t.Logf("executing other build system integration test in %s", dir)
+
+	// Execute the bundle command
+	cifuzz := builderPkg.CIFuzzExecutablePath(filepath.Join(installDir, "bin"))
+	shared.TestBundle(t, dir, cifuzz, "my_fuzz_test")
+}
+
 func runFuzzer(t *testing.T, cifuzz string, dir string, fuzzTest string, expectedOutput *regexp.Regexp) {
 	t.Helper()
 
