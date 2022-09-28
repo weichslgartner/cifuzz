@@ -4,10 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"fmt"
 	"io"
-	"net"
-	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -25,6 +22,7 @@ import (
 	"golang.org/x/sync/errgroup"
 	"gopkg.in/yaml.v3"
 
+	"code-intelligence.com/cifuzz/integration-tests/shared"
 	builderPkg "code-intelligence.com/cifuzz/internal/builder"
 	"code-intelligence.com/cifuzz/internal/testutil"
 	"code-intelligence.com/cifuzz/pkg/artifact"
@@ -32,7 +30,6 @@ import (
 	"code-intelligence.com/cifuzz/util/envutil"
 	"code-intelligence.com/cifuzz/util/executil"
 	"code-intelligence.com/cifuzz/util/fileutil"
-	"code-intelligence.com/cifuzz/util/stringutil"
 )
 
 func TestIntegration_CMake_InitCreateRunCoverageBundle(t *testing.T) {
@@ -564,11 +561,11 @@ func testBundle(t *testing.T, dir string, cifuzz string) {
 		projectName := "test-project"
 		artifactsName := "test-artifacts-123"
 		token := "test-token"
-		server := startMockServer(t, projectName, artifactsName)
+		server := shared.StartMockServer(t, projectName, artifactsName)
 		cmd = executil.Command(cifuzz, "remote-run",
 			"--bundle", bundlePath,
 			"--project", projectName,
-			"--server", server.address,
+			"--server", server.Address,
 		)
 		cmd.Env, err = envutil.Setenv(os.Environ(), "CIFUZZ_API_TOKEN", token)
 		require.NoError(t, err)
@@ -579,8 +576,8 @@ func testBundle(t *testing.T, dir string, cifuzz string) {
 		err = cmd.Run()
 		require.NoError(t, err)
 		require.FileExists(t, bundlePath)
-		require.True(t, server.artifactsUploaded)
-		require.True(t, server.runStarted)
+		require.True(t, server.ArtifactsUploaded)
+		require.True(t, server.RunStarted)
 	}
 }
 
@@ -590,7 +587,7 @@ func testRemoteRun(t *testing.T, dir string, cifuzz string) {
 	token := "test-token"
 
 	// Start a mock server to handle our requests
-	server := startMockServer(t, projectName, artifactsName)
+	server := shared.StartMockServer(t, projectName, artifactsName)
 
 	tempDir, err := os.MkdirTemp("", "cifuzz-archive-*")
 	require.NoError(t, err)
@@ -617,7 +614,7 @@ func testRemoteRun(t *testing.T, dir string, cifuzz string) {
 		"--seed-corpus", seedCorpusDir,
 		"--timeout", "100m",
 		"--project", projectName,
-		"--server", server.address,
+		"--server", server.Address,
 	)
 	cmd.Env, err = envutil.Setenv(os.Environ(), "CIFUZZ_API_TOKEN", token)
 	require.NoError(t, err)
@@ -628,53 +625,6 @@ func testRemoteRun(t *testing.T, dir string, cifuzz string) {
 	err = cmd.Run()
 	require.NoError(t, err)
 
-	require.True(t, server.artifactsUploaded)
-	require.True(t, server.runStarted)
-}
-
-type mockServer struct {
-	address           string
-	artifactsUploaded bool
-	runStarted        bool
-}
-
-func startMockServer(t *testing.T, projectName, artifactsName string) *mockServer {
-	server := &mockServer{}
-
-	handleUpload := func(w http.ResponseWriter, req *http.Request) {
-		_, err := io.ReadAll(req.Body)
-		require.NoError(t, err)
-		_, err = fmt.Fprintf(w, `{"display-name": "test-artifacts", "resource-name": "%s"}`, artifactsName)
-		require.NoError(t, err)
-		server.artifactsUploaded = true
-	}
-
-	handleStartRun := func(w http.ResponseWriter, req *http.Request) {
-		_, err := io.ReadAll(req.Body)
-		require.NoError(t, err)
-		_, err = fmt.Fprintf(w, `{"name": "test-campaign-run-123"}`)
-		require.NoError(t, err)
-		server.runStarted = true
-	}
-
-	handleDefault := func(w http.ResponseWriter, req *http.Request) {
-		require.Fail(t, "Unexpected request", stringutil.PrettyString(req))
-	}
-
-	mux := http.NewServeMux()
-	mux.HandleFunc(fmt.Sprintf("/v2/projects/%s/artifacts/import", projectName), handleUpload)
-	mux.HandleFunc(fmt.Sprintf("/v1/%s:run", artifactsName), handleStartRun)
-	mux.HandleFunc("/", handleDefault)
-
-	listener, err := net.Listen("tcp4", ":0")
-	require.NoError(t, err)
-
-	server.address = fmt.Sprintf("http://127.0.0.1:%d", listener.Addr().(*net.TCPAddr).Port)
-
-	go func() {
-		err = http.Serve(listener, mux)
-		require.NoError(t, err)
-	}()
-
-	return server
+	require.True(t, server.ArtifactsUploaded)
+	require.True(t, server.RunStarted)
 }
