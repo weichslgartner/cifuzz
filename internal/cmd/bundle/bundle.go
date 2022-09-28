@@ -1,6 +1,10 @@
 package bundle
 
 import (
+	"os"
+	"runtime"
+	"strings"
+
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
@@ -31,7 +35,26 @@ If no fuzz tests are specified all fuzz tests are added to the bundle.`,
 			// were bound to the flags of other commands before.
 			bindFlags()
 
-			// TODO: Fail early if platform is not supported
+			// Fail early if the platform is not supported. Creating the
+			// bundle actually works on all platforms, but the backend
+			// currently only supports running a bundle on Linux, so the
+			// user can't do anything useful with a bundle created on
+			// other platforms.
+			//
+			// We set CIFUZZ_BUNDLE_ON_UNSUPPORTED_PLATFORMS in tests to
+			// still be able to test that creating the bundle works on
+			// all platforms.
+			if os.Getenv("CIFUZZ_BUNDLE_ON_UNSUPPORTED_PLATFORMS") == "" && runtime.GOOS != "linux" {
+				system := strings.ToTitle(runtime.GOOS)
+				if runtime.GOOS == "darwin" {
+					system = "macOS"
+				}
+				err := errors.Errorf(`Creating a bundle is currently only supported on Linux. If you are
+interested in using this feature on %s, please file an issue at
+https://github.com/CodeIntelligenceTesting/cifuzz/issues`, system)
+				log.Print(err.Error())
+				return cmdutils.WrapSilentError(err)
+			}
 
 			err := config.FindAndParseProjectConfig(opts)
 			if err != nil {
