@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"code-intelligence.com/cifuzz/integration-tests/shared"
 	builderPkg "code-intelligence.com/cifuzz/internal/builder"
 	"code-intelligence.com/cifuzz/internal/testutil"
 	"code-intelligence.com/cifuzz/util/executil"
@@ -34,7 +35,7 @@ func TestIntegration_Make_RunCoverage(t *testing.T) {
 	}
 	testutil.RegisterTestDepOnCIFuzz()
 
-	installDir := testutil.InstallCifuzzInTemp(t)
+	installDir := shared.InstallCifuzzInTemp(t)
 	dir := copyMakeExampleDir(t, filepath.Join("examples", "other"))
 	defer fileutil.Cleanup(dir)
 	t.Logf("executing make integration test in %s", dir)
@@ -54,7 +55,7 @@ func TestIntegration_Make_DetailedCoverage(t *testing.T) {
 	}
 	testutil.RegisterTestDepOnCIFuzz()
 
-	installDir := testutil.InstallCifuzzInTemp(t)
+	installDir := shared.InstallCifuzzInTemp(t)
 
 	dir := copyMakeExampleDir(t, filepath.Join("integration-tests", "make", "testdata", "coverage"))
 	defer fileutil.Cleanup(dir)

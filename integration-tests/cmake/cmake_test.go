@@ -39,26 +39,26 @@ func TestIntegration_CMake_InitCreateRunCoverageBundle(t *testing.T) {
 	testutil.RegisterTestDepOnCIFuzz()
 
 	// Create installation builder
-	installDir := testutil.InstallCifuzzInTemp(t)
+	installDir := shared.InstallCifuzzInTemp(t)
 	cifuzz := builderPkg.CIFuzzExecutablePath(filepath.Join(installDir, "bin"))
 	err := os.Setenv("CMAKE_PREFIX_PATH", installDir)
 	require.NoError(t, err)
 
 	// Copy testdata
-	dir := testutil.CopyTestdataDir(t, "cmake")
+	dir := shared.CopyTestdataDir(t, "cmake")
 	defer fileutil.Cleanup(dir)
 	t.Logf("executing cmake integration test in %s", dir)
 
 	// Execute the root command
-	testutil.RunCommand(t, dir, cifuzz, nil)
+	shared.RunCommand(t, dir, cifuzz, nil)
 
 	// Execute the init command
-	initOutput := testutil.RunCommand(t, dir, cifuzz, []string{"init"})
-	testutil.AddLinesToFileAtBreakPoint(t, filepath.Join(dir, "CMakeLists.txt"), initOutput, "add_subdirectory", false)
+	initOutput := shared.RunCommand(t, dir, cifuzz, []string{"init"})
+	shared.AddLinesToFileAtBreakPoint(t, filepath.Join(dir, "CMakeLists.txt"), initOutput, "add_subdirectory", false)
 
 	// Execute the create command
 	outputPath := filepath.Join("src", "parser", "parser_fuzz_test.cpp")
-	createOutput := testutil.RunCommand(t, dir, cifuzz, []string{"create", "cpp", "--output", outputPath})
+	createOutput := shared.RunCommand(t, dir, cifuzz, []string{"create", "cpp", "--output", outputPath})
 
 	// Check that the fuzz test was created in the correct directory
 	fuzzTestPath := filepath.Join(dir, outputPath)
@@ -74,7 +74,7 @@ func TestIntegration_CMake_InitCreateRunCoverageBundle(t *testing.T) {
 	}
 
 	// Check that the findings command doesn't list any findings yet
-	findings := testutil.GetFindings(t, cifuzz, dir)
+	findings := shared.GetFindings(t, cifuzz, dir)
 	require.Empty(t, findings)
 
 	// Run the (empty) fuzz test
@@ -95,7 +95,7 @@ func TestIntegration_CMake_InitCreateRunCoverageBundle(t *testing.T) {
 	})
 
 	// Check that the findings command lists the finding
-	findings = testutil.GetFindings(t, cifuzz, dir)
+	findings = shared.GetFindings(t, cifuzz, dir)
 	require.Len(t, findings, 1)
 	require.Contains(t, findings[0].Details, "heap-use-after-free")
 	// TODO: This check currently fails on macOS because there
