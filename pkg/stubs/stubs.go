@@ -37,6 +37,14 @@ func Create(path string, testType config.FuzzTestType) error {
 	case config.JAVA:
 		baseName := strings.TrimSuffix(filepath.Base(path), ".java")
 		content = []byte(strings.Replace(string(javaStub), "__CLASS_NAME__", baseName, 1))
+
+		// If we have a valid package name we add it to the template
+		// We assume the project has the standard java project structure
+		if filepath.Dir(path) != "" {
+			packagePath := strings.TrimPrefix(filepath.Dir(path), filepath.Join("src", "test", "java")+string(os.PathSeparator))
+			packagePath = strings.ReplaceAll(packagePath, string(os.PathSeparator), ".")
+			content = []byte(strings.Replace(string(content), "__PACKAGE__", fmt.Sprintf("package %s;", packagePath), 1))
+		}
 	}
 
 	// write stub
