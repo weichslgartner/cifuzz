@@ -26,7 +26,7 @@ dependencies {
 
 application {
     // Define the main class for the application.
-    mainClass = 'gradle.App'
+    mainClass = 'com.github.CodeIntelligenceTesting.cifuzz.App'
 }
 
 tasks.named('test') {

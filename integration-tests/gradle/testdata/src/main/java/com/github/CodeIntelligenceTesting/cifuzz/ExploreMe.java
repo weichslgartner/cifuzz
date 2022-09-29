@@ -1,4 +1,4 @@
-package gradle;
+package com.github.CodeIntelligenceTesting.cifuzz;
 
 public class ExploreMe {
     // Function with multiple paths that can be discovered by a fuzzer.
