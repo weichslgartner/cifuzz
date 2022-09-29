@@ -17,7 +17,6 @@ import (
 	"golang.org/x/term"
 
 	"code-intelligence.com/cifuzz/internal/cmd/run/report_handler/metrics"
-	"code-intelligence.com/cifuzz/internal/cmd/run/report_handler/stacktrace"
 	"code-intelligence.com/cifuzz/internal/names"
 	"code-intelligence.com/cifuzz/pkg/desktop"
 	"code-intelligence.com/cifuzz/pkg/finding"
@@ -155,12 +154,6 @@ func (h *ReportHandler) handleFinding(f *finding.Finding, print bool) error {
 	var err error
 
 	f.CreatedAt = time.Now()
-
-	// Parse the stack trace
-	f.StackTrace, err = stacktrace.NewParser(h.ProjectDir).Parse(f.Logs)
-	if err != nil {
-		return err
-	}
 
 	// Generate a name for the finding. The name is chosen deterministically,
 	// based on:
