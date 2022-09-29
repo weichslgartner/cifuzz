@@ -11,7 +11,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/otiai10/copy"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -36,7 +35,7 @@ func TestIntegration_Other_RunCoverage(t *testing.T) {
 	testutil.RegisterTestDepOnCIFuzz()
 
 	installDir := shared.InstallCIFuzzInTemp(t)
-	dir := copyOtherExampleDir(t, filepath.Join("examples", "other"))
+	dir := shared.CopyTestdataDir(t, "other")
 	defer fileutil.Cleanup(dir)
 	t.Logf("executing other build system integration test in %s", dir)
 
@@ -57,28 +56,12 @@ func TestIntegration_Other_DetailedCoverage(t *testing.T) {
 
 	installDir := shared.InstallCIFuzzInTemp(t)
 
-	dir := copyOtherExampleDir(t, filepath.Join("integration-tests", "other", "testdata", "coverage"))
+	dir := shared.CopyTestdataDir(t, "other")
 	defer fileutil.Cleanup(dir)
 	t.Logf("executing other build system coverage test in %s", dir)
 
 	cifuzz := builderPkg.CIFuzzExecutablePath(filepath.Join(installDir, "bin"))
-	createAndVerifyLcovCoverageReport(t, cifuzz, dir)
-}
-
-func copyOtherExampleDir(t *testing.T, rootPath string) string {
-	dir, err := os.MkdirTemp("", "cifuzz-other-example-")
-	require.NoError(t, err)
-
-	// Get the path to the testdata dir
-	cwd, err := os.Getwd()
-	require.NoError(t, err)
-	exampleDir := filepath.Join(cwd, "..", "..", rootPath)
-
-	// Copy the example dir to the temporary directory
-	err = copy.Copy(exampleDir, dir)
-	require.NoError(t, err)
-
-	return dir
+	createAndVerifyLcovCoverageReport(t, cifuzz, dir, "crashing_fuzz_test")
 }
 
 func runFuzzer(t *testing.T, cifuzz string, dir string, fuzzTest string, expectedOutput *regexp.Regexp) {
@@ -150,15 +133,15 @@ func createHtmlCoverageReport(t *testing.T, cifuzz string, dir string, fuzzTest 
 	require.NotContains(t, report, "include/cifuzz")
 }
 
-func createAndVerifyLcovCoverageReport(t *testing.T, cifuzz string, dir string) {
+func createAndVerifyLcovCoverageReport(t *testing.T, cifuzz string, dir string, fuzzTest string) {
 	t.Helper()
 
-	reportPath := filepath.Join(dir, "crashing_fuzz_test.lcov")
+	reportPath := filepath.Join(dir, fuzzTest+".lcov")
 
 	cmd := executil.Command(cifuzz, "coverage", "-v",
 		"--format=lcov",
 		"--output", reportPath,
-		"crashing_fuzz_test")
+		fuzzTest)
 	cmd.Dir = dir
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

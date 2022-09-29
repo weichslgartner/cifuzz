@@ -1,2 +1,1 @@
-build-system: other
 build-command: make clean && make $FUZZ_TEST
