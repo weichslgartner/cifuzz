@@ -1,4 +1,4 @@
-package gradle;
+package com.github.CodeIntelligenceTesting.cifuzz;
 
 public class ExploreMe {
     // Function with multiple paths that can be discovered by a fuzzer.
@@ -28,6 +28,7 @@ public class ExploreMe {
         } else {
             System.out.println("this is the default path");
         }
+
         System.out.println("---------");
     }
 }
