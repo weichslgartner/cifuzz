@@ -262,14 +262,14 @@ func (c *runRemoteCmd) selectProject(token string) (string, error) {
 
 func (c *runRemoteCmd) uploadBundle(path string, token string) (*artifact, error) {
 	signalHandlerCtx, cancelSignalHandler := context.WithCancel(context.Background())
-	routines, routinesCtx := errgroup.WithContext(signalHandlerCtx)
+	routines, routinesCtx := errgroup.WithContext(context.Background())
 
 	// Cancel the routines context when receiving a termination signal
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, os.Interrupt, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 	routines.Go(func() error {
 		select {
-		case <-routinesCtx.Done():
+		case <-signalHandlerCtx.Done():
 			return nil
 		case s := <-sigs:
 			log.Warnf("Received %s", s.String())
@@ -312,7 +312,7 @@ func (c *runRemoteCmd) uploadBundle(path string, token string) (*artifact, error
 	// gets cancelled with the routines context is cancelled, which
 	// happens if an error occurs in the io.Copy above or the user if
 	// cancels the operation.
-	var resp *http.Response
+	var body []byte
 	routines.Go(func() error {
 		defer r.Close()
 		defer cancelSignalHandler()
@@ -325,25 +325,30 @@ func (c *runRemoteCmd) uploadBundle(path string, token string) (*artifact, error
 		req.Header.Add("Authorization", "Bearer "+token)
 
 		client := &http.Client{}
-		resp, err = client.Do(req)
-		return errors.WithStack(err)
+		resp, err := client.Do(req)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != 200 {
+			msg := responseToErrMsg(resp)
+			err := errors.Errorf("Failed to upload bundle: %s", msg)
+			log.Error(err)
+			return cmdutils.WrapSilentError(err)
+		}
+
+		body, err = io.ReadAll(resp.Body)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+
+		return nil
 	})
 
 	err := routines.Wait()
 	if err != nil {
 		return nil, err
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-	if resp.StatusCode != 200 {
-		msg := responseToErrMsg(resp)
-		err := errors.Errorf("Failed to upload bundle: %s", msg)
-		log.Error(err)
-		return nil, cmdutils.WrapSilentError(err)
 	}
 
 	artifact := &artifact{}
