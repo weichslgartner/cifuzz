@@ -1,4 +1,4 @@
-package cmake
+package other
 
 import (
 	"bufio"
@@ -26,19 +26,19 @@ import (
 var expectedFinding = regexp.MustCompile(`heap buffer overflow in exploreMe`)
 var filteredLine = regexp.MustCompile(`child process \d+ exited`)
 
-func TestIntegration_Make_RunCoverage(t *testing.T) {
+func TestIntegration_Other_RunCoverage(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
 	if runtime.GOOS == "windows" {
-		t.Skip("Make support is only available on Unix")
+		t.Skip("Other build systems are currently only supported on Unix")
 	}
 	testutil.RegisterTestDepOnCIFuzz()
 
 	installDir := shared.InstallCIFuzzInTemp(t)
-	dir := copyMakeExampleDir(t, filepath.Join("examples", "other"))
+	dir := copyOtherExampleDir(t, filepath.Join("examples", "other"))
 	defer fileutil.Cleanup(dir)
-	t.Logf("executing make integration test in %s", dir)
+	t.Logf("executing other build system integration test in %s", dir)
 
 	// Run the two fuzz tests and verify that they crash with the expected finding.
 	cifuzz := builderPkg.CIFuzzExecutablePath(filepath.Join(installDir, "bin"))
@@ -46,27 +46,27 @@ func TestIntegration_Make_RunCoverage(t *testing.T) {
 	createHtmlCoverageReport(t, cifuzz, dir, "my_fuzz_test")
 }
 
-func TestIntegration_Make_DetailedCoverage(t *testing.T) {
+func TestIntegration_Other_DetailedCoverage(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
 	if runtime.GOOS == "windows" {
-		t.Skip("Make support is only available on Unix")
+		t.Skip("Other build systems are currently only supported on Unix")
 	}
 	testutil.RegisterTestDepOnCIFuzz()
 
 	installDir := shared.InstallCIFuzzInTemp(t)
 
-	dir := copyMakeExampleDir(t, filepath.Join("integration-tests", "make", "testdata", "coverage"))
+	dir := copyOtherExampleDir(t, filepath.Join("integration-tests", "other", "testdata", "coverage"))
 	defer fileutil.Cleanup(dir)
-	t.Logf("executing make coverage test in %s", dir)
+	t.Logf("executing other build system coverage test in %s", dir)
 
 	cifuzz := builderPkg.CIFuzzExecutablePath(filepath.Join(installDir, "bin"))
 	createAndVerifyLcovCoverageReport(t, cifuzz, dir)
 }
 
-func copyMakeExampleDir(t *testing.T, rootPath string) string {
-	dir, err := os.MkdirTemp("", "cifuzz-make-example-")
+func copyOtherExampleDir(t *testing.T, rootPath string) string {
+	dir, err := os.MkdirTemp("", "cifuzz-other-example-")
 	require.NoError(t, err)
 
 	// Get the path to the testdata dir
