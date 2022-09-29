@@ -14,6 +14,9 @@ import (
 var framePattern = regexp.MustCompile(
 	`#(?P<frame_number>\d+)\s+0x[a-fA-F0-9]+\s+in\s+(?P<function>(\(anonymous namespace\))?[^(\s]+).*\s(?P<source_file>\S+?):(?P<line>\d+):?(?P<column>\d*)`)
 
+// Special pattern for Java stack traces
+var framePatternJava = regexp.MustCompile(`\sat\s(?P<source_file>\S+)[.](?P<function>\S+[^<>])[(]\S+:(?P<line>\d+)`)
+
 // This matches diagnostic messages printed by UBSan when it reports an
 // error. UBSan doesn't always print a stack trace, so we extract the
 // source file from this line.
@@ -30,12 +33,17 @@ type StackFrame struct {
 	Function    string
 }
 
-type parser struct {
-	projectDir string
+type ParserOptions struct {
+	ProjectDir    string
+	SupportJazzer bool
 }
 
-func NewParser(projectDir string) *parser {
-	return &parser{projectDir: projectDir}
+type parser struct {
+	*ParserOptions
+}
+
+func NewParser(opts *ParserOptions) *parser {
+	return &parser{opts}
 }
 
 // Parse parses output from an error reported by libFuzzer or a sanitizer
@@ -107,6 +115,12 @@ func (p *parser) parseSourceLocation(logs []string) ([]*StackFrame, error) {
 
 func (p *parser) stackFrameFromLine(line string) (*StackFrame, error) {
 	matches, found := regexutil.FindNamedGroupsMatch(framePattern, line)
+        if !found && p.SupportJazzer {
+                matches, found = regexutil.FindNamedGroupsMatch(framePatternJava, line)
+                if !found {
+                        return nil, nil
+                }
+        }
 	if !found {
 		return nil, nil
 	}
@@ -120,9 +134,12 @@ func (p *parser) stackFrameFromLine(line string) (*StackFrame, error) {
 		return nil, nil
 	}
 
-	frameNumber, err := strconv.ParseUint(matches["frame_number"], 10, 32)
-	if err != nil {
-		return nil, errors.WithStack(err)
+	var frameNumber uint64
+	if matches["frame_number"] != "" {
+		frameNumber, err = strconv.ParseUint(matches["frame_number"], 10, 32)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
 	}
 
 	lineNumber, err := strconv.ParseUint(matches["line"], 10, 32)
@@ -160,7 +177,7 @@ func (p *parser) validateSourceFile(path string) (string, error) {
 	// because that only produces relative paths if the compiler
 	// command-line also contained relative paths to the source files.
 	if filepath.IsAbs(path) {
-		path, err = filepath.Rel(p.projectDir, path)
+		path, err = filepath.Rel(p.ProjectDir, path)
 		// We don't return the error here, because on Windows an error
 		// is returned when the paths are on different drives (e.g. C:
 		// and D:), which means that the source file is not below the
@@ -184,6 +201,15 @@ func (p *parser) validateSourceFile(path string) (string, error) {
 		//    root cause of the findings is probably also the same, so
 		//    it makes sense to deduplicate them.
 		return "", nil
+	}
+
+	if p.SupportJazzer {
+		// Ignore files from the Java standard library. We can't filter
+		// these out via the regex because go regex doesn't support
+		// lookups to filter out specific words.
+		if strings.Contains(path, "java.base") {
+			return "", nil
+		}
 	}
 
 	return path, nil

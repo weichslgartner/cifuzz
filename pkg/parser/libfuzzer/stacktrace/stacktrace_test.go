@@ -16,7 +16,7 @@ func TestStackTrace(t *testing.T) {
 	// doesn't have to exist or be cleaned up, it just has to be a valid
 	// absolute path on the current platform, which os.TempDir() is.
 	projectDir := os.TempDir()
-	parser := NewParser(projectDir)
+	parser := NewParser(&ParserOptions{ProjectDir: projectDir})
 	sourceFile := filepath.Join(projectDir, "api.cpp")
 
 	var defaultStackTrace = []*StackFrame{{

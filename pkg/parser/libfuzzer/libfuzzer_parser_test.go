@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -396,12 +397,19 @@ Base64: ZGVhZGJlZWY=`,
 							fmt.Sprintf("artifact_prefix='./'; Test unit written to %s", testInputFile.Name()),
 							"Base64: ZGVhZGJlZWY=",
 						},
+						StackTrace: []*stacktrace.StackFrame{
+							{SourceFile: "com.example.parser.Parser",
+								Line:        11,
+								Column:      0,
+								FrameNumber: 0,
+								Function:    "parseBytes"},
+						},
 					},
 				},
 			},
 		},
 		{
-			name: "jazzer FuzzerSecurityIssue",
+			name: "jazzer FuzzerSecurityIssue output contains script",
 			logs: `
 INFO: A corpus is not provided, starting from an empty corpus
 == Java Exception: com.code_intelligence.jazzer.api.FuzzerSecurityIssueHigh: Output contains </script
@@ -430,6 +438,70 @@ Base64: UVFcb1w8L1xzY3JpcHQt`,
 							"QQ<script-",
 							fmt.Sprintf("artifact_prefix='./'; Test unit written to %s", testInputFile.Name()),
 							"Base64: UVFcb1w8L1xzY3JpcHQt",
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "jazzer FuzzerSecurityIssue remote code execution",
+			logs: `
+INFO: A corpus is not provided, starting from an empty corpus
+== Java Exception: com.code_intelligence.jazzer.api.FuzzerSecurityIssueHigh: Remote Code Execution
+Unrestricted class loading based on externally controlled data may allow
+remote code execution depending on available classes on the classpath.
+	at jaz.Zer.<clinit>(Zer.java:54)
+	at java.base/java.lang.Class.forName0(Native Method)
+	at java.base/java.lang.Class.forName(Class.java:315)
+	at com.github.CodeIntelligenceTesting.cifuzz.ExploreMe.exploreMe(ExploreMe.java:22)
+	at com.github.CodeIntelligenceTesting.cifuzz.FuzzTestCase.myFuzzTest(FuzzTestCase.java:13)
+	at com.code_intelligence.jazzer.runtime.FuzzTargetRunnerNatives.startLibFuzzer(Native Method)
+	at com.code_intelligence.jazzer.driver.FuzzTargetRunner.startLibFuzzer(FuzzTargetRunner.java:380)
+	at com.code_intelligence.jazzer.driver.FuzzTargetRunner.startLibFuzzer(FuzzTargetRunner.java:254)
+	at com.code_intelligence.jazzer.driver.Driver.start(Driver.java:92)
+DEDUP_TOKEN: e943c470c21ef432
+== libFuzzer crashing input ==
+0x40,0x6a,0x61,0x7a,0x2e,0x5a,0x65,0x72,0000000000000000000
+@jaz.Zer\012-\037\000x2e,0x5a,0x65,0x72,0xa,0x2d,0x1f,0x0,0x0,0x21,0x0,0x1f,
+@jaz.Zer\012-\037\000\000!\000\037
+` + fmt.Sprintf("artifact_prefix='./'; Test unit written to %s", testInputFile.Name()) + `
+Base64: QGphei5aZXIKLR8AACEAHw==`,
+			expected: []*report.Report{
+				{Status: report.RunStatus_INITIALIZING},
+				{
+					Status: report.RunStatus_RUNNING,
+					Finding: &finding.Finding{
+						Type:      finding.ErrorType_CRASH,
+						Details:   "Security Issue: Remote Code Execution",
+						InputData: testInput,
+						InputFile: testInputFile.Name(),
+						Logs: []string{
+							"== Java Exception: com.code_intelligence.jazzer.api.FuzzerSecurityIssueHigh: Remote Code Execution",
+							"Unrestricted class loading based on externally controlled data may allow",
+							"remote code execution depending on available classes on the classpath.",
+							"	at jaz.Zer.<clinit>(Zer.java:54)",
+							"	at java.base/java.lang.Class.forName0(Native Method)",
+							"	at java.base/java.lang.Class.forName(Class.java:315)",
+							"	at com.github.CodeIntelligenceTesting.cifuzz.ExploreMe.exploreMe(ExploreMe.java:22)",
+							"	at com.github.CodeIntelligenceTesting.cifuzz.FuzzTestCase.myFuzzTest(FuzzTestCase.java:13)",
+							"	at com.code_intelligence.jazzer.runtime.FuzzTargetRunnerNatives.startLibFuzzer(Native Method)",
+							"	at com.code_intelligence.jazzer.driver.FuzzTargetRunner.startLibFuzzer(FuzzTargetRunner.java:380)",
+							"	at com.code_intelligence.jazzer.driver.FuzzTargetRunner.startLibFuzzer(FuzzTargetRunner.java:254)",
+							"	at com.code_intelligence.jazzer.driver.Driver.start(Driver.java:92)",
+							"DEDUP_TOKEN: e943c470c21ef432",
+							"== libFuzzer crashing input ==",
+							"0x40,0x6a,0x61,0x7a,0x2e,0x5a,0x65,0x72,0000000000000000000",
+							"@jaz.Zer\\012-\\037\\000x2e,0x5a,0x65,0x72,0xa,0x2d,0x1f,0x0,0x0,0x21,0x0,0x1f,",
+							"@jaz.Zer\\012-\\037\\000\\000!\\000\\037",
+							fmt.Sprintf("artifact_prefix='./'; Test unit written to %s", testInputFile.Name()),
+							"Base64: QGphei5aZXIKLR8AACEAHw==",
+						},
+						StackTrace: []*stacktrace.StackFrame{
+							{SourceFile: "com.github.CodeIntelligenceTesting.cifuzz.ExploreMe",
+								Line:        22,
+								Column:      0,
+								FrameNumber: 0,
+								Function:    "exploreMe"},
 						},
 					},
 				},
@@ -499,6 +571,15 @@ Base64: CiMKIQoDZm9vEhoaGGJeAABkZWFkYmVlZjEyMzQ1Njc4OVfHng==`,
 							fmt.Sprintf("artifact_prefix='./'; Test unit written to %s", testInputFile.Name()),
 							"Base64: CiMKIQoDZm9vEhoaGGJeAABkZWFkYmVlZjEyMzQ1Njc4OVfHng==",
 						},
+						StackTrace: []*stacktrace.StackFrame{
+							{
+								SourceFile:  "/llvmbuild/llvm-project-llvmorg-10.0.0/compiler-rt/lib/asan/asan_stack.cpp",
+								Line:        86,
+								Column:      3,
+								FrameNumber: 0,
+								Function:    "__sanitizer_print_stack_trace",
+							},
+						},
 					},
 				},
 			},
@@ -546,6 +627,15 @@ Base64: J3JycnJiYXJycnJycnJycmZvb3IAcgAAAXJyAAAAAHJycnJycnJycnJycnJycnJycnJycnJy
 							"'rrrrbarrrrrrrrrfoor\\x00r\\x00\\x00\\x01rr\\x00\\x00\\x00\\x00rrrrrrrrrrrrrrrrrrrrrrrrr",
 							fmt.Sprintf("artifact_prefix='./'; Test unit written to %s", testInputFile.Name()),
 							"Base64: J3JycnJiYXJycnJycnJycmZvb3IAcgAAAXJyAAAAAHJycnJycnJycnJycnJycnJycnJycnJycnI=",
+						},
+						StackTrace: []*stacktrace.StackFrame{
+							{
+								SourceFile:  "/llvmbuild/llvm-project-llvmorg-10.0.0/compiler-rt/lib/asan/asan_stack.cpp",
+								Line:        86,
+								Column:      3,
+								FrameNumber: 0,
+								Function:    "__sanitizer_print_stack_trace",
+							},
 						},
 					},
 				},
@@ -691,6 +781,13 @@ SUMMARY: libFuzzer: timeout`,
 					if report.GetFinding() != nil {
 						report.Finding.MoreDetails = nil
 					}
+
+					if runtime.GOOS != "windows" &&
+						(tt.name == "metric line in the middle of a report" || tt.name == "segfault at the end") {
+						// Remove expected stacktrace that is only necessary for tests on windows
+						tt.expected[len(tt.expected)-1].Finding.StackTrace = nil
+					}
+
 					require.Equal(t, tt.expected[i], report)
 					i += 1
 				}

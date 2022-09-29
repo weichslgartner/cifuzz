@@ -549,7 +549,11 @@ func (p *parser) finalizeAndSendPendingFinding(ctx context.Context) error {
 	var err error
 
 	// Parse the stack trace
-	p.pendingFinding.StackTrace, err = stacktrace.NewParser(p.ProjectDir).Parse(p.pendingFinding.Logs)
+	parserOpts := &stacktrace.ParserOptions{
+		ProjectDir:    p.ProjectDir,
+		SupportJazzer: p.SupportJazzer,
+	}
+	p.pendingFinding.StackTrace, err = stacktrace.NewParser(parserOpts).Parse(p.pendingFinding.Logs)
 	if err != nil {
 		return err
 	}

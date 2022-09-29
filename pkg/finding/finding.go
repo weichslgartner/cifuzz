@@ -230,8 +230,12 @@ func (f *Finding) ShortDescriptionColumns() []string {
 	var errorType string
 	switch f.Type {
 	case ErrorType_CRASH:
-		switch f.Details {
-		case "detected memory leaks":
+		switch {
+		case f.Details == "detected memory leaks":
+			// Special vulnerabilities
+			errorType = f.Details
+		case strings.Contains(f.Details, "Security Issue:"):
+			// Jazzer findings
 			errorType = f.Details
 		default:
 			errorType = strings.ReplaceAll(strings.Split(f.Details, " ")[0], "-", " ")
