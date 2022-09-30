@@ -3,6 +3,7 @@ package build
 import (
 	"os"
 	"path"
+	"path/filepath"
 	"runtime"
 	"strings"
 
@@ -137,4 +138,12 @@ func CoverageCFlags(clangVersion *semver.Version) []string {
 		}
 	}
 	return cflags
+}
+
+func JazzerSeedCorpus(targetClass string, projectDir string) string {
+	seedCorpus := targetClass + "SeedCorpus"
+	path := strings.Split(seedCorpus, ".")
+	path = append([]string{"src", "test", "resources"}, path...)
+
+	return filepath.Join(projectDir, filepath.Join(path...))
 }
