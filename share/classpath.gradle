@@ -1,0 +1,7 @@
+allprojects {
+    task printClasspath {
+        doLast {
+            println "cifuzz.test.classpath=${sourceSets.test.runtimeClasspath.asPath}";
+        }
+    }
+}
