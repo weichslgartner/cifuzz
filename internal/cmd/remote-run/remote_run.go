@@ -328,7 +328,8 @@ func (c *runRemoteCmd) uploadBundle(path string, token string) (*artifact, error
 		return nil, errors.WithStack(err)
 	}
 	if resp.StatusCode != 200 {
-		err := errors.Errorf("Uploading bundle failed with %v", resp.Status)
+		msg := responseToErrMsg(resp)
+		err := errors.Errorf("Failed to upload bundle: %s", msg)
 		log.Error(err)
 		return nil, cmdutils.WrapSilentError(err)
 	}
@@ -352,7 +353,8 @@ func (c *runRemoteCmd) startRemoteFuzzingRun(artifact *artifact, token string) e
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		err := errors.Errorf("Starting remote fuzzing run failed with %v", resp.Status)
+		msg := responseToErrMsg(resp)
+		err = errors.Errorf("Failed to start fuzzing run: %s", msg)
 		log.Error(err)
 		return cmdutils.WrapSilentError(err)
 	}
@@ -423,7 +425,8 @@ func (c *runRemoteCmd) listProjects(token string) ([]*project, error) {
 		return nil, errors.WithStack(err)
 	}
 	if resp.StatusCode != 200 {
-		err := errors.Errorf("Listing projects failed with %v", resp.Status)
+		msg := responseToErrMsg(resp)
+		err := errors.Errorf("Failed to list projects: %s", msg)
 		log.Error(err)
 		return nil, cmdutils.WrapSilentError(err)
 	}
@@ -440,4 +443,21 @@ func (c *runRemoteCmd) listProjects(token string) ([]*project, error) {
 	}
 
 	return projects, nil
+}
+
+func responseToErrMsg(resp *http.Response) string {
+	msg := resp.Status
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return msg
+	}
+	apiResp := struct {
+		Code    int
+		Message string
+	}{}
+	err = json.Unmarshal(body, &apiResp)
+	if err != nil {
+		return fmt.Sprintf("%s: %s", msg, string(body))
+	}
+	return fmt.Sprintf("%s: %s", msg, apiResp.Message)
 }
