@@ -29,11 +29,20 @@ runs:
         sh -c "$(curl -fsSL https://raw.githubusercontent.com/CodeIntelligenceTesting/cifuzz/main/install.sh)"
       shell: bash
 
-    - name: Run CMake Example
+    - name: CMake Example (run + bundle)
       run: |
         cd examples/cmake
         ~/cifuzz/bin/cifuzz run --use-sandbox=false my_fuzz_test
         ~/cifuzz/bin/cifuzz findings --json | jq -r '.[].name' >> findings.old
+        ~/cifuzz/bin/cifuzz bundle my_fuzz_test
+      shell: bash
+
+    # by now coverage runs are not supported on windows
+    - name: Run CMake Example (coverage)
+      if: "!contains(inputs.os, 'windows')"
+      run: |
+        cd examples/cmake
+        ~/cifuzz/bin/cifuzz coverage my_fuzz_test
       shell: bash
 
     - name: Replace current version with the newly created one
@@ -44,11 +53,20 @@ runs:
         ./$INSTALLER
       shell: bash
 
-    - name: Run CMake Example again
+    - name: Run CMake Example again (run + bundle)
       run: |
         cd examples/cmake
         ~/cifuzz/bin/cifuzz run my_fuzz_test
         ~/cifuzz/bin/cifuzz findings --json | jq -r '.[].name' >> findings.new
+        ~/cifuzz/bin/cifuzz bundle my_fuzz_test
+      shell: bash
+
+    # by now coverage runs are not supported on windows
+    - name: Run CMake Example again (coverage)
+      if: "!contains(inputs.os, 'windows')"
+      run: |
+        cd examples/cmake
+        ~/cifuzz/bin/cifuzz coverage my_fuzz_test
       shell: bash
 
     - name: Compare findings
@@ -56,8 +74,6 @@ runs:
         cd examples/cmake
         echo "--old--" && cat findings.old
         echo "--new--" && cat findings.new
-        # TODO uncomment as soon as we have a release including the new
-        # animal based names, until then this will fail
-        #cmp findings.old findings.new
+        cmp findings.old findings.new
       shell: bash
 
