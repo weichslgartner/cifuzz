@@ -31,11 +31,13 @@ func (f RunfilesFinderImpl) CMakePresetsPath() (string, error) {
 }
 
 func (f RunfilesFinderImpl) JazzerAgentDeployJarPath() (string, error) {
-	return f.findFollowSymlinks("bin/jazzer_driver")
+	path, err := exec.LookPath("jazzer_agent_deploy.jar")
+	return path, errors.WithStack(err)
 }
 
-func (f RunfilesFinderImpl) JazzerDriverPath() (string, error) {
-	return f.findFollowSymlinks("bin/jazzer_driver")
+func (f RunfilesFinderImpl) JazzerPath() (string, error) {
+	path, err := exec.LookPath("jazzer")
+	return path, errors.WithStack(err)
 }
 
 func (f RunfilesFinderImpl) LLVMCovPath() (string, error) {
@@ -50,6 +52,16 @@ func (f RunfilesFinderImpl) LLVMProfDataPath() (string, error) {
 
 func (f RunfilesFinderImpl) LLVMSymbolizerPath() (string, error) {
 	path, err := exec.LookPath("llvm-symbolizer")
+	return path, errors.WithStack(err)
+}
+
+func (f RunfilesFinderImpl) MavenPath() (string, error) {
+	path, err := exec.LookPath("mvn")
+	return path, errors.WithStack(err)
+}
+
+func (f RunfilesFinderImpl) GradlePath() (string, error) {
+	path, err := exec.LookPath("gradle")
 	return path, errors.WithStack(err)
 }
 
@@ -71,6 +83,10 @@ func (f RunfilesFinderImpl) VSCodeTasksPath() (string, error) {
 
 func (f RunfilesFinderImpl) LogoPath() (string, error) {
 	return f.findFollowSymlinks("share/cifuzz/share/logo.png")
+}
+
+func (f RunfilesFinderImpl) GradleClasspathScriptPath() (string, error) {
+	return f.findFollowSymlinks("share/cifuzz/share/classpath.gradle")
 }
 
 func (f RunfilesFinderImpl) findFollowSymlinks(relativePath string) (string, error) {

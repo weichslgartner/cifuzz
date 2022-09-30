@@ -31,7 +31,7 @@ func (m *RunfilesFinderMock) JazzerAgentDeployJarPath() (string, error) {
 	return args.String(0), args.Error(1)
 }
 
-func (m *RunfilesFinderMock) JazzerDriverPath() (string, error) {
+func (m *RunfilesFinderMock) JazzerPath() (string, error) {
 	args := m.Called()
 	return args.String(0), args.Error(1)
 }
@@ -47,6 +47,16 @@ func (m *RunfilesFinderMock) LLVMProfDataPath() (string, error) {
 }
 
 func (m *RunfilesFinderMock) LLVMSymbolizerPath() (string, error) {
+	args := m.Called()
+	return args.String(0), args.Error(1)
+}
+
+func (m *RunfilesFinderMock) MavenPath() (string, error) {
+	args := m.Called()
+	return args.String(0), args.Error(1)
+}
+
+func (m *RunfilesFinderMock) GradlePath() (string, error) {
 	args := m.Called()
 	return args.String(0), args.Error(1)
 }
@@ -72,6 +82,11 @@ func (m *RunfilesFinderMock) VSCodeTasksPath() (string, error) {
 }
 
 func (m *RunfilesFinderMock) LogoPath() (string, error) {
+	args := m.Called()
+	return args.String(0), args.Error(1)
+}
+
+func (m *RunfilesFinderMock) GradleClasspathScriptPath() (string, error) {
 	args := m.Called()
 	return args.String(0), args.Error(1)
 }

@@ -17,7 +17,7 @@ type RunfilesFinder interface {
 	CMakePath() (string, error)
 	CMakePresetsPath() (string, error)
 	JazzerAgentDeployJarPath() (string, error)
-	JazzerDriverPath() (string, error)
+	JazzerPath() (string, error)
 	LLVMCovPath() (string, error)
 	LLVMProfDataPath() (string, error)
 	LLVMSymbolizerPath() (string, error)
@@ -26,6 +26,9 @@ type RunfilesFinder interface {
 	ReplayerSourcePath() (string, error)
 	VSCodeTasksPath() (string, error)
 	LogoPath() (string, error)
+	MavenPath() (string, error)
+	GradlePath() (string, error)
+	GradleClasspathScriptPath() (string, error)
 }
 
 var Finder RunfilesFinder
@@ -93,5 +96,5 @@ func FindSystemJavaHome() (string, error) {
 }
 
 func JazzerDriverPath() (string, error) {
-	return Finder.JazzerDriverPath()
+	return Finder.JazzerPath()
 }
