@@ -39,6 +39,13 @@ func TestLibFuzzerAdapter_ReportsParsing(t *testing.T) {
 	require.NoError(t, err)
 	defer fileutil.Cleanup(testInputFile.Name())
 
+	var llvmDir string
+	if runtime.GOOS == "windows" {
+		llvmDir = "C:\\llvm"
+	} else {
+		llvmDir = "/llvm"
+	}
+
 	tests := []struct {
 		name     string
 		logs     string
@@ -542,16 +549,16 @@ Base64: ZGVhZGJlZWY=`,
 		},
 		{
 			name: "segfault at the end",
-			logs: `
+			logs: fmt.Sprintf(`
 INFO: A corpus is not provided, starting from an empty corpus
 ==16== ERROR: libFuzzer: deadly signal
-    #0 0x4be181 in __sanitizer_print_stack_trace /llvmbuild/llvm-project-llvmorg-10.0.0/compiler-rt/lib/asan/asan_stack.cpp:86:3
+    #0 0x4be181 in __sanitizer_print_stack_trace %s/llvm-project-llvmorg-10.0.0/compiler-rt/lib/asan/asan_stack.cpp:86:3
 
 SUMMARY: libFuzzer: deadly signal
 0xa,0x23,0xa,0x21,0xa,0x3,0x66,0x6f,0x6f,0x12,0x1a,0x1a,0x18,0x62,0x5e,0x0,0x0,0x64,0x65,0x61,0x64,0x62,0x65,0x65,0x66,0x31,0x32,0x33,0x34,0x35,0x36,0x37,0x38,0x39,0x57,0xc7,0x9e,
 \x0a#\x0a!\x0a\x03foo\x12\x1a\x1a\x18b^\x00\x00deadbeef123456789W\xc7\x9e
-` + fmt.Sprintf("artifact_prefix='./'; Test unit written to %s", testInputFile.Name()) + `
-Base64: CiMKIQoDZm9vEhoaGGJeAABkZWFkYmVlZjEyMzQ1Njc4OVfHng==`,
+artifact_prefix='./'; Test unit written to %s
+Base64: CiMKIQoDZm9vEhoaGGJeAABkZWFkYmVlZjEyMzQ1Njc4OVfHng==`, llvmDir, testInputFile.Name()),
 			expected: []*report.Report{
 				{Status: report.RunStatus_INITIALIZING},
 				{
@@ -563,7 +570,7 @@ Base64: CiMKIQoDZm9vEhoaGGJeAABkZWFkYmVlZjEyMzQ1Njc4OVfHng==`,
 						InputFile: testInputFile.Name(),
 						Logs: []string{
 							"==16== ERROR: libFuzzer: deadly signal",
-							"    #0 0x4be181 in __sanitizer_print_stack_trace /llvmbuild/llvm-project-llvmorg-10.0.0/compiler-rt/lib/asan/asan_stack.cpp:86:3",
+							fmt.Sprintf("    #0 0x4be181 in __sanitizer_print_stack_trace %s/llvm-project-llvmorg-10.0.0/compiler-rt/lib/asan/asan_stack.cpp:86:3", llvmDir),
 							"",
 							"SUMMARY: libFuzzer: deadly signal",
 							"0xa,0x23,0xa,0x21,0xa,0x3,0x66,0x6f,0x6f,0x12,0x1a,0x1a,0x18,0x62,0x5e,0x0,0x0,0x64,0x65,0x61,0x64,0x62,0x65,0x65,0x66,0x31,0x32,0x33,0x34,0x35,0x36,0x37,0x38,0x39,0x57,0xc7,0x9e,",
@@ -571,32 +578,23 @@ Base64: CiMKIQoDZm9vEhoaGGJeAABkZWFkYmVlZjEyMzQ1Njc4OVfHng==`,
 							fmt.Sprintf("artifact_prefix='./'; Test unit written to %s", testInputFile.Name()),
 							"Base64: CiMKIQoDZm9vEhoaGGJeAABkZWFkYmVlZjEyMzQ1Njc4OVfHng==",
 						},
-						StackTrace: []*stacktrace.StackFrame{
-							{
-								SourceFile:  "/llvmbuild/llvm-project-llvmorg-10.0.0/compiler-rt/lib/asan/asan_stack.cpp",
-								Line:        86,
-								Column:      3,
-								FrameNumber: 0,
-								Function:    "__sanitizer_print_stack_trace",
-							},
-						},
 					},
 				},
 			},
 		},
 		{
 			name: "metric line in the middle of a report",
-			logs: `
+			logs: fmt.Sprintf(`
 INFO: A corpus is not provided, starting from an empty corpus
 ==16== ERROR: libFuzzer: deadly signal
 #38	INITED cov: 15 ft: 39 corp: 8/147b exec/s: 38 rss: 44Mb
-    #0 0x4a0021 in __sanitizer_print_stack_trace /llvmbuild/llvm-project-llvmorg-10.0.0/compiler-rt/lib/asan/asan_stack.cpp:86:3
+    #0 0x4a0021 in __sanitizer_print_stack_trace %s/llvm-project-llvmorg-10.0.0/compiler-rt/lib/asan/asan_stack.cpp:86:3
 
 SUMMARY: libFuzzer: deadly signal
 0x27,0x72,0x72,0x72,0x72,0x62,0x61,0x72,0x72,0x72,0x72,0x72,0x72,0x72,0x72,0x72,0x66,0x6f,0x6f,0x72,0x0,0x72,0x0,0x0,0x1,0x72,0x72,0x0,0x0,0x0,0x0,0x72,0x72,0x72,0x72,0x72,0x72,0x72,0x72,0x72,0x72,0x72,0x72,0x72,0x72,0x72,0x72,0x72,0x72,0x72,0x72,0x72,0x72,0x72,0x72,0x72,
 'rrrrbarrrrrrrrrfoor\x00r\x00\x00\x01rr\x00\x00\x00\x00rrrrrrrrrrrrrrrrrrrrrrrrr
-` + fmt.Sprintf("artifact_prefix='./'; Test unit written to %s", testInputFile.Name()) + `
-Base64: J3JycnJiYXJycnJycnJycmZvb3IAcgAAAXJyAAAAAHJycnJycnJycnJycnJycnJycnJycnJycnI=`,
+artifact_prefix='./'; Test unit written to %s
+Base64: J3JycnJiYXJycnJycnJycmZvb3IAcgAAAXJyAAAAAHJycnJycnJycnJycnJycnJycnJycnJycnI=`, llvmDir, testInputFile.Name()),
 			expected: []*report.Report{
 				{Status: report.RunStatus_INITIALIZING},
 				{
@@ -620,22 +618,13 @@ Base64: J3JycnJiYXJycnJycnJycmZvb3IAcgAAAXJyAAAAAHJycnJycnJycnJycnJycnJycnJycnJy
 						InputFile: testInputFile.Name(),
 						Logs: []string{
 							"==16== ERROR: libFuzzer: deadly signal",
-							"    #0 0x4a0021 in __sanitizer_print_stack_trace /llvmbuild/llvm-project-llvmorg-10.0.0/compiler-rt/lib/asan/asan_stack.cpp:86:3",
+							fmt.Sprintf("    #0 0x4a0021 in __sanitizer_print_stack_trace %s/llvm-project-llvmorg-10.0.0/compiler-rt/lib/asan/asan_stack.cpp:86:3", llvmDir),
 							"",
 							"SUMMARY: libFuzzer: deadly signal",
 							"0x27,0x72,0x72,0x72,0x72,0x62,0x61,0x72,0x72,0x72,0x72,0x72,0x72,0x72,0x72,0x72,0x66,0x6f,0x6f,0x72,0x0,0x72,0x0,0x0,0x1,0x72,0x72,0x0,0x0,0x0,0x0,0x72,0x72,0x72,0x72,0x72,0x72,0x72,0x72,0x72,0x72,0x72,0x72,0x72,0x72,0x72,0x72,0x72,0x72,0x72,0x72,0x72,0x72,0x72,0x72,0x72,",
 							"'rrrrbarrrrrrrrrfoor\\x00r\\x00\\x00\\x01rr\\x00\\x00\\x00\\x00rrrrrrrrrrrrrrrrrrrrrrrrr",
 							fmt.Sprintf("artifact_prefix='./'; Test unit written to %s", testInputFile.Name()),
 							"Base64: J3JycnJiYXJycnJycnJycmZvb3IAcgAAAXJyAAAAAHJycnJycnJycnJycnJycnJycnJycnJycnI=",
-						},
-						StackTrace: []*stacktrace.StackFrame{
-							{
-								SourceFile:  "/llvmbuild/llvm-project-llvmorg-10.0.0/compiler-rt/lib/asan/asan_stack.cpp",
-								Line:        86,
-								Column:      3,
-								FrameNumber: 0,
-								Function:    "__sanitizer_print_stack_trace",
-							},
 						},
 					},
 				},
@@ -780,12 +769,6 @@ SUMMARY: libFuzzer: timeout`,
 					removeTimestamps(report)
 					if report.GetFinding() != nil {
 						report.Finding.MoreDetails = nil
-					}
-
-					if runtime.GOOS != "windows" &&
-						(tt.name == "metric line in the middle of a report" || tt.name == "segfault at the end") {
-						// Remove expected stacktrace that is only necessary for tests on windows
-						tt.expected[len(tt.expected)-1].Finding.StackTrace = nil
 					}
 
 					require.Equal(t, tt.expected[i], report)

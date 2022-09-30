@@ -115,12 +115,12 @@ func (p *parser) parseSourceLocation(logs []string) ([]*StackFrame, error) {
 
 func (p *parser) stackFrameFromLine(line string) (*StackFrame, error) {
 	matches, found := regexutil.FindNamedGroupsMatch(framePattern, line)
-        if !found && p.SupportJazzer {
-                matches, found = regexutil.FindNamedGroupsMatch(framePatternJava, line)
-                if !found {
-                        return nil, nil
-                }
-        }
+	if !found && p.SupportJazzer {
+		matches, found = regexutil.FindNamedGroupsMatch(framePatternJava, line)
+		if !found {
+			return nil, nil
+		}
+	}
 	if !found {
 		return nil, nil
 	}
