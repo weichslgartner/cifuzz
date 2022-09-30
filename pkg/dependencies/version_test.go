@@ -132,6 +132,8 @@ func TestClangVersion_CXXMissing(t *testing.T) {
 	finderMock.On("ClangPath").Return("path/clang", nil)
 
 	t.Setenv("CC", "CC/clang")
+	t.Setenv("CXX", "")
+
 	keys := []Key{CLANG}
 	deps, err := Define(keys)
 	require.NoError(t, err)
@@ -152,6 +154,9 @@ func TestClangVersion_CCFilename(t *testing.T) {
 		return version, nil
 	}
 
+	finderMock := &mocks.RunfilesFinderMock{}
+	finderMock.On("ClangPath").Return("path/clang", nil)
+
 	t.Setenv("CC", filename)
 	t.Setenv("CXX", "g++")
 
@@ -159,6 +164,7 @@ func TestClangVersion_CCFilename(t *testing.T) {
 	deps, err := Define(keys)
 	require.NoError(t, err)
 	dep := deps[CLANG]
+	dep.finder = finderMock
 
 	versionFound, err := clangVersion(dep, mockCheck)
 	require.NoError(t, err)
@@ -173,6 +179,9 @@ func TestClangVersion_CXXFilename(t *testing.T) {
 		return version, nil
 	}
 
+	finderMock := &mocks.RunfilesFinderMock{}
+	finderMock.On("ClangPath").Return("path/clang", nil)
+
 	t.Setenv("CC", "gcc")
 	t.Setenv("CXX", filename)
 
@@ -180,6 +189,7 @@ func TestClangVersion_CXXFilename(t *testing.T) {
 	deps, err := Define(keys)
 	require.NoError(t, err)
 	dep := deps[CLANG]
+	dep.finder = finderMock
 
 	versionFound, err := clangVersion(dep, mockCheck)
 	require.NoError(t, err)

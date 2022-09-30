@@ -51,7 +51,7 @@ func clangVersion(dep *Dependency, clangCheck execCheck) (*semver.Version, error
 	// clang available in the path
 	checkPath := false
 
-	if cc, found := os.LookupEnv("CC"); found {
+	if cc, found := os.LookupEnv("CC"); found && cc != "" {
 		if strings.Contains(path.Base(cc), "clang") {
 			ccVersion, err := clangCheck(cc, dep.Key)
 			if err != nil {
@@ -61,12 +61,13 @@ func clangVersion(dep *Dependency, clangCheck execCheck) (*semver.Version, error
 			minVersion = ccVersion
 		} else {
 			log.Warn("No clang found in CC")
+			checkPath = true
 		}
 	} else {
 		checkPath = true
 	}
 
-	if cxx, found := os.LookupEnv("CXX"); found {
+	if cxx, found := os.LookupEnv("CXX"); found && cxx != "" {
 		if strings.Contains(path.Base(cxx), "clang") {
 			cxxVersion, err := clangCheck(cxx, dep.Key)
 			if err != nil {
@@ -79,6 +80,7 @@ func clangVersion(dep *Dependency, clangCheck execCheck) (*semver.Version, error
 
 		} else {
 			log.Warn("No clang found in CXX")
+			checkPath = true
 		}
 	} else {
 		checkPath = true
