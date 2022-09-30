@@ -2,8 +2,8 @@ package jazzer
 
 import (
 	"context"
-	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -58,19 +58,23 @@ func NewRunner(options *RunnerOptions) *Runner {
 }
 
 func (r *Runner) Run(ctx context.Context) error {
-	var err error
-
-	var driverPath string
-	driverPath, err = runfiles.Finder.JazzerDriverPath()
-	if err != nil {
-		return err
-	}
-	agentPath, err := runfiles.Finder.JazzerAgentDeployJarPath()
+	err := r.ValidateOptions()
 	if err != nil {
 		return err
 	}
 
-	args := []string{driverPath}
+	javaHome, err := runfiles.Finder.JavaHomePath()
+	if err != nil {
+		return err
+	}
+	javaBin := filepath.Join(javaHome, "bin", "java")
+	args := []string{javaBin}
+
+	// class paths
+	args = append(args, "-cp", strings.Join(r.ClassPaths, ":"))
+
+	// Jazzer main class
+	args = append(args, "com.code_intelligence.jazzer.Jazzer")
 
 	// ----------------------
 	// --- Jazzer options ---
@@ -80,12 +84,6 @@ func (r *Runner) Run(ctx context.Context) error {
 	} else {
 		args = append(args, "--target_class="+r.TargetClass)
 	}
-
-	args = append(args, fmt.Sprintf("--cp=%s", strings.Join(r.ClassPaths, ":")))
-
-	args = append(args, "--agent_path="+agentPath)
-	args = append(args, instrumentorAgentArgs(r.InstrumentationPackageFilters)...)
-
 	// -------------------------
 	// --- libfuzzer options ---
 	// -------------------------
@@ -137,8 +135,6 @@ func (r *Runner) Run(ctx context.Context) error {
 		jazzerArgs := args
 
 		bindings := []*minijail.Binding{
-			// The Jazzer agent must be accessible
-			{Source: agentPath},
 			// The first corpus directory must be writable, because
 			// libfuzzer writes new test inputs to it
 			{Source: r.GeneratedCorpusDir, Writable: minijail.ReadWrite},
@@ -154,10 +150,6 @@ func (r *Runner) Run(ctx context.Context) error {
 		}
 
 		// Add binding for the system JDK and pass it to minijail.
-		javaHome, err := runfiles.FindSystemJavaHome()
-		if err != nil {
-			return err
-		}
 		bindings = append(bindings, &minijail.Binding{Source: javaHome})
 
 		// Set up Minijail
@@ -195,7 +187,7 @@ func (r *Runner) FuzzerEnvironment() ([]string, error) {
 	}
 
 	// Set JAVA_HOME
-	javaHome, err := runfiles.FindSystemJavaHome()
+	javaHome, err := runfiles.Finder.JavaHomePath()
 	if err != nil {
 		return nil, err
 	}
@@ -213,17 +205,6 @@ func (r *Runner) FuzzerEnvironment() ([]string, error) {
 	return env, nil
 }
 
-func instrumentorAgentArgs(instrumentationPackageFilters []string) []string {
-	// add arguments for the instrumentation agent:
-	// instrumentation_includes - Specifies a list of glob patterns for classes that should be instrumented with fuzzing
-	//		instrumentation.
-	// custom_hooks - A list of classes which contain methods with hook annotations.
-	instrumentationAgentArgs := []string{
-		"--custom_hooks=" + strings.Join(customHooks, ":"),
-	}
-	if len(instrumentationPackageFilters) > 0 {
-		instrumentationAgentArgs = append(instrumentationAgentArgs,
-			"--instrumentation_includes="+strings.Join(instrumentationPackageFilters, ":"))
-	}
-	return instrumentationAgentArgs
+func (r *Runner) Cleanup(ctx context.Context) {
+	r.Runner.Cleanup(ctx)
 }
