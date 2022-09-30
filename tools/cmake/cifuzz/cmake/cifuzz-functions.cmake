@@ -94,8 +94,14 @@ function(enable_fuzz_testing)
       else()
         add_compile_options(-fprofile-instr-generate -fcoverage-mapping)
         if(NOT APPLE)
-          # LLVM's continous coverage mode currently requires compile-time support on non-macOS platforms.
-          add_compile_options(-mllvm -runtime-counter-relocation)
+          # LLVM's continuous coverage mode currently requires compile-time support on non-macOS platforms. This is only
+          # really working as of clang 14 though, earlier versions are affected by runtime crashes.
+          set(_cc_version ${CMAKE_C_COMPILER_VERSION})
+          set(_cxx_version ${CMAKE_CXX_COMPILER_VERSION})
+          if (((NOT DEFINED ${CMAKE_C_COMPILER_VERSION}) OR (${CMAKE_C_COMPILER_VERSION} VERSION_GREATER_EQUAL 14)) AND
+            ((NOT DEFINED ${CMAKE_CXX_COMPILER_VERSION}) OR (${CMAKE_CXX_COMPILER_VERSION} VERSION_GREATER_EQUAL 14)))
+            add_compile_options(-mllvm -runtime-counter-relocation)
+          endif()
         endif()
         add_link_options(-fprofile-instr-generate)
       endif()

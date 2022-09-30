@@ -10,10 +10,12 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/Masterminds/semver"
 	"github.com/pkg/errors"
 
 	"code-intelligence.com/cifuzz/internal/build"
 	"code-intelligence.com/cifuzz/internal/cmdutils"
+	"code-intelligence.com/cifuzz/pkg/dependencies"
 	"code-intelligence.com/cifuzz/pkg/log"
 	"code-intelligence.com/cifuzz/pkg/runfiles"
 	"code-intelligence.com/cifuzz/util/envutil"
@@ -231,10 +233,18 @@ func (b *Builder) setCoverageEnv() error {
 		"-fprofile-instr-generate",
 		"-fcoverage-mapping",
 	}...)
+
 	if runtime.GOOS != "darwin" {
 		// LLVM's continuous mode requires compile-time support on non-macOS
-		// platforms.
-		cflags = append(cflags, "-mllvm", "-runtime-counter-relocation")
+		// platforms. This support is unstable in Clang 13 and lower, so we
+		// only enable it on 14+.
+		cc := envutil.Getenv(b.env, "CC")
+		ccVersion, err := dependencies.ClangVersion(cc)
+		if err != nil {
+			log.Warnf("Failed to determine version of %q: %v", cc, err)
+		} else if ccVersion.Compare(semver.MustParse("14.0.0")) >= 0 {
+			cflags = append(cflags, "-mllvm", "-runtime-counter-relocation")
+		}
 	}
 	b.env, err = envutil.Setenv(b.env, "CFLAGS", strings.Join(cflags, " "))
 	if err != nil {

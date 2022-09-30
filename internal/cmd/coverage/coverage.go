@@ -2,6 +2,7 @@ package coverage
 
 import (
 	"bytes"
+	"debug/elf"
 	"debug/macho"
 	"fmt"
 	"io"
@@ -311,7 +312,8 @@ func (c *coverageCmd) runFuzzTest(buildResult *build.Result) error {
 
 	// The environment we run the binary in
 	var binaryEnv []string
-	binaryEnv, err = envutil.Setenv(binaryEnv, "LLVM_PROFILE_FILE", c.rawProfilePattern())
+	binaryEnv, err = envutil.Setenv(binaryEnv, "LLVM_PROFILE_FILE",
+		c.rawProfilePattern(supportsLlvmProfileContinuousMode(buildResult.Executable)))
 	if err != nil {
 		return err
 	}
@@ -432,7 +434,9 @@ func (c *coverageCmd) indexRawProfile(fuzzTestExecutable string) error {
 		return err
 	}
 	if len(rawProfileFiles) == 0 {
-		return errors.Errorf("%s did not generate .profraw files at %s", fuzzTestExecutable, c.rawProfilePattern())
+		// The rawProfilePattern parameter only governs whether we add "%c",
+		// which doesn't affect the actual raw profile location.
+		return errors.Errorf("%s did not generate .profraw files at %s", fuzzTestExecutable, c.rawProfilePattern(false))
 	}
 
 	llvmProfData, err := runfiles.Finder.LLVMProfDataPath()
@@ -591,17 +595,21 @@ func (c *coverageCmd) getIgnoreCifuzzIncludesArgs() ([]string, error) {
 	return []string{"-ignore-filename-regex=" + regexp.QuoteMeta(cifuzzIncludePath) + "/.*"}, nil
 }
 
-func (c *coverageCmd) rawProfilePattern() string {
+func (c *coverageCmd) rawProfilePattern(supportsContinuousMode bool) string {
 	// Use "%m" instead of a fixed path to support coverage of shared
 	// libraries: Each executable or library generates its own profile
 	// file, all of which we have to merge in the end. By using "%m",
 	// the profile is written to a unique file for each executable and
 	// shared library.
-	// Use "%c", which expands out to nothing, to enable the continuous mode in
-	// which the .profraw is mmaped and thus kept in sync with the counters in
-	// the instrumented code even when it crashes.
+	// Use "%c", if supported, which expands out to nothing, to enable the
+	// continuous mode in which the .profraw is mmaped and thus kept in sync with
+	// the counters in the instrumented code even when it crashes.
 	// https://clang.llvm.org/docs/SourceBasedCodeCoverage.html#running-the-instrumented-program
-	return filepath.Join(c.tmpDir, "%c%m.profraw")
+	basePattern := "%m.profraw"
+	if supportsContinuousMode {
+		basePattern = "%c" + basePattern
+	}
+	return filepath.Join(c.tmpDir, basePattern)
 }
 
 func (c *coverageCmd) rawProfileFiles() ([]string, error) {
@@ -690,4 +698,42 @@ func cpuToArchFlag(cpu macho.Cpu) (string, error) {
 	default:
 		return "", errors.Errorf("unsupported architecture: %s", cpu.String())
 	}
+}
+
+func supportsLlvmProfileContinuousMode(binary string) bool {
+	if runtime.GOOS == "darwin" {
+		// No compile-time flags are required on macOS.
+		return true
+	}
+	if runtime.GOOS != "linux" {
+		// We do not know the level of support for platforms other than Linux
+		// and macOS.
+		return false
+	}
+	// On Linux, we need to parse the symbols of the binary to check whether it
+	// has been built with the required compile-time flags
+	// (-mllvm -runtime-counter-relocation).
+	file, err := elf.Open(binary)
+	if err != nil {
+		log.Warnf("Failed to parse %s as an ELF file: %s", binary, err)
+		// Continuous mode is best-effort, do not fail on "weird" binaries.
+		return false
+	}
+	symbols, err := file.Symbols()
+	if err != nil {
+		log.Warnf("Failed to read ELF symbols from %s: %s", binary, err)
+		return false
+	}
+	var biasVarAddress uint64
+	var biasDefaultVarAddress uint64
+	for _, symbol := range symbols {
+		if symbol.Name == "__llvm_profile_counter_bias" {
+			biasVarAddress = symbol.Value
+		} else if symbol.Name == "__llvm_profile_counter_bias_default" {
+			biasDefaultVarAddress = symbol.Value
+		}
+	}
+	// Check taken from:
+	// https://github.com/llvm/llvm-project/blob/846709b287abe541fcad42e5a54d37a41dae3f67/compiler-rt/lib/profile/InstrProfilingFile.c#L574
+	return biasVarAddress != 0 && biasVarAddress != biasDefaultVarAddress
 }

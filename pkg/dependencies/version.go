@@ -26,6 +26,11 @@ var (
 
 type execCheck func(string, Key) (*semver.Version, error)
 
+// ClangVersion returns the version of the clang/clang++ executable at the given path.
+func ClangVersion(path string) (*semver.Version, error) {
+	return clangCheck(path, CLANG)
+}
+
 // small helper to reuse clang version check
 func clangCheck(path string, key Key) (*semver.Version, error) {
 	version, err := getVersionFromCommand(path, []string{"--version"}, clangRegex, key)

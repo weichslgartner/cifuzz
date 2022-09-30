@@ -6,7 +6,7 @@
 * [git](https://git-scm.com/)
 * [make](https://www.gnu.org/software/make/)
 * [CMake >= 3.21](https://cmake.org/)
-* [LLVM >= 11](https://clang.llvm.org/get_started.html)
+* [LLVM >= 14](https://clang.llvm.org/get_started.html)
 * [go >= 1.18](https://go.dev/doc/install)
 * [libcap](https://man7.org/linux/man-pages/man3/libcap.3.html)
 
