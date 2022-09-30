@@ -79,9 +79,17 @@ func TestIntegration_Other_Bundle(t *testing.T) {
 	defer fileutil.Cleanup(dir)
 	t.Logf("executing other build system integration test in %s", dir)
 
+	// Use a different Makefile on macOS, because shared objects need
+	// to be built differently there
+	var args []string
+	if runtime.GOOS == "darwin" {
+		args = append(args, "--build-command", "make -f Makefile.darwin clean && make -f Makefile.darwin $FUZZ_TEST")
+	}
+	args = append(args, "my_fuzz_test")
+
 	// Execute the bundle command
 	cifuzz := builderPkg.CIFuzzExecutablePath(filepath.Join(installDir, "bin"))
-	shared.TestBundle(t, dir, cifuzz, "my_fuzz_test")
+	shared.TestBundle(t, dir, cifuzz, args...)
 }
 
 func runFuzzer(t *testing.T, cifuzz string, dir string, fuzzTest string, expectedOutput *regexp.Regexp) {

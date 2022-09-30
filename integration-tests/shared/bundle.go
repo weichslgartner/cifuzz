@@ -16,7 +16,7 @@ import (
 	"code-intelligence.com/cifuzz/util/fileutil"
 )
 
-func TestBundle(t *testing.T, dir string, cifuzz string, fuzzTests ...string) {
+func TestBundle(t *testing.T, dir string, cifuzz string, args ...string) {
 	t.Helper()
 
 	// Make the bundle command not fail on unsupported platforms to be
@@ -42,7 +42,7 @@ func TestBundle(t *testing.T, dir string, cifuzz string, fuzzTests ...string) {
 	require.NoError(t, err)
 
 	// Bundle all fuzz tests into an archive.
-	args := []string{
+	defaultArgs := []string{
 		"bundle",
 		"-o", bundlePath,
 		"--dict", dictPath,
@@ -63,7 +63,7 @@ func TestBundle(t *testing.T, dir string, cifuzz string, fuzzTests ...string) {
 		"--env", "NO_SUCH_VARIABLE",
 		"--verbose",
 	}
-	args = append(args, fuzzTests...)
+	args = append(defaultArgs, args...)
 	cmd := executil.Command(cifuzz, args...)
 	cmd.Dir = dir
 	cmd.Env, err = envutil.Setenv(os.Environ(), "BAR", "bar")
