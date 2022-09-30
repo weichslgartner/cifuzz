@@ -30,7 +30,7 @@ func CreateTestDeps(t *testing.T, keys []Key) Dependencies {
 		dep.Installed = installedFunc
 	}
 
-	Default = deps
+	CMakeDeps = deps
 	return deps
 }
 

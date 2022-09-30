@@ -9,14 +9,32 @@ import (
 )
 
 func TestResetDefault(t *testing.T) {
-	oldDefault := Default
-	Default = Dependencies{}
-	ResetDefaultsForTestsOnly()
-	assert.Len(t, Default, 5)
+	oldDefaultCMake := CMakeDeps
+	oldDefaultMaven := MavenDeps
+	oldDefaultGradle := GradleDeps
 
-	newKeys := maps.Keys(Default)
-	for key, _ := range oldDefault {
-		assert.Contains(t, newKeys, key)
+	CMakeDeps = Dependencies{}
+	MavenDeps = Dependencies{}
+	GradleDeps = Dependencies{}
+
+	ResetDefaultsForTestsOnly()
+	assert.Len(t, CMakeDeps, 5)
+	assert.Len(t, MavenDeps, 1)
+	assert.Len(t, GradleDeps, 1)
+
+	newCMakeKeys := maps.Keys(CMakeDeps)
+	for key, _ := range oldDefaultCMake {
+		assert.Contains(t, newCMakeKeys, key)
+	}
+
+	newMavenKeys := maps.Keys(MavenDeps)
+	for key, _ := range oldDefaultMaven {
+		assert.Contains(t, newMavenKeys, key)
+	}
+
+	newGradleKeys := maps.Keys(GradleDeps)
+	for key, _ := range oldDefaultGradle {
+		assert.Contains(t, newGradleKeys, key)
 	}
 }
 func TestResetDefault_Panic(t *testing.T) {

@@ -9,25 +9,42 @@ import (
 
 type Dependencies map[Key]*Dependency
 
-var Default Dependencies
+var CMakeDeps Dependencies
+var MavenDeps Dependencies
+var GradleDeps Dependencies
 
 func init() {
 	setDefaults()
 }
 
 func setDefaults() {
-	deps, err := Define([]Key{
+	cmakeDeps, err := Define([]Key{
 		CLANG,
 		CMAKE,
 		LLVM_COV,
 		LLVM_PROFDATA,
 		LLVM_SYMBOLIZER,
 	})
-
 	if err != nil {
-		panic("Unable to define default dependencies")
+		panic("Unable to define cmake dependencies")
 	}
-	Default = deps
+	CMakeDeps = cmakeDeps
+
+	mavenDeps, err := Define([]Key{
+		MAVEN,
+	})
+	if err != nil {
+		panic("Unable to define maven dependencies")
+	}
+	MavenDeps = mavenDeps
+
+	gradleDeps, err := Define([]Key{
+		GRADLE,
+	})
+	if err != nil {
+		panic("Unable to define gradle dependencies")
+	}
+	GradleDeps = gradleDeps
 }
 
 func ResetDefaultsForTestsOnly() {
@@ -122,6 +139,26 @@ var all = map[Key]Dependency{
 		},
 		Installed: func(dep *Dependency) bool {
 			return dep.checkFinder(dep.finder.LLVMSymbolizerPath)
+		},
+	},
+	MAVEN: {
+		Key:        MAVEN,
+		MinVersion: *semver.MustParse("0.0.0"),
+		GetVersion: func(dep *Dependency) (*semver.Version, error) {
+			return semver.NewVersion("0.0.0")
+		},
+		Installed: func(dep *Dependency) bool {
+			return dep.checkFinder(dep.finder.MavenPath)
+		},
+	},
+	GRADLE: {
+		Key:        GRADLE,
+		MinVersion: *semver.MustParse("0.0.0"),
+		GetVersion: func(dep *Dependency) (*semver.Version, error) {
+			return semver.NewVersion("0.0.0")
+		},
+		Installed: func(dep *Dependency) bool {
+			return dep.checkFinder(dep.finder.GradlePath)
 		},
 	},
 }

@@ -237,5 +237,5 @@ func (c *coverageCmd) checkDependencies() (bool, error) {
 	if c.opts.BuildSystem == config.BuildSystemCMake {
 		deps = append(deps, dependencies.CMAKE)
 	}
-	return dependencies.Check(deps, dependencies.Default, runfiles.Finder)
+	return dependencies.Check(deps, dependencies.CMakeDeps, runfiles.Finder)
 }

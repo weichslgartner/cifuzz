@@ -17,6 +17,9 @@ const (
 	LLVM_SYMBOLIZER Key = "llvm-symbolizer"
 	LLVM_PROFDATA   Key = "llvm-profdata"
 
+	MAVEN  Key = "mvn"
+	GRADLE Key = "gradle"
+
 	MESSAGE_VERSION = "cifuzz requires %s %s or higher, have %s"
 	MESSAGE_MISSING = "cifuzz requires %s, but it is not installed"
 )

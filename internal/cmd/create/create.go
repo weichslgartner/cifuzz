@@ -191,5 +191,5 @@ func (c *createCmd) checkDependencies() (bool, error) {
 		deps = append(deps, dependencies.CMAKE)
 	}
 
-	return dependencies.Check(deps, dependencies.Default, runfiles.Finder)
+	return dependencies.Check(deps, dependencies.CMakeDeps, runfiles.Finder)
 }

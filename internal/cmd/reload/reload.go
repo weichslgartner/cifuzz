@@ -114,5 +114,5 @@ func (c *reloadCmd) checkDependencies() (bool, error) {
 	if c.opts.BuildSystem == config.BuildSystemCMake {
 		deps = append(deps, []dependencies.Key{dependencies.CLANG, dependencies.CMAKE}...)
 	}
-	return dependencies.Check(deps, dependencies.Default, runfiles.Finder)
+	return dependencies.Check(deps, dependencies.CMakeDeps, runfiles.Finder)
 }

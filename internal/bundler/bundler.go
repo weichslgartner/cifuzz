@@ -534,7 +534,7 @@ func (b *Bundler) checkDependencies() (bool, error) {
 	if b.Opts.BuildSystem == config.BuildSystemCMake {
 		deps = append(deps, dependencies.CMAKE)
 	}
-	return dependencies.Check(deps, dependencies.Default, runfiles.Finder)
+	return dependencies.Check(deps, dependencies.CMakeDeps, runfiles.Finder)
 }
 
 //nolint:nonamedreturns
