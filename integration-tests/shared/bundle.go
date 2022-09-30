@@ -153,8 +153,8 @@ func TestBundle(t *testing.T, dir string, cifuzz string, fuzzTests ...string) {
 	fuzzerPath = filepath.Join(archiveDir, coverageMetadata.Path)
 	require.FileExists(t, fuzzerPath)
 
-	// Run the coverage build, which uses the replayer, on the seed corpus and verify that it creates a coverage
-	// profile.
+	// Run the coverage build on the seed corpus and verify that it
+	// creates a coverage profile.
 	coverageProfile := filepath.Join(archiveDir, "profile.lcov")
 	cmd = executil.Command(fuzzerPath, append(coverageMetadata.EngineOptions.Flags, seedCorpusPath)...)
 	cmd.Dir = filepath.Join(archiveDir, "work_dir")
