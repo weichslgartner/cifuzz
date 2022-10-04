@@ -41,7 +41,7 @@ func AddFlags(cmd *cobra.Command, funcs ...func(cmd *cobra.Command) func()) (bin
 
 func AddBranchFlag(cmd *cobra.Command) func() {
 	cmd.Flags().String("branch", "",
-		"Branch name to use in the artifacts config.\n"+
+		"Branch name to use in the bundle config.\n"+
 			"By default, the currently checked out git branch is used.")
 	return func() {
 		ViperMustBindPFlag("branch", cmd.Flags().Lookup("branch"))
@@ -69,7 +69,7 @@ func AddBuildJobsFlag(cmd *cobra.Command) func() {
 
 func AddCommitFlag(cmd *cobra.Command) func() {
 	cmd.Flags().String("commit", "",
-		"Commit to use in the artifacts config.\n"+
+		"Commit to use in the bundle config.\n"+
 			"By default, the head of the currently checked out git branch is used.")
 	return func() {
 		ViperMustBindPFlag("commit", cmd.Flags().Lookup("commit"))

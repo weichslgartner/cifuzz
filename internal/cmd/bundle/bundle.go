@@ -42,7 +42,8 @@ func newWithOptions(opts *options) *cobra.Command {
 		Use:   "bundle [flags] [<fuzz test>]...",
 		Short: "Bundles fuzz tests into an archive",
 		Long: `Bundles all runtime artifacts required by the given fuzz tests into
-a self-contained archive that can be executed by a remote fuzzing server.
+a self-contained archive (bundle) that can be executed by a remote
+fuzzing server.
 
 The usage of this command depends on the build system configured for the
 project:
@@ -123,7 +124,7 @@ https://github.com/CodeIntelligenceTesting/cifuzz/issues`, system)
 		cmdutils.AddSeedCorpusFlag,
 		cmdutils.AddTimeoutFlag,
 	)
-	cmd.Flags().StringVarP(&opts.OutputPath, "output", "o", "", "Output path of the artifacts archive (.tar.gz)")
+	cmd.Flags().StringVarP(&opts.OutputPath, "output", "o", "", "Output path of the bundle (.tar.gz)")
 
 	return cmd
 }
