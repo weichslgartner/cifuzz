@@ -1,12 +1,13 @@
 Add the following to your WORKSPACE file:
 
+    load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
     load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
     http_archive(
         name = "rules_fuzzing",
-        sha256 = "d9002dd3cd6437017f08593124fdd1b13b3473c7b929ceb0e60d317cb9346118",
-        strip_prefix = "rules_fuzzing-0.3.2",
-        urls = ["https://github.com/bazelbuild/rules_fuzzing/archive/v0.3.2.zip"],
+        sha256 = "93353c864968596cfee046ea1ef587ff62eda90dd24d4360c70465376e507982",
+        strip_prefix = "rules_fuzzing-2492fd2f37163de8e19ce85061e90a464f3e9255",
+        urls = ["https://github.com/bazelbuild/rules_fuzzing/archive/2492fd2f37163de8e19ce85061e90a464f3e9255.tar.gz"],
     )
 
     load("@rules_fuzzing//fuzzing:repositories.bzl", "rules_fuzzing_dependencies")
@@ -16,3 +17,10 @@ Add the following to your WORKSPACE file:
     load("@rules_fuzzing//fuzzing:init.bzl", "rules_fuzzing_init")
 
     rules_fuzzing_init()
+
+    git_repository(
+        name = "cifuzz",
+        branch = "bazel-support",
+        remote = "https://github.com/CodeIntelligenceTesting/cifuzz",
+        strip_prefix = "tools/cmake/cifuzz/include/cifuzz",
+    )

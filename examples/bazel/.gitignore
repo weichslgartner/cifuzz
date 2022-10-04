@@ -1,0 +1,4 @@
+/bazel-*
+*_inputs
+/.cifuzz-corpus/
+/.cifuzz-findings/

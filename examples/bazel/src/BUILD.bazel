@@ -1,0 +1,23 @@
+load("@rules_fuzzing//fuzzing:cc_defs.bzl", "cc_fuzz_test")
+
+cc_library(
+    name = "explore_me",
+    srcs = ["explore_me.cpp"],
+    hdrs = ["explore_me.h"],
+    visibility = ["//visibility:public"],
+)
+
+cc_fuzz_test(
+    name = "explore_me_fuzz_test",
+    srcs = [
+        "explore_me_fuzz_test.cpp",
+    ],
+    corpus = glob(
+        ["explore_me_fuzz_test_inputs/**"],
+        allow_empty = True,
+    ),
+    deps = [
+        ":explore_me",
+        "@cifuzz",
+    ],
+)

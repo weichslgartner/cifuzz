@@ -6,6 +6,8 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/Masterminds/semver"
+
 	"code-intelligence.com/cifuzz/util/envutil"
 )
 
@@ -68,4 +70,66 @@ func CommonBuildEnv() ([]string, error) {
 	}
 
 	return env, nil
+}
+
+var commonCFlags = []string{
+	// Keep debug symbols
+	"-g",
+	// Do optimizations which don't harm debugging
+	"-Og",
+	// To get good stack frames for better debugging
+	"-fno-omit-frame-pointer",
+	// Conventional macro to conditionally compile out fuzzer road blocks
+	// See https://llvm.org/docs/LibFuzzer.html#fuzzer-friendly-build-mode
+	"-DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION",
+}
+
+func LibFuzzerCFlags() []string {
+	// These flags must not contain spaces, because the environment
+	// variables that are set to these flags are space separated.
+	// Note: Keep in sync with tools/cmake/CIFuzz/share/CIFuzz/CIFuzzFunctions.cmake
+	return append(commonCFlags, []string{
+		// ----- Flags used to build with libFuzzer -----
+		// Compile with edge coverage and compare instrumentation. We
+		// use fuzzer-no-link here instead of -fsanitize=fuzzer because
+		// CFLAGS are often also passed to the linker, which would cause
+		// errors if the build includes tools which have a main function.
+		"-fsanitize=fuzzer-no-link",
+
+		// ----- Flags used to build with ASan -----
+		// Build with instrumentation for ASan and UBSan and link in
+		// their runtime
+		"-fsanitize=address,undefined",
+		// To support recovering from ASan findings
+		"-fsanitize-recover=address",
+		// Use additional error detectors for use-after-scope bugs
+		// TODO: Evaluate the slow down caused by this flag
+		// TODO: Check if there are other additional error detectors
+		//       which we want to use
+		"-fsanitize-address-use-after-scope",
+		// Disable source fortification, which is currently not supported
+		// in combination with ASan, see https://github.com/google/sanitizers/issues/247
+		"-U_FORTIFY_SOURCE",
+	}...)
+}
+
+func CoverageCFlags(clangVersion *semver.Version) []string {
+	cflags := append(commonCFlags, []string{
+		// ----- Flags used to build with code coverage -----
+		"-fprofile-instr-generate",
+		"-fcoverage-mapping",
+		// Disable source fortification to ensure that coverage builds
+		// reach all code reached by ASan builds.
+		"-U_FORTIFY_SOURCE",
+	}...)
+
+	if runtime.GOOS != "darwin" && clangVersion != nil {
+		// LLVM's continuous mode requires compile-time support on non-macOS
+		// platforms. This support is unstable in Clang 13 and lower, so we
+		// only enable it on 14+.
+		if clangVersion.Compare(semver.MustParse("14.0.0")) >= 0 {
+			cflags = append(cflags, "-mllvm", "-runtime-counter-relocation")
+		}
+	}
+	return cflags
 }

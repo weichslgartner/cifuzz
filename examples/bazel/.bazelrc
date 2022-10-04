@@ -1,0 +1,8 @@
+# Force the use of Clang for all builds.
+build --repo_env=CC=clang
+build --repo_env=CXX=clang++
+
+# --config=asan-replay
+build:asan-replay --@rules_fuzzing//fuzzing:cc_engine=@rules_fuzzing//fuzzing/engines:replay
+build:asan-replay --@rules_fuzzing//fuzzing:cc_engine_instrumentation=none
+build:asan-replay --@rules_fuzzing//fuzzing:cc_engine_sanitizer=asan

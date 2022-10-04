@@ -10,7 +10,6 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/Masterminds/semver"
 	"github.com/pkg/errors"
 
 	"code-intelligence.com/cifuzz/internal/build"
@@ -161,48 +160,11 @@ func (b *Builder) Build(fuzzTest string) (*build.Result, error) {
 	}, nil
 }
 
-var commonCFlags = []string{
-	// Keep debug symbols
-	"-g",
-	// Do optimizations which don't harm debugging
-	"-Og",
-	// To get good stack frames for better debugging
-	"-fno-omit-frame-pointer",
-	// Conventional macro to conditionally compile out fuzzer road blocks
-	// See https://llvm.org/docs/LibFuzzer.html#fuzzer-friendly-build-mode
-	"-DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION",
-}
-
 func (b *Builder) setLibFuzzerEnv() error {
 	var err error
 
-	// Set CFLAGS and CXXFLAGS. Note that these flags must not contain
-	// spaces, because the environment variables are space separated.
-	//
-	// Note: Keep in sync with tools/cmake/CIFuzz/share/CIFuzz/CIFuzzFunctions.cmake
-	cflags := append(commonCFlags, []string{
-		// ----- Flags used to build with libFuzzer -----
-		// Compile with edge coverage and compare instrumentation. We
-		// use fuzzer-no-link here instead of -fsanitize=fuzzer because
-		// CFLAGS are often also passed to the linker, which would cause
-		// errors if the build includes tools which have a main function.
-		"-fsanitize=fuzzer-no-link",
-
-		// ----- Flags used to build with ASan -----
-		// Build with instrumentation for ASan and UBSan and link in
-		// their runtime
-		"-fsanitize=address,undefined",
-		// To support recovering from ASan findings
-		"-fsanitize-recover=address",
-		// Use additional error detectors for use-after-scope bugs
-		// TODO: Evaluate the slow down caused by this flag
-		// TODO: Check if there are other additional error detectors
-		//       which we want to use
-		"-fsanitize-address-use-after-scope",
-		// Disable source fortification, which is currently not supported
-		// in combination with ASan, see https://github.com/google/sanitizers/issues/247
-		"-U_FORTIFY_SOURCE",
-	}...)
+	// Set CFLAGS and CXXFLAGS
+	cflags := build.LibFuzzerCFlags()
 	b.env, err = envutil.Setenv(b.env, "CFLAGS", strings.Join(cflags, " "))
 	if err != nil {
 		return err
@@ -251,27 +213,13 @@ func (b *Builder) setCoverageEnv() error {
 	// spaces, because the environment variables are space separated.
 	//
 	// Note: Keep in sync with tools/cmake/CIFuzz/share/CIFuzz/CIFuzzFunctions.cmake
-	cflags := append(commonCFlags, []string{
-		// ----- Flags used to build with code coverage -----
-		"-fprofile-instr-generate",
-		"-fcoverage-mapping",
-		// Disable source fortification to ensure that coverage builds
-		// reach all code reached by ASan builds.
-		"-U_FORTIFY_SOURCE",
-	}...)
-
-	if runtime.GOOS != "darwin" {
-		// LLVM's continuous mode requires compile-time support on non-macOS
-		// platforms. This support is unstable in Clang 13 and lower, so we
-		// only enable it on 14+.
-		cc := envutil.Getenv(b.env, "CC")
-		ccVersion, err := dependencies.ClangVersion(cc)
-		if err != nil {
-			log.Warnf("Failed to determine version of %q: %v", cc, err)
-		} else if ccVersion.Compare(semver.MustParse("14.0.0")) >= 0 {
-			cflags = append(cflags, "-mllvm", "-runtime-counter-relocation")
-		}
+	cc := envutil.Getenv(b.env, "CC")
+	clangVersion, err := dependencies.ClangVersion(cc)
+	if err != nil {
+		log.Warnf("Failed to determine version of %q: %v", cc, err)
 	}
+	cflags := build.CoverageCFlags(clangVersion)
+
 	b.env, err = envutil.Setenv(b.env, "CFLAGS", strings.Join(cflags, " "))
 	if err != nil {
 		return err

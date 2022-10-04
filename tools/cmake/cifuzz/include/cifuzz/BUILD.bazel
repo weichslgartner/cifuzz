@@ -1,0 +1,6 @@
+cc_library(
+    name = "cifuzz",
+    hdrs = ["cifuzz/cifuzz.h"],
+    includes = ["."],
+    visibility = ["//visibility:public"],
+)

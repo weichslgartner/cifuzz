@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"syscall"
 	"time"
 
@@ -18,6 +19,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"code-intelligence.com/cifuzz/internal/build"
+	"code-intelligence.com/cifuzz/internal/build/bazel"
 	"code-intelligence.com/cifuzz/internal/build/cmake"
 	"code-intelligence.com/cifuzz/internal/build/other"
 	"code-intelligence.com/cifuzz/internal/cmd/run/report_handler"
@@ -97,6 +99,7 @@ type runCmd struct {
 	opts *runOptions
 
 	reportHandler *report_handler.ReportHandler
+	tempDir       string
 }
 
 func New() *cobra.Command {
@@ -176,6 +179,14 @@ func (c *runCmd) run() error {
 		return dependencies.Error()
 	}
 
+	// Create a temporary directory which the builder can use to create
+	// temporary files
+	c.tempDir, err = os.MkdirTemp("", "cifuzz-run-")
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	defer fileutil.Cleanup(c.tempDir)
+
 	buildResult, err := c.buildFuzzTest()
 	if err != nil {
 		return err
@@ -223,7 +234,41 @@ func (c *runCmd) buildFuzzTest() (*build.Result, error) {
 		sanitizers = append(sanitizers, "undefined")
 	}
 
-	if c.opts.BuildSystem == config.BuildSystemCMake {
+	if runtime.GOOS == "windows" && c.opts.BuildSystem != config.BuildSystemCMake {
+		return nil, errors.New("CMake is the only supported build system on Windows")
+	}
+
+	if c.opts.BuildSystem == config.BuildSystemBazel {
+		// The cc_fuzz_test rule defines multiple bazel targets: If the
+		// name is "foo", it defines the targets "foo", "foo_bin", and
+		// others. We need to run the "foo_bin" target but want to
+		// allow users to specify either "foo" or "foo_bin", so we check
+		// if the fuzz test name appended with "_bin" is a valid target
+		// and use that in that case
+		cmd := exec.Command("bazel", "query", c.opts.fuzzTest+"_bin")
+		err := cmd.Run()
+		if err == nil {
+			c.opts.fuzzTest += "_bin"
+		}
+
+		builder, err := bazel.NewBuilder(&bazel.BuilderOptions{
+			ProjectDir: c.opts.ProjectDir,
+			Engine:     "libfuzzer",
+			NumJobs:    c.opts.NumBuildJobs,
+			Stdout:     c.OutOrStdout(),
+			Stderr:     c.ErrOrStderr(),
+			TempDir:    c.tempDir,
+			Verbose:    viper.GetBool("verbose"),
+		})
+		if err != nil {
+			return nil, err
+		}
+		buildResults, err := builder.Build([]string{c.opts.fuzzTest})
+		if err != nil {
+			return nil, err
+		}
+		return buildResults[c.opts.fuzzTest], nil
+	} else if c.opts.BuildSystem == config.BuildSystemCMake {
 		builder, err := cmake.NewBuilder(&cmake.BuilderOptions{
 			ProjectDir: c.opts.ProjectDir,
 			// TODO: Do not hardcode this value.
@@ -249,9 +294,6 @@ func (c *runCmd) buildFuzzTest() (*build.Result, error) {
 		}
 		return buildResults[c.opts.fuzzTest], nil
 	} else if c.opts.BuildSystem == config.BuildSystemOther {
-		if runtime.GOOS == "windows" {
-			return nil, errors.New("CMake is the only supported build system on Windows")
-		}
 		builder, err := other.NewBuilder(&other.BuilderOptions{
 			ProjectDir:   c.opts.ProjectDir,
 			BuildCommand: c.opts.BuildCommand,
@@ -306,6 +348,24 @@ func (c *runCmd) runFuzzTest(buildResult *build.Result) error {
 		if err != nil {
 			return errors.WithStack(err)
 		}
+	}
+
+	readOnlyBindings := []string{buildResult.BuildDir}
+	if c.opts.BuildSystem == config.BuildSystemBazel {
+		// The install base directory contains e.g. the script generated
+		// by bazel via --script_path and must therefore be accessible
+		// inside the sandbox.
+		cmd := exec.Command("bazel", "info", "install_base")
+		out, err := cmd.Output()
+		if err != nil {
+			// It's expected that bazel might fail due to user configuration,
+			// so we print the error without the stack trace.
+			err = cmdutils.WrapExecError(errors.WithStack(err), cmd)
+			log.Error(err)
+			return cmdutils.ErrSilent
+		}
+		installBase := strings.TrimSpace(string(out))
+		readOnlyBindings = append(readOnlyBindings, installBase)
 	}
 
 	runnerOpts := &libfuzzer.RunnerOptions{

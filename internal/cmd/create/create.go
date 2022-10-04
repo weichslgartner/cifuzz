@@ -143,10 +143,10 @@ BUILD.bazel file:
     load("@rules_fuzzing//fuzzing:cc_defs.bzl", "cc_fuzz_test")
 
     cc_fuzz_test(
-        name = "%s",
-        srcs = ["%s"],
+        name = "%[1]s",
+        srcs = ["%[2]s"],
         corpus = glob(
-            ["my_fuzz_test_inputs/**"],
+            ["%[1]s_inputs/**"],
             allow_empty = True,
         ),
         deps = ["@cifuzz"],
