@@ -55,6 +55,7 @@ func TestBundle(t *testing.T, dir string, cifuzz string, args ...string) {
 		"--timeout", "100m",
 		"--branch", "my-branch",
 		"--commit", "123456abcdef",
+		"--docker-image", "my-image",
 		"--env", "FOO=foo",
 		// This should be set to the value from the local environment,
 		// which we set to "bar" below
@@ -119,6 +120,9 @@ func TestBundle(t *testing.T, dir string, cifuzz string, args ...string) {
 	// Verify that the metadata contain the engine args and fuzz test args
 	assert.Equal(t, []string{"-runs=0"}, metadata.Fuzzers[0].EngineOptions.Flags)
 	assert.Equal(t, []string{"arg3", "arg4"}, metadata.Fuzzers[0].FuzzTestArgs)
+
+	// Verify that the metadata contains the Docker image
+	assert.Equal(t, "my-image", metadata.RunEnvironment.Docker)
 
 	// Verify the metadata contains the env vars
 	require.Equal(t, []string{"FOO=foo", "BAR=bar", "NO_CIFUZZ=1"}, metadata.Fuzzers[0].EngineOptions.Env)

@@ -86,6 +86,15 @@ func AddDictFlag(cmd *cobra.Command) func() {
 	}
 }
 
+func AddDockerImageFlag(cmd *cobra.Command) func() {
+	cmd.Flags().String("docker-image", "ubuntu:rolling",
+		"Docker image to use in the bundle config. This image will be used when\n"+
+			"the bundle is executed on a remote fuzzing server.")
+	return func() {
+		ViperMustBindPFlag("docker-image", cmd.Flags().Lookup("docker-image"))
+	}
+}
+
 func AddEngineArgFlag(cmd *cobra.Command) func() {
 	// TODO(afl): Also link to https://www.mankier.com/8/afl-fuzz
 	cmd.Flags().StringArray("engine-arg", nil,

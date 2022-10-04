@@ -76,6 +76,7 @@ type Opts struct {
 	NumBuildJobs   uint          `mapstructure:"build-jobs"`
 	Commit         string        `mapstructure:"commit"`
 	Dictionary     string        `mapstructure:"dict"`
+	DockerImage    string        `mapstructure:"docker-image"`
 	EngineArgs     []string      `mapstructure:"engine-args"`
 	Env            []string      `mapstructure:"env"`
 	FuzzTestArgs   []string      `mapstructure:"fuzz-test-args"`
@@ -236,8 +237,7 @@ func (b *Bundler) Bundle() error {
 	metadata := &artifact.Metadata{
 		Fuzzers: fuzzers,
 		RunEnvironment: &artifact.RunEnvironment{
-			// TODO(fmeum): Make configurable.
-			Docker: "ubuntu:rolling",
+			Docker: b.Opts.DockerImage,
 		},
 		CodeRevision: b.getCodeRevision(),
 	}

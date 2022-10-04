@@ -117,6 +117,7 @@ https://github.com/CodeIntelligenceTesting/cifuzz/issues`, system)
 		cmdutils.AddBuildJobsFlag,
 		cmdutils.AddCommitFlag,
 		cmdutils.AddDictFlag,
+		cmdutils.AddDockerImageFlag,
 		cmdutils.AddEngineArgFlag,
 		cmdutils.AddEnvFlag,
 		cmdutils.AddFuzzTestArgFlag,
