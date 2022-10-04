@@ -32,6 +32,7 @@ runs:
     - name: CMake Example (run + bundle)
       run: |
         cd examples/cmake
+        export CIFUZZ_BUNDLE_ON_UNSUPPORTED_PLATFORMS=1
         ~/cifuzz/bin/cifuzz run --use-sandbox=false my_fuzz_test
         ~/cifuzz/bin/cifuzz findings --json | jq -r '.[].name' >> findings.old
         ~/cifuzz/bin/cifuzz bundle my_fuzz_test
@@ -56,6 +57,7 @@ runs:
     - name: Run CMake Example again (run + bundle)
       run: |
         cd examples/cmake
+        export CIFUZZ_BUNDLE_ON_UNSUPPORTED_PLATFORMS=1
         ~/cifuzz/bin/cifuzz run my_fuzz_test
         ~/cifuzz/bin/cifuzz findings --json | jq -r '.[].name' >> findings.new
         ~/cifuzz/bin/cifuzz bundle my_fuzz_test
