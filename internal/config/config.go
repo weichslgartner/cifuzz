@@ -18,13 +18,20 @@ import (
 )
 
 const (
+	BuildSystemBazel  string = "bazel"
 	BuildSystemCMake  string = "cmake"
 	BuildSystemMaven  string = "maven"
 	BuildSystemGradle string = "gradle"
 	BuildSystemOther  string = "other"
 )
 
-var buildSystemTypes = []string{BuildSystemCMake, BuildSystemMaven, BuildSystemGradle, BuildSystemOther}
+var buildSystemTypes = []string{
+	BuildSystemBazel,
+	BuildSystemCMake,
+	BuildSystemMaven,
+	BuildSystemGradle,
+	BuildSystemOther,
+}
 
 const projectConfigFile = "cifuzz.yaml"
 
@@ -142,6 +149,7 @@ func ValidateBuildSystem(buildSystem string) error {
 
 func DetermineBuildSystem(projectDir string) (string, error) {
 	buildSystemIdentifier := map[string][]string{
+		BuildSystemBazel:  {"WORKSPACE", "WORKSPACE.bazel"},
 		BuildSystemCMake:  {"CMakeLists.txt"},
 		BuildSystemMaven:  {"pom.xml"},
 		BuildSystemGradle: {"build.gradle", "build.gradle.kts"},

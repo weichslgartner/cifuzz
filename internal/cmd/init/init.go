@@ -12,6 +12,9 @@ import (
 	"code-intelligence.com/cifuzz/pkg/log"
 )
 
+//go:embed instructions/bazel
+var bazelSetup string
+
 //go:embed instructions/cmake
 var cmakeSetup string
 
@@ -88,6 +91,8 @@ func setUpAndMentionBuildSystemIntegrations(dir string) {
 	}
 
 	switch buildSystem {
+	case config.BuildSystemBazel:
+		log.Print(bazelSetup)
 	case config.BuildSystemCMake:
 		// Note: We set NO_SYSTEM_ENVIRONMENT_PATH to avoid that the
 		// system-wide cmake package takes precedence over a package
