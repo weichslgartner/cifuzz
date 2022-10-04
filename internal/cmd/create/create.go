@@ -135,6 +135,24 @@ func (c *createCmd) printBuildSystemInstructions() {
 	filename := filepath.Base(c.opts.outputPath)
 	// Printing build system instructions is best-effort: Do not fail on errors.
 	switch c.opts.BuildSystem {
+	case config.BuildSystemBazel:
+		log.Printf(`
+Define a bazel target for the fuzz test by adding the following to the
+BUILD.bazel file:
+
+    load("@rules_fuzzing//fuzzing:cc_defs.bzl", "cc_fuzz_test")
+
+    cc_fuzz_test(
+        name = "%s",
+        srcs = ["%s"],
+        corpus = glob(
+            ["my_fuzz_test_inputs/**"],
+            allow_empty = True,
+        ),
+        deps = ["@cifuzz"],
+    )
+
+`, strings.TrimSuffix(filename, filepath.Ext(filename)), filename)
 	case config.BuildSystemCMake:
 		log.Printf(`
 Create a CMake target for the fuzz test as follows - it behaves just like
