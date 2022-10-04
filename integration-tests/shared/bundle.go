@@ -1,6 +1,7 @@
 package shared
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -80,6 +81,25 @@ func TestBundle(t *testing.T, dir string, cifuzz string, args ...string) {
 	archiveFile, err := os.Open(bundlePath)
 	require.NoError(t, err)
 	err = artifact.ExtractArchiveForTestsOnly(archiveFile, archiveDir)
+	require.NoError(t, err)
+
+	// List the files in the archive for easier debugging
+	msg := fmt.Sprintf("Extracted archive at %s:\n", archiveDir)
+	err = filepath.Walk(archiveDir,
+		func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			if !info.IsDir() {
+				relPath, err := filepath.Rel(archiveDir, path)
+				if err != nil {
+					return err
+				}
+				msg += relPath + "\n"
+			}
+			return nil
+		})
+	t.Log(msg)
 	require.NoError(t, err)
 
 	// Read the fuzzer path from the YAML.
