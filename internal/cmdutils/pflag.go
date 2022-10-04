@@ -99,7 +99,7 @@ func AddEngineArgFlag(cmd *cobra.Command) func() {
 
 func AddEnvFlag(cmd *cobra.Command) func() {
 	cmd.Flags().StringArray("env", nil,
-		"Set environment variable, e.g. '--env `VAR=value`'.\n"+
+		"Set environment variable when executing fuzz tests, e.g. '--env `VAR=value`'.\n"+
 			"To use the value of VAR in the local environment, use '--env VAR'.\n"+
 			"This flag can be used multiple times.")
 	return func() {
