@@ -1,4 +1,12 @@
-# cifuzz gradle example
-This is a simple gradle based project.
+# cifuzz Gradle example
+This is a simple Gradle based project, already configured with
+**cifuzz**. It should quickly produce a finding, but slow enough to
+see the progress of the fuzzer.
 
-**Gradle is not supported by cifuzz right now. Support coming soon!** 
+To start make sure you installed **cifuzz** according to the
+main [README](../../README.md).
+
+You can start the fuzzing with
+```bash
+cifuzz run com.example.FuzzTestCase
+```
