@@ -1,4 +1,4 @@
-package com.github.CodeIntelligenceTesting.cifuzz;
+package com.example;
 
 public class ExploreMe {
     // Function with multiple paths that can be discovered by a fuzzer.

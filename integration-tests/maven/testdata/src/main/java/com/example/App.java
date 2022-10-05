@@ -1,4 +1,4 @@
-package com.github.CodeIntelligenceTesting.cifuzz;
+package com.example;
 
 public class App {
     public static void main(String[] args) {
