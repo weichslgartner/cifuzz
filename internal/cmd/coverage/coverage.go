@@ -325,7 +325,7 @@ func (c *coverageCmd) runFuzzTest(buildResult *build.Result) error {
 	// The environment we run minijail in
 	wrapperEnv := os.Environ()
 
-	dirWithEmptyFile, err := os.MkdirTemp("", "cifuzz-coverage-*")
+	dirWithEmptyFile, err := os.MkdirTemp(c.tmpDir, "empty-file-corpus-*")
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -333,13 +333,11 @@ func (c *coverageCmd) runFuzzTest(buildResult *build.Result) error {
 	if err != nil {
 		return err
 	}
-	defer fileutil.Cleanup(dirWithEmptyFile)
 
-	emptyDir, err := os.MkdirTemp("", "cifuzz-coverage-*")
+	emptyDir, err := os.MkdirTemp(c.tmpDir, "merge-target-*")
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	defer fileutil.Cleanup(emptyDir)
 
 	// libFuzzer's merge mode never runs the empty input, whereas regular fuzzing runs and the replayer always try the
 	// empty input first. To achieve consistent behavior, manually run the empty input, ignoring any crashes. runFuzzer
