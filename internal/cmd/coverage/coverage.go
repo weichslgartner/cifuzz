@@ -339,18 +339,28 @@ func (c *coverageCmd) runFuzzTest(buildResult *build.Result) error {
 		return errors.WithStack(err)
 	}
 
+	artifactsDir, err := os.MkdirTemp(c.tmpDir, "merge-artifacts-*")
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	// libFuzzer emits crashing inputs in merge mode, but these aren't useful as we only run on already known inputs.
+	// Since there is no way to disable this behavior in libFuzzer, we instead emit artifacts into a dedicated temporary
+	// directory that is thrown away after the coverage run.
+	args := []string{"-artifact_prefix=" + artifactsDir + "/"}
+
 	// libFuzzer's merge mode never runs the empty input, whereas regular fuzzing runs and the replayer always try the
 	// empty input first. To achieve consistent behavior, manually run the empty input, ignoring any crashes. runFuzzer
 	// always logs any error we encounter.
 	// This line is responsible for empty inputs being skipped:
 	// https://github.com/llvm/llvm-project/blob/c7c0ce7d9ebdc0a49313bc77e14d1e856794f2e0/compiler-rt/lib/fuzzer/FuzzerIO.cpp#L127
-	_ = c.runFuzzer(buildResult.Executable, []string{"-runs=0"}, []string{dirWithEmptyFile}, binaryEnv, wrapperEnv)
+	_ = c.runFuzzer(buildResult.Executable, append(args, "-runs=0"), []string{dirWithEmptyFile}, binaryEnv, wrapperEnv)
 
 	// We use libFuzzer's crash-resistant merge mode to merge all corpus directories into an empty directory, which
 	// makes libFuzzer go over all inputs in a subprocess that is restarted in case it crashes. With LLVM's continuous
 	// mode (see rawProfilePattern) and since the LLVM coverage information is automatically appended to the existing
 	// .profraw file, we collect complete coverage information even if the target crashes on an input in the corpus.
-	return c.runFuzzer(buildResult.Executable, []string{"-merge=1"}, append([]string{emptyDir}, corpusDirs...), binaryEnv, wrapperEnv)
+	return c.runFuzzer(buildResult.Executable, append(args, "-merge=1"), append([]string{emptyDir}, corpusDirs...), binaryEnv, wrapperEnv)
 }
 
 func (c *coverageCmd) runFuzzer(executable string, preCorpusArgs []string, corpusDirs []string, binaryEnv []string, wrapperEnv []string) error {
