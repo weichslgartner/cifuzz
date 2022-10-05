@@ -105,11 +105,21 @@ func (c *integrateCmd) run() error {
 }
 
 func setupGitIgnore(projectDir string) error {
+	// Files to ignore for all build systems
 	filesToIgnore := []string{
-		"/.cifuzz-build/",
 		"/.cifuzz-corpus/",
 		"/.cifuzz-findings/",
-		"/CMakeUserPresets.json",
+	}
+
+	buildSystem, err := config.DetermineBuildSystem(projectDir)
+	if err != nil {
+		return err
+	}
+	if buildSystem == config.BuildSystemCMake {
+		filesToIgnore = append(filesToIgnore,
+			"/.cifuzz-build/",
+			"/CMakeUserPresets.json",
+		)
 	}
 
 	gitIgnorePath := filepath.Join(projectDir, ".gitignore")
@@ -128,7 +138,7 @@ func setupGitIgnore(projectDir string) error {
 		if err != nil {
 			return errors.WithStack(err)
 		}
-		existingFilesToIgnore := strings.Split(string(bytes), "\n")
+		existingFilesToIgnore := stringutil.NonEmpty(strings.Split(string(bytes), "\n"))
 
 		gitIgnore, err := os.OpenFile(gitIgnorePath, os.O_APPEND|os.O_WRONLY, 0644)
 		if err != nil {

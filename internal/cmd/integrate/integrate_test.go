@@ -19,6 +19,7 @@ import (
 	"code-intelligence.com/cifuzz/pkg/log"
 	"code-intelligence.com/cifuzz/pkg/mocks"
 	"code-intelligence.com/cifuzz/util/fileutil"
+	"code-intelligence.com/cifuzz/util/stringutil"
 )
 
 var logOutput io.ReadWriter
@@ -54,27 +55,33 @@ func TestMissingCIFuzzProject(t *testing.T) {
 }
 
 func TestSetupGitIgnore(t *testing.T) {
-	err := setupGitIgnore(testDir)
-	assert.NoError(t, err)
+	gitIgnorePath := filepath.Join(testDir, ".gitignore")
 
 	// Check that a new .gitignore file is created
-	gitIgnorePath := filepath.Join(testDir, ".gitignore")
+	err := setupGitIgnore(testDir)
+	require.NoError(t, err)
 	content, err := os.ReadFile(gitIgnorePath)
-	assert.NoError(t, err)
-	assert.Equal(t, 4, len(strings.Split(string(content), "\n")))
+	require.NoError(t, err)
+	assert.Equal(t, 2, len(getNonEmptyLines(content)))
 
-	// Check that only nonexisting entries are added
-	filesToIgnore := []string{
-		"/.cifuzz-build/",
-		"/.cifuzz-corpus/",
-		"test/.cifuzz-findings/",
-	}
-	err = os.WriteFile(gitIgnorePath, []byte(strings.Join(filesToIgnore, "\n")), 0644)
+	// Check that only nonexistent entries are added
+	fileToIgnore := "/.cifuzz-corpus/\n"
+	err = os.WriteFile(gitIgnorePath, []byte(fileToIgnore), 0644)
+	require.NoError(t, err)
 	err = setupGitIgnore(testDir)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	content, err = os.ReadFile(gitIgnorePath)
-	assert.NoError(t, err)
-	assert.Equal(t, 5, len(strings.Split(string(content), "\n")))
+	require.NoError(t, err)
+	assert.Equal(t, 2, len(getNonEmptyLines(content)))
+
+	// Check that two additional entries are added for cmake projects
+	err = fileutil.Touch(filepath.Join(testDir, "CMakeLists.txt"))
+	require.NoError(t, err)
+	err = setupGitIgnore(testDir)
+	require.NoError(t, err)
+	content, err = os.ReadFile(gitIgnorePath)
+	require.NoError(t, err)
+	assert.Equal(t, 4, len(getNonEmptyLines(content)))
 }
 
 func TestSetupCMakePresets(t *testing.T) {
@@ -123,6 +130,10 @@ func TestSetupVSCodeTasks(t *testing.T) {
 	content, err := os.ReadFile(vscodeTasks)
 	require.NoError(t, err)
 	testutil.CheckOutput(t, logOutput, string(content))
+}
+
+func getNonEmptyLines(content []byte) []string {
+	return stringutil.NonEmpty(strings.Split(string(content), "\n"))
 }
 
 func getRootSourceDirectory(t *testing.T) string {
