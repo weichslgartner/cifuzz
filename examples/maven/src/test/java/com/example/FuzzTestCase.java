@@ -1,4 +1,4 @@
-package com.github.CodeIntelligenceTesting.cifuzz;
+package com.example;
 
 import com.code_intelligence.jazzer.api.FuzzedDataProvider;
 import com.code_intelligence.jazzer.junit.FuzzTest;
