@@ -38,9 +38,26 @@
 Be aware that the behavior of the commands or the configuration
 can change.
 
-
+## What is cifuzz
 **cifuzz** is a CLI tool that helps you to integrate and run fuzzing
 based tests into your project.
+
+### Features
+* Easily setup, create and run fuzz tests 
+* Get coverage reports
+* Manage your findings with ease
+* Integrates into your favorite IDE
+* Supports multiple programming languages and build systems
+
+![CLion](/docs/assets/tools/clion.png)
+![IDEA](/docs/assets/tools/idea.png)
+![VSCode](/docs/assets/tools/vscode.png)
+![C++](/docs/assets/tools/cpp.png)
+![Java](/docs/assets/tools/java.png)
+![CMake](/docs/assets/tools/cmake.png)
+![gradle](/docs/assets/tools/gradle.png)
+![Maven](/docs/assets/tools/maven.png)
+
 
 ## Getting started
 If you are new to the world of fuzzing, we recommend you to take a
