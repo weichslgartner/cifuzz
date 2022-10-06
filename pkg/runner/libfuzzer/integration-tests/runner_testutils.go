@@ -86,20 +86,20 @@ func (test *RunnerTest) Start(t *testing.T, reportCh chan *report.Report) error 
 	}
 
 	libfuzzerOptions := &libfuzzer.RunnerOptions{
-		FuzzTarget:         test.FuzzTarget,
-		GeneratedCorpusDir: test.GeneratedCorpusDir,
-		SeedCorpusDirs:     []string{seedCorpusDir},
-		ProjectDir:         test.ProjectDir,
-		Timeout:            test.Timeout,
 		EngineArgs:         test.EngineArgs,
-		FuzzTestArgs:       test.FuzzTestArgs,
 		EnvVars:            test.FuzzerEnv,
-		UseMinijail:        !test.DisableMinijail,
-		ReportHandler:      &ChannelPassthrough{ch: reportCh},
+		FuzzTarget:         test.FuzzTarget,
+		FuzzTestArgs:       test.FuzzTestArgs,
+		GeneratedCorpusDir: test.GeneratedCorpusDir,
 		// To ease debugging, we write the output to stderr in addition
 		// to the test.LogOutput buffer
-		LogOutput: io.MultiWriter(test.LogOutput, os.Stderr),
-		Verbose:   true,
+		LogOutput:      io.MultiWriter(test.LogOutput, os.Stderr),
+		ProjectDir:     test.ProjectDir,
+		ReportHandler:  &ChannelPassthrough{ch: reportCh},
+		SeedCorpusDirs: []string{seedCorpusDir},
+		Timeout:        test.Timeout,
+		UseMinijail:    !test.DisableMinijail,
+		Verbose:        true,
 	}
 	defer close(reportCh)
 

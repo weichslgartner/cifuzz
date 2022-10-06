@@ -38,22 +38,22 @@ const (
 )
 
 type RunnerOptions struct {
-	FuzzTarget         string
-	GeneratedCorpusDir string
-	SeedCorpusDirs     []string
 	Dictionary         string
+	EngineArgs         []string
+	EnvVars            []string
+	FuzzTarget         string
+	FuzzTestArgs       []string
+	GeneratedCorpusDir string
+	KeepColor          bool
 	LibraryDirs        []string
+	LogOutput          io.Writer
 	ProjectDir         string
 	ReadOnlyBindings   []string
-	EnvVars            []string
-	EngineArgs         []string
-	FuzzTestArgs       []string
 	ReportHandler      report.Handler
+	SeedCorpusDirs     []string
 	Timeout            time.Duration
 	UseMinijail        bool
 	Verbose            bool
-	KeepColor          bool
-	LogOutput          io.Writer
 }
 
 func (options *RunnerOptions) ValidateOptions() error {

@@ -309,20 +309,20 @@ func (c *runCmd) runFuzzTest(buildResult *build.Result) error {
 	}
 
 	runnerOpts := &libfuzzer.RunnerOptions{
-		FuzzTarget:         buildResult.Executable,
-		GeneratedCorpusDir: generatedCorpusDir,
-		SeedCorpusDirs:     seedCorpusDirs,
-		ProjectDir:         c.opts.ProjectDir,
-		ReadOnlyBindings:   []string{buildResult.BuildDir},
 		Dictionary:         c.opts.Dictionary,
 		EngineArgs:         c.opts.EngineArgs,
+		EnvVars:            []string{"NO_CIFUZZ=1"},
+		FuzzTarget:         buildResult.Executable,
 		FuzzTestArgs:       c.opts.FuzzTestArgs,
+		GeneratedCorpusDir: generatedCorpusDir,
+		KeepColor:          !c.opts.PrintJSON,
+		ProjectDir:         c.opts.ProjectDir,
+		ReadOnlyBindings:   []string{buildResult.BuildDir},
 		ReportHandler:      c.reportHandler,
+		SeedCorpusDirs:     seedCorpusDirs,
 		Timeout:            c.opts.Timeout,
 		UseMinijail:        c.opts.UseSandbox,
 		Verbose:            viper.GetBool("verbose"),
-		KeepColor:          !c.opts.PrintJSON,
-		EnvVars:            []string{"NO_CIFUZZ=1"},
 	}
 	runner := libfuzzer.NewRunner(runnerOpts)
 
