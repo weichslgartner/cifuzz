@@ -1,14 +1,43 @@
-<a href="https://www.code-intelligence.com/">
-<img src="https://www.code-intelligence.com/hubfs/Logos/CI%20Logos/Logo_quer_white.png" alt="Code Intelligence logo" width="450px">
-</a>
+<div align="center">
+  <img src="/docs/assets/logo.png" alt="Code Intelligence" />
+  <h1>cifuzz</h1>
+  <p>makes fuzz tests as easy as unit tests</p>
+  <a href="https://github.com/CodeIntelligenceTesting/cifuzz/releases">
+    <img src="https://img.shields.io/github/v/release/CodeIntelligenceTesting/cifuzz">
+  </a>
+  <a href="https://github.com/CodeIntelligenceTesting/cifuzz/actions/workflows/pipeline_pr.yml">
+    <img src="https://img.shields.io/github/workflow/status/CodeIntelligenceTesting/cifuzz/PR%20Pipeline?logo=github" />
+  </a>
+  <a href="https://github.com/CodeIntelligenceTesting/cifuzz/blob/main/CONTRIBUTING.md">
+    <img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" />
+  </a>
+  <a href="https://github.com/CodeIntelligenceTesting/cifuzz/blob/main/LICENSE">
+    <img src="https://img.shields.io/github/license/CodeIntelligenceTesting/cifuzz" />
+  </a>
 
-# cifuzz
+  <br />
+  <br />
 
+  <a href="https://docs.code-intelligence.com/cifuzz-cli" target="_blank">Docs</a>
+  |
+  <a href="https://github.com/CodeIntelligenceTesting/cifuzz/blob/main/docs/Glossary.md">Glossary</a>
+  |
+  <a href="https://github.com/CodeIntelligenceTesting/cifuzz/tree/main/examples">Examples</a>
+  |
+  <a href="https://www.code-intelligence.com/" target="_blank">Website</a>
+  |
+  <a href="https://www.code-intelligence.com/blog" target="_blank">Blog</a>
+  |
+  <a href="https://twitter.com/CI_Fuzz" target="_blank">Twitter</a>
+  |
+  <a href="https://www.youtube.com/channel/UCjXN5ac3tgXgtuCoSnQaEmA" target="_blank">YouTube</a>
+</div>
+
+---
 > **_IMPORTANT:_** This project is under active development.
 Be aware that the behavior of the commands or the configuration
 can change.
 
-[![Tests](https://github.com/CodeIntelligenceTesting/cifuzz/actions/workflows/pipeline_pr.yml/badge.svg?branch=main)](https://github.com/CodeIntelligenceTesting/cifuzz/actions/workflows/pipeline_pr.yml)
 
 **cifuzz** is a CLI tool that helps you to integrate and run fuzzing
 based tests into your project.
