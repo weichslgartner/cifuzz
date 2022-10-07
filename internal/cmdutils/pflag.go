@@ -141,6 +141,15 @@ func AddProjectDirFlag(cmd *cobra.Command) func() {
 	}
 }
 
+func AddRecoverUBSanFlag(cmd *cobra.Command) func() {
+	cmd.Flags().Bool("recover-ubsan", false,
+		"Recover from findings of the UndefinedBehaviorSanitizer and continue fuzzing.\n"+
+			"Note that when using this flag, no crashing input is stored for those findings.")
+	return func() {
+		ViperMustBindPFlag("recover-ubsan", cmd.Flags().Lookup("recover-ubsan"))
+	}
+}
+
 func AddSeedCorpusFlag(cmd *cobra.Command) func() {
 	// TODO(afl): Also link to https://aflplus.plus/docs/fuzzing_in_depth/#a-collecting-inputs
 	cmd.Flags().StringArrayP("seed-corpus", "s", nil,

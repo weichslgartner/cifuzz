@@ -49,6 +49,7 @@ type RunnerOptions struct {
 	LogOutput          io.Writer
 	ProjectDir         string
 	ReadOnlyBindings   []string
+	RecoverUBSan       bool
 	ReportHandler      report.Handler
 	SeedCorpusDirs     []string
 	Timeout            time.Duration
@@ -394,7 +395,7 @@ func (r *Runner) FuzzerEnvironment() ([]string, error) {
 		return nil, err
 	}
 
-	env, err = fuzzer_runner.SetCommonUBSANOptions(env)
+	env, err = fuzzer_runner.SetCommonUBSANOptions(env, r.RecoverUBSan)
 	if err != nil {
 		return nil, err
 	}

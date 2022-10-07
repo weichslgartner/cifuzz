@@ -38,6 +38,7 @@ type runOptions struct {
 	Dictionary     string        `mapstructure:"dict"`
 	EngineArgs     []string      `mapstructure:"engine-args"`
 	FuzzTestArgs   []string      `mapstructure:"fuzz-test-args"`
+	RecoverUBSan   bool          `mapstructure:"recover-ubsan"`
 	SeedCorpusDirs []string      `mapstructure:"seed-corpus-dirs"`
 	Timeout        time.Duration `mapstructure:"timeout"`
 	UseSandbox     bool          `mapstructure:"use-sandbox"`
@@ -159,6 +160,7 @@ depends on the build system configured for the project:
 		cmdutils.AddFuzzTestArgFlag,
 		cmdutils.AddPrintJSONFlag,
 		cmdutils.AddProjectDirFlag,
+		cmdutils.AddRecoverUBSanFlag,
 		cmdutils.AddSeedCorpusFlag,
 		cmdutils.AddTimeoutFlag,
 		cmdutils.AddUseSandboxFlag,
@@ -318,6 +320,7 @@ func (c *runCmd) runFuzzTest(buildResult *build.Result) error {
 		KeepColor:          !c.opts.PrintJSON,
 		ProjectDir:         c.opts.ProjectDir,
 		ReadOnlyBindings:   []string{buildResult.BuildDir},
+		RecoverUBSan:       c.opts.RecoverUBSan,
 		ReportHandler:      c.reportHandler,
 		SeedCorpusDirs:     seedCorpusDirs,
 		Timeout:            c.opts.Timeout,
