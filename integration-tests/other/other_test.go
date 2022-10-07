@@ -22,7 +22,6 @@ import (
 	"code-intelligence.com/cifuzz/util/stringutil"
 )
 
-var expectedFinding = regexp.MustCompile(`heap buffer overflow in exploreMe`)
 var filteredLine = regexp.MustCompile(`child process \d+ exited`)
 
 func TestIntegration_Other_RunCoverage(t *testing.T) {
@@ -39,9 +38,17 @@ func TestIntegration_Other_RunCoverage(t *testing.T) {
 	defer fileutil.Cleanup(dir)
 	t.Logf("executing other build system integration test in %s", dir)
 
-	// Run the two fuzz tests and verify that they crash with the expected finding.
+	// Run the fuzz test and verify that it crashes with the expected finding
 	cifuzz := builderPkg.CIFuzzExecutablePath(filepath.Join(installDir, "bin"))
+	expectedFinding := regexp.MustCompile(`undefined behaviour in exploreMe`)
 	runFuzzer(t, cifuzz, dir, "my_fuzz_test", expectedFinding)
+
+	// Run the fuzz test with --recover-ubsan and verify that it now
+	// also finds the heap buffer overflow
+	expectedFinding = regexp.MustCompile(`heap buffer overflow in exploreMe`)
+	runFuzzer(t, cifuzz, dir, "my_fuzz_test", expectedFinding, "--recover-ubsan")
+
+	// Test the coverage command
 	createHtmlCoverageReport(t, cifuzz, dir, "my_fuzz_test")
 }
 
@@ -92,17 +99,17 @@ func TestIntegration_Other_Bundle(t *testing.T) {
 	shared.TestBundle(t, dir, cifuzz, args...)
 }
 
-func runFuzzer(t *testing.T, cifuzz string, dir string, fuzzTest string, expectedOutput *regexp.Regexp) {
+func runFuzzer(t *testing.T, cifuzz string, dir string, fuzzTest string, expectedOutput *regexp.Regexp, args ...string) {
 	t.Helper()
 
-	cmd := executil.Command(
-		cifuzz,
+	args = append([]string{
 		"run", fuzzTest,
 		"--no-notifications",
 		// The crashes are expected to be found quickly.
 		"--engine-arg=-runs=1000000",
 		"--engine-arg=-seed=1",
-	)
+	}, args...)
+	cmd := executil.Command(cifuzz, args...)
 	cmd.Dir = dir
 	stdoutPipe, err := cmd.StdoutTeePipe(os.Stdout)
 	require.NoError(t, err)

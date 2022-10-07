@@ -24,6 +24,7 @@ import (
 	"code-intelligence.com/cifuzz/integration-tests/shared"
 	builderPkg "code-intelligence.com/cifuzz/internal/builder"
 	"code-intelligence.com/cifuzz/internal/testutil"
+	"code-intelligence.com/cifuzz/pkg/finding"
 	"code-intelligence.com/cifuzz/pkg/parser/libfuzzer/stacktrace"
 	"code-intelligence.com/cifuzz/util/envutil"
 	"code-intelligence.com/cifuzz/util/executil"
@@ -87,15 +88,35 @@ func TestIntegration_CMake_InitCreateRunCoverageBundle(t *testing.T) {
 	// https://www.gnu.org/software/autoconf/manual/autoconf-2.63/html_node/Timestamps-and-Make.html
 	time.Sleep(time.Second)
 	modifyFuzzTestToCallFunction(t, fuzzTestPath)
-	// Run the fuzz test
+
+	// Run the fuzz test and check that it finds the undefined behavior
+	// (unless we're running on Windows, in which case UBSan is not
+	// supported)
+	if runtime.GOOS != "windows" {
+		runFuzzer(t, cifuzz, dir, &runFuzzerOptions{
+			expectedOutput: regexp.MustCompile(`^SUMMARY: UndefinedBehaviorSanitizer: undefined-behavior`),
+		})
+	}
+
+	// Run the fuzz test with --recover-ubsan and verify that it now
+	// also finds the heap buffer overflow
 	runFuzzer(t, cifuzz, dir, &runFuzzerOptions{
 		expectedOutput: regexp.MustCompile(`^==\d*==ERROR: AddressSanitizer: heap-use-after-free`),
+		args:           []string{"--recover-ubsan"},
 	})
 
-	// Check that the findings command lists the finding
+	// Check that the findings command lists the findings
 	findings = shared.GetFindings(t, cifuzz, dir)
-	require.Len(t, findings, 1)
-	require.Contains(t, findings[0].Details, "heap-use-after-free")
+	// On Windows, only the ASan finding is expected, on Linux and macOS
+	// at least two findings are expected
+	require.GreaterOrEqual(t, len(findings), 1)
+	var asanFinding *finding.Finding
+	for _, f := range findings {
+		if strings.HasPrefix(f.Details, "heap-use-after-free") {
+			asanFinding = f
+		}
+	}
+	require.NotNil(t, asanFinding)
 	// TODO: This check currently fails on macOS because there
 	// llvm-symbolizer doesn't read debug info from object files.
 	// See https://github.com/google/sanitizers/issues/207#issuecomment-136495556
@@ -103,7 +124,7 @@ func TestIntegration_CMake_InitCreateRunCoverageBundle(t *testing.T) {
 		expectedStackTrace := []*stacktrace.StackFrame{
 			{
 				SourceFile:  "src/parser/parser.cpp",
-				Line:        19,
+				Line:        23,
 				Column:      14,
 				FrameNumber: 0,
 				Function:    "parse",
@@ -123,7 +144,7 @@ func TestIntegration_CMake_InitCreateRunCoverageBundle(t *testing.T) {
 			}
 		}
 
-		require.Equal(t, expectedStackTrace, findings[0].StackTrace)
+		require.Equal(t, expectedStackTrace, asanFinding.StackTrace)
 	}
 
 	// Check that options set via the config file are respected
@@ -156,6 +177,7 @@ func TestIntegration_CMake_InitCreateRunCoverageBundle(t *testing.T) {
 		expectedOutput:               regexp.MustCompile(`Stats:`),
 		terminateAfterExpectedOutput: false,
 		env:                          env,
+		args:                         []string{"--recover-ubsan"},
 	})
 
 	// Building with coverage instrumentation doesn't work on Windows yet
