@@ -1,7 +1,11 @@
 package completion
 
 import (
+	"io/fs"
+	"os"
 	"path/filepath"
+	"regexp"
+	"strings"
 
 	"github.com/mattn/go-zglob"
 	"github.com/pkg/errors"
@@ -32,16 +36,19 @@ func ValidFuzzTests(cmd *cobra.Command, args []string, toComplete string) ([]str
 		return nil, cobra.ShellCompDirectiveError
 	}
 
-	if conf.BuildSystem == config.BuildSystemCMake {
+	switch conf.BuildSystem {
+	case config.BuildSystemCMake:
 		return validCMakeFuzzTests(conf.ProjectDir)
-	} else if conf.BuildSystem == config.BuildSystemOther {
+	case config.BuildSystemMaven, config.BuildSystemGradle:
+		return validJavaFuzzTests(toComplete, conf.ProjectDir)
+	case config.BuildSystemOther:
 		// For other build systems, the <fuzz test> argument must be
 		// the path to the fuzz test executable, so we use file
 		// completion here (which is only useful if the executable has
 		// been built before, but that's still better than no completion
 		// support)
 		return nil, cobra.ShellCompDirectiveDefault
-	} else {
+	default:
 		err := errors.Errorf("Unsupported build system \"%s\"", conf.BuildSystem)
 		log.Error(err, err.Error())
 		return nil, cobra.ShellCompDirectiveError
@@ -58,5 +65,57 @@ func validCMakeFuzzTests(projectDir string) ([]string, cobra.ShellCompDirective)
 	for _, match := range matches {
 		res = append(res, filepath.Base(match))
 	}
+	return res, cobra.ShellCompDirectiveNoFileComp
+}
+
+func validJavaFuzzTests(toComplete string, projectDir string) ([]string, cobra.ShellCompDirective) {
+	var res []string
+
+	testDir := filepath.Join(projectDir, "src", "test", "java")
+	completionPrefix := filepath.Join(
+		testDir,
+		strings.ReplaceAll(toComplete, ".", string(os.PathSeparator)),
+	)
+
+	err := filepath.WalkDir(testDir, func(path string, d fs.DirEntry, err error) error {
+		if !strings.HasPrefix(path, completionPrefix) {
+			return nil
+		}
+
+		if !d.IsDir() {
+			if filepath.Ext(path) != ".java" {
+				return nil
+			}
+
+			bytes, err := os.ReadFile(path)
+			if err != nil {
+				return err
+			}
+
+			match, err := regexp.MatchString(`@FuzzTest|fuzzerTestOneInput\(`, string(bytes))
+			if err != nil {
+				return err
+			}
+			if match == true {
+				classPath, err := filepath.Rel(testDir, path)
+				if err != nil {
+					return err
+				}
+
+				className := strings.TrimSuffix(filepath.Base(path), ".java")
+				classPath = filepath.Join(filepath.Dir(classPath), className)
+				classPath = strings.ReplaceAll(classPath, string(os.PathSeparator), ".")
+
+				res = append(res, classPath)
+			}
+		}
+
+		return nil
+	})
+	if err != nil {
+		log.Error(err, err.Error())
+		return nil, cobra.ShellCompDirectiveError
+	}
+
 	return res, cobra.ShellCompDirectiveNoFileComp
 }
