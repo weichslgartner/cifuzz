@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <errno.h>
 #include <limits.h>
 #include <stdio.h>
 
@@ -20,6 +21,8 @@ int LLVMFuzzerInitialize(int *argc, char ***argv) {
  *   - 'return': Returns a non-zero value.
  *   - all other values: Prints the input to stdout interpreted as ASCII,
  *                       wrapped in single quotes and followed by a newline.
+ *
+ * The fuzz target also sets errno to a non-zero value. The replayer should ignore this.
  */
 int LLVMFuzzerTestOneInput(const unsigned char *data, size_t size) {
   size_t i;
@@ -46,5 +49,7 @@ int LLVMFuzzerTestOneInput(const unsigned char *data, size_t size) {
   putchar('\n');
   /* Ensure that all output has been written in case the next execution crashes. */
   fflush(stdout);
+  /* Set errno to a non-zero value to verify that this doesn't cause errors in the replayer. */
+  errno = 1;
   return 0;
 }

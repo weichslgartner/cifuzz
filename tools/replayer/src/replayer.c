@@ -298,6 +298,14 @@ static void run_dir_entry(const char *dir, const char *file) {
   free(path);
 }
 
+#if !defined(_WIN32)
+/* Resets errno before calling readdir to ensure that previous errors aren't taken for readdir failures. */
+static struct dirent* clear_errno_readdir(DIR *dirp) {
+  errno = 0;
+  return readdir(dirp);
+}
+#endif
+
 static void traverse_dir(const char *path) {
 #if defined(_WIN32)
   WIN32_FIND_DATA fd;
@@ -334,8 +342,7 @@ static void traverse_dir(const char *path) {
     fprintf(stderr, "Failed to open directory '%s': %s\n", path, strerror(errno));
     exit(1);
   }
-  errno = 0;
-  while ((dir_entry = readdir(dir)) != NULL) {
+  while ((dir_entry = clear_errno_readdir(dir)) != NULL) {
     run_dir_entry(path, dir_entry->d_name);
   }
   if (errno != 0) {
