@@ -1,5 +1,5 @@
 ## Configuration for a CI Fuzz project
-## Generated on 2022-09-21
+## Generated on 2022-10-11
 
 ## The build system used to build this project. If not set, cifuzz tries
 ## to detect the build system automatically.
@@ -39,5 +39,13 @@
 ## Only supported on Linux.
 #use-sandbox: false
 
+## Recover from findings of the UndefinedBehaviorSanitizer and continue
+## fuzzing. Note that when using this option, no crashing input is
+## stored for findings of the UndefinedBehaviorSanitizer.
+#recover-ubsan: true
+
 ## Set to true to print output of the `cifuzz run` command as JSON.
 #print-json: true
+
+## Set to true to disable desktop notifications
+#no-notifications: true
