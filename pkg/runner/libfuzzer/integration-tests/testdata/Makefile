@@ -17,7 +17,6 @@ CXXFLAGS = -fsanitize=fuzzer,address,undefined \
 		-g
 
 BUILD_DIR = build
-SHARED_DIR = shared
 FUZZ_TARGET_DIR = fuzz-targets
 # get all c/cpp files and remove file extension
 EXT :=
@@ -66,18 +65,9 @@ prepare:
 
 all: $(ALL_PREREQUISITES)
 
-$(BUILD_DIR)/api.obj: $(SHARED_DIR)/api.cpp $(SHARED_DIR)/api.h
-	${CXX} $< ${CXXFLAGS} $(NOLINK_OPTION) $(INCLUDE_OPTION)$(SHARED_DIR) $(OUT_OBJ_OPTION)$@ 
-	@echo "--> done: $@"
-
-$(FUZZ_TARGET_DIR)/do_stuff_fuzzer: OUT=$(BUILD_DIR)/$(notdir $@)$(EXT)
-$(FUZZ_TARGET_DIR)/do_stuff_fuzzer: ${FUZZ_TARGET_DIR}/do_stuff_fuzzer.cpp $(BUILD_DIR)/api.obj
-	$(CXX) $? $(CXXFLAGS) $(INCLUDE_OPTION)$(SHARED_DIR) $(OUT_OPTION)$(OUT)
-	@echo "--> done: $(OUT)"
-
 $(FUZZ_TARGET_DIR)/trigger_asan_with_file_accesses: OUT=$(BUILD_DIR)/$(notdir $@)$(EXT)
-$(FUZZ_TARGET_DIR)/trigger_asan_with_file_accesses: ${FUZZ_TARGET_DIR}/trigger_asan_with_file_accesses.c $(BUILD_DIR)/api.obj
-	$(CC) $? $(CFLAGS) $(INCLUDE_OPTION)$(SHARED_DIR) $(OUT_OPTION)$(OUT)
+$(FUZZ_TARGET_DIR)/trigger_asan_with_file_accesses: ${FUZZ_TARGET_DIR}/trigger_asan_with_file_accesses.c
+	$(CC) $? $(CFLAGS) $(OUT_OPTION)$(OUT)
 	@echo "--> done: $(OUT)"
 
 $(FUZZ_TARGET_DIR)/trigger_ubsan_non_recoverable: OUT=$(BUILD_DIR)/$(notdir $@)$(EXT)
