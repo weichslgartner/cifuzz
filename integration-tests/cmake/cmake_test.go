@@ -12,7 +12,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-	"sync/atomic"
+	"sync"
 	"syscall"
 	"testing"
 	"time"
@@ -78,7 +78,7 @@ func TestIntegration_CMake_InitCreateRunCoverageBundle(t *testing.T) {
 
 	// Run the (empty) fuzz test
 	runFuzzer(t, cifuzz, dir, &runFuzzerOptions{
-		expectedOutput:               regexp.MustCompile(`^paths: \d+`),
+		expectedOutputs:              []*regexp.Regexp{regexp.MustCompile(`^paths: \d+`)},
 		terminateAfterExpectedOutput: true,
 	})
 
@@ -94,15 +94,15 @@ func TestIntegration_CMake_InitCreateRunCoverageBundle(t *testing.T) {
 	// supported)
 	if runtime.GOOS != "windows" {
 		runFuzzer(t, cifuzz, dir, &runFuzzerOptions{
-			expectedOutput: regexp.MustCompile(`^SUMMARY: UndefinedBehaviorSanitizer: undefined-behavior`),
+			expectedOutputs: []*regexp.Regexp{regexp.MustCompile(`^SUMMARY: UndefinedBehaviorSanitizer: undefined-behavior`)},
 		})
 	}
 
 	// Run the fuzz test with --recover-ubsan and verify that it now
 	// also finds the heap buffer overflow
 	runFuzzer(t, cifuzz, dir, &runFuzzerOptions{
-		expectedOutput: regexp.MustCompile(`^==\d*==ERROR: AddressSanitizer: heap-use-after-free`),
-		args:           []string{"--recover-ubsan"},
+		expectedOutputs: []*regexp.Regexp{regexp.MustCompile(`^==\d*==ERROR: AddressSanitizer: heap-use-after-free`)},
+		args:            []string{"--recover-ubsan"},
 	})
 
 	// Check that the findings command lists the findings
@@ -154,7 +154,7 @@ func TestIntegration_CMake_InitCreateRunCoverageBundle(t *testing.T) {
 	// When minijail is used, the artifact prefix is set to the minijail
 	// output path
 	runFuzzer(t, cifuzz, dir, &runFuzzerOptions{
-		expectedOutput: regexp.MustCompile(`artifact_prefix='./'`),
+		expectedOutputs: []*regexp.Regexp{regexp.MustCompile(`artifact_prefix='./'`)},
 	})
 
 	if runtime.GOOS == "linux" {
@@ -162,8 +162,8 @@ func TestIntegration_CMake_InitCreateRunCoverageBundle(t *testing.T) {
 		// settings (only on Linux because we only support Minijail on
 		// Linux).
 		runFuzzer(t, cifuzz, dir, &runFuzzerOptions{
-			expectedOutput: regexp.MustCompile(`minijail`),
-			args:           []string{"--use-sandbox=true"},
+			expectedOutputs: []*regexp.Regexp{regexp.MustCompile(`minijail`)},
+			args:            []string{"--use-sandbox=true"},
 		})
 	}
 	// Clear cifuzz.yml so that subsequent tests run with defaults (e.g. sandboxing).
@@ -174,7 +174,7 @@ func TestIntegration_CMake_InitCreateRunCoverageBundle(t *testing.T) {
 	env, err := envutil.Setenv(os.Environ(), "ASAN_OPTIONS", "print_stats=1:atexit=1")
 	require.NoError(t, err)
 	runFuzzer(t, cifuzz, dir, &runFuzzerOptions{
-		expectedOutput:               regexp.MustCompile(`Stats:`),
+		expectedOutputs:              []*regexp.Regexp{regexp.MustCompile(`Stats:`)},
 		terminateAfterExpectedOutput: false,
 		env:                          env,
 		args:                         []string{"--recover-ubsan"},
@@ -198,7 +198,7 @@ func TestIntegration_CMake_InitCreateRunCoverageBundle(t *testing.T) {
 }
 
 type runFuzzerOptions struct {
-	expectedOutput               *regexp.Regexp
+	expectedOutputs              []*regexp.Regexp
 	terminateAfterExpectedOutput bool
 	env                          []string
 	args                         []string
@@ -255,21 +255,30 @@ func runFuzzer(t *testing.T, cifuzz string, dir string, opts *runFuzzerOptions) 
 	}()
 
 	// Check that the output contains the expected output
-	seenExpectedOutput := &atomic.Value{}
-	seenExpectedOutput.Store(false)
+	var seenExpectedOutputs int
+	lenExpectedOutputs := len(opts.expectedOutputs)
+	mutex := sync.Mutex{}
 
 	routines := errgroup.Group{}
 	routines.Go(func() error {
 		// cifuzz progress messages go to stdout.
 		scanner := bufio.NewScanner(stdoutPipe)
 		for scanner.Scan() {
-			if opts.expectedOutput.MatchString(scanner.Text()) {
-				seenExpectedOutput.Store(true)
-				if opts.terminateAfterExpectedOutput {
-					err = cmd.TerminateProcessGroup()
-					require.NoError(t, err)
+			mutex.Lock()
+			var remainingExpectedOutputs []*regexp.Regexp
+			for _, expectedOutput := range opts.expectedOutputs {
+				if expectedOutput.MatchString(scanner.Text()) {
+					seenExpectedOutputs += 1
+				} else {
+					remainingExpectedOutputs = append(remainingExpectedOutputs, expectedOutput)
 				}
 			}
+			opts.expectedOutputs = remainingExpectedOutputs
+			if seenExpectedOutputs == lenExpectedOutputs && opts.terminateAfterExpectedOutput {
+				err = cmd.TerminateProcessGroup()
+				require.NoError(t, err)
+			}
+			mutex.Unlock()
 		}
 		err = stdoutPipe.Close()
 		require.NoError(t, err)
@@ -280,13 +289,21 @@ func runFuzzer(t *testing.T, cifuzz string, dir string, opts *runFuzzerOptions) 
 		// Fuzzer output goes to stderr.
 		scanner := bufio.NewScanner(stderrPipe)
 		for scanner.Scan() {
-			if opts.expectedOutput.MatchString(scanner.Text()) {
-				seenExpectedOutput.Store(true)
-				if opts.terminateAfterExpectedOutput {
-					err = cmd.TerminateProcessGroup()
-					require.NoError(t, err)
+			mutex.Lock()
+			var remainingExpectedOutputs []*regexp.Regexp
+			for _, expectedOutput := range opts.expectedOutputs {
+				if expectedOutput.MatchString(scanner.Text()) {
+					seenExpectedOutputs += 1
+				} else {
+					remainingExpectedOutputs = append(remainingExpectedOutputs, expectedOutput)
 				}
 			}
+			opts.expectedOutputs = remainingExpectedOutputs
+			if seenExpectedOutputs == lenExpectedOutputs && opts.terminateAfterExpectedOutput {
+				err = cmd.TerminateProcessGroup()
+				require.NoError(t, err)
+			}
+			mutex.Unlock()
 		}
 		err = stderrPipe.Close()
 		require.NoError(t, err)
@@ -299,7 +316,7 @@ func runFuzzer(t *testing.T, cifuzz string, dir string, opts *runFuzzerOptions) 
 		err = routines.Wait()
 		require.NoError(t, err)
 
-		seen := seenExpectedOutput.Load().(bool)
+		seen := seenExpectedOutputs == lenExpectedOutputs
 		if seen && opts.terminateAfterExpectedOutput && executil.IsTerminatedExitErr(waitErr) {
 			return
 		}
@@ -308,8 +325,8 @@ func runFuzzer(t *testing.T, cifuzz string, dir string, opts *runFuzzerOptions) 
 		require.NoError(t, runCtx.Err())
 	}
 
-	seen := seenExpectedOutput.Load().(bool)
-	require.True(t, seen, "Did not see %q in fuzzer output", opts.expectedOutput.String())
+	seen := seenExpectedOutputs == lenExpectedOutputs
+	require.True(t, seen, "Did not see %q in fuzzer output", opts.expectedOutputs)
 }
 
 func createHtmlCoverageReport(t *testing.T, cifuzz string, dir string) {
