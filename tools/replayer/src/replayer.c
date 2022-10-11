@@ -75,6 +75,7 @@ static int launched_as_clion_doctest = 0;
 static const char *argv0;
 static int all_inputs_passed = 0;
 static int num_passing_inputs = 0;
+static int in_user_callback = 0;
 static const char *current_input = NULL;
 
 /* Keep in sync with strsignal below. */
@@ -233,10 +234,12 @@ C_LINKAGE void __sanitizer_set_death_callback(void (*callback)(void));
 static void run_one_input(const unsigned char *data, size_t size) {
   int res;
 
+  in_user_callback = 1;
   res = LLVMFuzzerTestOneInput(data, size);
   /* Avoid "unused but set variable" warnings if asserts are compiled out with NDEBUG. */
   (void)res;
   assert(res == 0);
+  in_user_callback = 0;
   num_passing_inputs++;
 }
 
@@ -406,7 +409,9 @@ static void print_summary(const char *failure_reason) {
         "    cifuzz run %s\n\n" COLOR_RESET, WITH_DEFAULT(cifuzz_test_name)());
     }
   } else {
-    if (current_input) {
+    if (!in_user_callback) {
+      fprintf(stderr, COLOR_RED "\nInternal error encountered\n" COLOR_RESET);
+    } else if (current_input) {
       fprintf(stderr, COLOR_RED "\nFuzz test failed on input '%s'\n"
                       "Reason: %s\n\n" COLOR_RESET, current_input, failure_reason);
       /* TODO: Replace with cifuzz debug on all platforms when it has been implemented. */
