@@ -268,6 +268,7 @@ static void run_file(const char *path) {
   assert(n_read == len);
   current_input = path;
   run_one_input(buf, len);
+  current_input = NULL;
   free(buf);
   fprintf(stderr, "Done:    %s (%ld bytes)\n", path, (unsigned long) n_read);
 }
