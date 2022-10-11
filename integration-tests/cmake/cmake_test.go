@@ -93,15 +93,28 @@ func TestIntegration_CMake_InitCreateRunCoverageBundle(t *testing.T) {
 	// (unless we're running on Windows, in which case UBSan is not
 	// supported)
 	if runtime.GOOS != "windows" {
-		runFuzzer(t, cifuzz, dir, &runFuzzerOptions{
-			expectedOutputs: []*regexp.Regexp{regexp.MustCompile(`^SUMMARY: UndefinedBehaviorSanitizer: undefined-behavior`)},
-		})
+		expectedOutputs := []*regexp.Regexp{
+			regexp.MustCompile(`^SUMMARY: UndefinedBehaviorSanitizer: undefined-behavior`),
+		}
+		runFuzzer(t, cifuzz, dir, &runFuzzerOptions{expectedOutputs: expectedOutputs})
+	}
+
+	expectedOutputs := []*regexp.Regexp{
+		// Check that the use-after-free is found
+		regexp.MustCompile(`^==\d*==ERROR: AddressSanitizer: heap-use-after-free`),
+	}
+
+	// Check that Minijail is used (if running on Linux, because Minijail
+	// is only supported on Linux)
+	if runtime.GOOS == "linux" {
+		minijailOutDir := filepath.Join(os.TempDir(), "minijail-out")
+		expectedOutputs = append(expectedOutputs, regexp.MustCompile(regexp.QuoteMeta(`artifact_prefix='`+minijailOutDir)))
 	}
 
 	// Run the fuzz test with --recover-ubsan and verify that it now
 	// also finds the heap buffer overflow
 	runFuzzer(t, cifuzz, dir, &runFuzzerOptions{
-		expectedOutputs: []*regexp.Regexp{regexp.MustCompile(`^==\d*==ERROR: AddressSanitizer: heap-use-after-free`)},
+		expectedOutputs: expectedOutputs,
 		args:            []string{"--recover-ubsan"},
 	})
 
@@ -151,11 +164,12 @@ func TestIntegration_CMake_InitCreateRunCoverageBundle(t *testing.T) {
 	configFileContent := `use-sandbox: false`
 	err = os.WriteFile(filepath.Join(dir, "cifuzz.yaml"), []byte(configFileContent), 0644)
 	require.NoError(t, err)
-	// When minijail is used, the artifact prefix is set to the minijail
-	// output path
-	runFuzzer(t, cifuzz, dir, &runFuzzerOptions{
-		expectedOutputs: []*regexp.Regexp{regexp.MustCompile(`artifact_prefix='./'`)},
-	})
+	// Check that Minijail is not used (i.e. the artifact prefix is
+	// not set to the Minijail output path)
+	expectedOutputs = []*regexp.Regexp{
+		regexp.MustCompile(regexp.QuoteMeta(`artifact_prefix='` + filepath.Join(os.TempDir(), "libfuzzer-out"))),
+	}
+	runFuzzer(t, cifuzz, dir, &runFuzzerOptions{expectedOutputs: expectedOutputs})
 
 	if runtime.GOOS == "linux" {
 		// Check that command-line flags take precedence over config file

@@ -23,6 +23,7 @@ import (
 	fuzzer_runner "code-intelligence.com/cifuzz/pkg/runner"
 	"code-intelligence.com/cifuzz/util/envutil"
 	"code-intelligence.com/cifuzz/util/executil"
+	"code-intelligence.com/cifuzz/util/fileutil"
 	"code-intelligence.com/cifuzz/util/sliceutil"
 	"code-intelligence.com/cifuzz/util/stringutil"
 )
@@ -125,6 +126,23 @@ func (r *Runner) Run(ctx context.Context) error {
 	// Add any seed corpus directories as further positional arguments
 	args = append(args, r.SeedCorpusDirs...)
 
+	// Set the directory in which fuzzing artifacts (e.g. crashes) are
+	// stored. This must be an absolute path, because else crash files
+	// are created in the current working directory, which the fuzz test
+	// could change, causing the parser to not find the crash files.
+	if r.UseMinijail {
+		// When using Minijail, artifacts must be created in the
+		// (writable) Minijail output directory
+		args = append(args, "-artifact_prefix="+minijail.OutputDir+"/")
+	} else {
+		outputDir, err := os.MkdirTemp("", "libfuzzer-out-")
+		if err != nil {
+			return errors.WithStack(err)
+		}
+		defer fileutil.Cleanup(outputDir)
+		args = append(args, "-artifact_prefix="+outputDir+"/")
+	}
+
 	if len(r.FuzzTestArgs) > 0 {
 		// separate the libfuzzer and fuzz test arguments with a "--"
 		args = append(args, "--")
@@ -142,10 +160,6 @@ func (r *Runner) Run(ctx context.Context) error {
 
 	if r.UseMinijail {
 		libfuzzerArgs := args
-
-		// Make libfuzzer create artifacts (e.g. crash files) in the
-		// minijail output directory.
-		libfuzzerArgs = append(libfuzzerArgs, "-artifact_prefix="+minijail.OutputDir+"/")
 
 		bindings := []*minijail.Binding{
 			// The fuzz target must be accessible
