@@ -47,9 +47,16 @@ type LLVMCoverageGenerator struct {
 
 	buildResult *build.Result
 	tmpDir      string
+	finder      runfiles.RunfilesFinder
 }
 
 func (cov *LLVMCoverageGenerator) Generate() (string, error) {
+
+	// ensure a finder is set
+	if cov.finder == nil {
+		cov.finder = runfiles.Finder
+	}
+
 	var baseTmpDir string
 	if cov.UseSandbox {
 		baseTmpDir = minijail.OutputDir
@@ -130,7 +137,7 @@ func (cov *LLVMCoverageGenerator) build() error {
 			Sanitizers:   []string{"coverage"},
 			Stdout:       cov.StdOut,
 			Stderr:       cov.StdErr,
-		})
+		}, cov.finder)
 		if err != nil {
 			return err
 		}
@@ -341,7 +348,7 @@ func (cov *LLVMCoverageGenerator) indexRawProfile() error {
 		return errors.Errorf("%s did not generate .profraw files at %s", cov.buildResult.Executable, cov.rawProfilePattern(false))
 	}
 
-	llvmProfData, err := runfiles.Finder.LLVMProfDataPath()
+	llvmProfData, err := cov.finder.LLVMProfDataPath()
 	if err != nil {
 		return err
 	}
@@ -407,7 +414,7 @@ func (cov *LLVMCoverageGenerator) generateHTMLReport() (string, error) {
 }
 
 func (cov *LLVMCoverageGenerator) runLlvmCov(args []string) (string, error) {
-	llvmCov, err := runfiles.Finder.LLVMCovPath()
+	llvmCov, err := cov.finder.LLVMCovPath()
 	if err != nil {
 		return "", err
 	}
@@ -487,7 +494,7 @@ func (cov *LLVMCoverageGenerator) lcovReportSummary() (string, error) {
 }
 
 func (cov *LLVMCoverageGenerator) getIgnoreCIFuzzIncludesArgs() ([]string, error) {
-	cifuzzIncludePath, err := runfiles.Finder.CIFuzzIncludePath()
+	cifuzzIncludePath, err := cov.finder.CIFuzzIncludePath()
 	if err != nil {
 		return nil, err
 	}

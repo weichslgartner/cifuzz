@@ -47,15 +47,16 @@ type Builder struct {
 	*BuilderOptions
 	env      []string
 	buildDir string
+	finder   runfiles.RunfilesFinder
 }
 
-func NewBuilder(opts *BuilderOptions) (*Builder, error) {
+func NewBuilder(opts *BuilderOptions, finder runfiles.RunfilesFinder) (*Builder, error) {
 	err := opts.Validate()
 	if err != nil {
 		return nil, err
 	}
 
-	b := &Builder{BuilderOptions: opts}
+	b := &Builder{BuilderOptions: opts, finder: finder}
 
 	// Create a temporary build directory
 	b.buildDir, err = os.MkdirTemp("", "cifuzz-build-")
@@ -186,7 +187,7 @@ func (b *Builder) setLibFuzzerEnv() error {
 
 	// Users should pass the environment variable FUZZ_TEST_CFLAGS to the
 	// compiler command building the fuzz test.
-	cifuzzIncludePath, err := runfiles.Finder.CIFuzzIncludePath()
+	cifuzzIncludePath, err := b.finder.CIFuzzIncludePath()
 	if err != nil {
 		return err
 	}
@@ -240,7 +241,7 @@ func (b *Builder) setCoverageEnv() error {
 
 	// Users should pass the environment variable FUZZ_TEST_CFLAGS to the
 	// compiler command building the fuzz test.
-	cifuzzIncludePath, err := runfiles.Finder.CIFuzzIncludePath()
+	cifuzzIncludePath, err := b.finder.CIFuzzIncludePath()
 	if err != nil {
 		return err
 	}

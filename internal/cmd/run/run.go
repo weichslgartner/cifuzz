@@ -302,7 +302,7 @@ func (c *runCmd) buildFuzzTest() (*build.Result, error) {
 			Sanitizers: sanitizers,
 			Stdout:     c.OutOrStdout(),
 			Stderr:     c.ErrOrStderr(),
-		})
+		}, runfiles.Finder)
 		if err != nil {
 			return nil, err
 		}

@@ -387,7 +387,7 @@ func (b *Bundler) buildAllVariantsOther(configureVariants []configureVariant) ([
 			Sanitizers:   variant.Sanitizers,
 			Stdout:       b.Opts.Stdout,
 			Stderr:       b.Opts.Stderr,
-		})
+		}, runfiles.Finder)
 		if err != nil {
 			return nil, err
 		}
