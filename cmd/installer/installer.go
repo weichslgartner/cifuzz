@@ -254,6 +254,9 @@ func installBashCompletionScript(targetDir, cifuzzPath string) error {
 		// so we need user action to source our installation directory
 		notes = append(notes, fmt.Sprintf(`To enable command completion:
 
+    # enable bash completion (if not already enabled):
+    echo "[ -f $(brew --prefix)/etc/bash_completion ] && source $(brew --prefix)/etc/bash_completion" >> ~/.bash_profile
+    # enable cifuzz completion:
     echo source '%s' >> ~/.bash_profile
 
 `, completionScriptPath))
@@ -329,7 +332,6 @@ func installZshCompletionScript(targetDir, cifuzzPath string) error {
 	}
 
 	return nil
-
 }
 
 func installFishCompletionScript(cifuzzPath string) error {
