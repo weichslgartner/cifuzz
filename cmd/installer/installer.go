@@ -4,6 +4,7 @@ package main
 
 import (
 	"embed"
+	"fmt"
 	"io/fs"
 	"os"
 	"os/exec"
@@ -23,6 +24,8 @@ import (
 
 //go:embed build
 var buildFiles embed.FS
+
+var notes []string
 
 func main() {
 	flags := pflag.NewFlagSet("cifuzz installer", pflag.ExitOnError)
@@ -48,11 +51,16 @@ func main() {
 	}
 
 	binDir := filepath.Join(*installDir, "bin")
-	PrintPathInstructions(binDir)
-}
 
-func PrintPathInstructions(binDir string) {
 	log.Success("Installation successful")
+
+	// Print a newline between the "Installation successful" message
+	// and the notes
+	log.Print()
+
+	for _, note := range notes {
+		log.Note(note)
+	}
 
 	if runtime.GOOS == "windows" {
 		// TODO: On Windows, users generally don't expect having to fiddle with their PATH. We should update it for
@@ -62,10 +70,20 @@ func PrintPathInstructions(binDir string) {
 If you haven't already done so.
 `, binDir)
 	} else {
-		log.Notef(`Please add the following to ~/.profile or ~/.bash_profile:
-    export PATH="$PATH:%s"
-If you haven't already done so.
-`, binDir)
+		shell := filepath.Base(os.Getenv("SHELL"))
+		var profileName string
+		if shell == "bash" {
+			profileName = "~/.bash_profile"
+		} else if shell == "zsh" {
+			profileName = "~/.zprofile"
+		} else {
+			profileName = "~/.profile"
+		}
+		log.Notef(`To add cifuzz to your PATH:
+
+    export PATH="$PATH:%s" >> %s
+
+`, binDir, profileName)
 	}
 }
 
@@ -137,7 +155,7 @@ func ExtractEmbeddedFiles(targetDir string, files *embed.FS) error {
 	case "bash":
 		err = installBashCompletionScript(cifuzzPath)
 	case "zsh":
-		err = installZshCompletionScript(cifuzzPath)
+		err = installZshCompletionScript(targetDir, cifuzzPath)
 	case "fish":
 		err = installFishCompletionScript(cifuzzPath)
 	}
@@ -214,28 +232,74 @@ func installBashCompletionScript(cifuzzPath string) error {
 	return errors.WithStack(err)
 }
 
-func installZshCompletionScript(cifuzzPath string) error {
-	var cmd *exec.Cmd
-	switch runtime.GOOS {
-	case "linux":
-		// We try to read $ZDOTDIR/.zshrc or ~/.zshrc here in order to
-		// store the completion script in the correct directory.
-		// When run as non-root, it's expected that ~/.zshrc sets
-		// $fpath[1] to a directory in the user's home directory, which
-		// allows us to write to it.
-		// When run as root, it's expected that /root/.zshrc doesn't
-		// exist, which leaves $fpath[1] at the default which is below
-		// /etc.
-		cmd = exec.Command("zsh", "-c", ". ${ZDOTDIR:-${HOME}}/.zshrc 2>/dev/null; '"+cifuzzPath+"' completion zsh > \"${fpath[1]}/_cifuzz\"")
-	case "darwin":
-		cmd = exec.Command("zsh", "-c", "'"+cifuzzPath+"' completion zsh > \"$(brew --prefix)/share/zsh/site-functions/_cifuzz\"")
-	default:
+func installZshCompletionScript(targetDir, cifuzzPath string) error {
+	// Installing the zsh completion script is only supported on Linux
+	// and macOS
+	if runtime.GOOS != "linux" && runtime.GOOS != "darwin" {
 		return nil
 	}
+
+	// Install the completion script in the target directory
+	completionsDir := filepath.Join(targetDir, "share", "cifuzz", "zsh", "completions")
+	err := os.MkdirAll(completionsDir, 0700)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	completionScriptPath := filepath.Join(completionsDir, "_cifuzz")
+	cmd := exec.Command("sh", "-c", "'"+cifuzzPath+"' completion zsh > \""+completionScriptPath+"\"")
 	cmd.Stderr = os.Stderr
 	log.Printf("Command: %s", cmd.String())
-	err := cmd.Run()
-	return errors.WithStack(err)
+	err = cmd.Run()
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	// Check if we can write to the first path in the fpath, in which
+	// case we also install the completion script into that directory,
+	// not requiring any user action.
+	//
+	// We try to read $ZDOTDIR/.zshrc or ~/.zshrc here in order to
+	// store the completion script in the correct directory.
+	// When run as non-root, we try to get a user-writeable directory
+	// from $fpath[1] by reading ~/.zshrc.
+	// When run as root, it's expected that /root/.zshrc doesn't
+	// exist, which leaves $fpath[1] at the default which should be only
+	// writeable as root.
+	cmd = exec.Command("zsh", "-c", ". ${ZDOTDIR:-${HOME}}/.zshrc 2>/dev/null; echo \"$fpath[1]\"")
+	cmd.Stderr = os.Stderr
+	log.Printf("Command: %s", cmd.String())
+	out, err := cmd.Output()
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	fpath := strings.TrimSpace(string(out))
+
+	// Try to write the script to the first fpath directory
+	cmd = exec.Command("zsh", "-c", "'"+cifuzzPath+"' completion zsh > \""+fpath+"/_cifuzz\"")
+	cmd.Stderr = os.Stderr
+	log.Printf("Command: %s", cmd.String())
+	err = cmd.Run()
+	if err != nil {
+		// Writing to the first fpath directory failed, so we tell the
+		// user to add the completion script from our install directory
+		// to their fpath instead
+		notes = append(notes, fmt.Sprintf(`To enable command completion:
+
+    echo fpath=(%s $fpath) >> ~/.zshrc
+    echo "autoload -U compinit; compinit" >> ~/.zshrc
+
+`, completionsDir))
+	} else {
+		notes = append(notes, `To enable command completion (if not already enabled):
+
+    echo "autoload -U compinit; compinit" >> ~/.zshrc
+
+`)
+	}
+
+	return nil
+
 }
 
 func installFishCompletionScript(cifuzzPath string) error {
