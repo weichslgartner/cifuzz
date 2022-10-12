@@ -153,7 +153,7 @@ func ExtractEmbeddedFiles(targetDir string, files *embed.FS) error {
 	cifuzzPath := filepath.Join(targetDir, "bin", "cifuzz")
 	switch filepath.Base(os.Getenv("SHELL")) {
 	case "bash":
-		err = installBashCompletionScript(cifuzzPath)
+		err = installBashCompletionScript(targetDir, cifuzzPath)
 	case "zsh":
 		err = installZshCompletionScript(targetDir, cifuzzPath)
 	case "fish":
@@ -199,8 +199,29 @@ func ExtractEmbeddedFiles(targetDir string, files *embed.FS) error {
 	return nil
 }
 
-func installBashCompletionScript(cifuzzPath string) error {
-	var cmd *exec.Cmd
+func installBashCompletionScript(targetDir, cifuzzPath string) error {
+	// Installing the bash completion script is only supported on Linux
+	// and macOS
+	if runtime.GOOS != "linux" && runtime.GOOS != "darwin" {
+		return nil
+	}
+
+	// Install the completion script in the target directory
+	completionsDir := filepath.Join(targetDir, "share", "cifuzz", "bash", "completions")
+	err := os.MkdirAll(completionsDir, 0700)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	completionScriptPath := filepath.Join(completionsDir, "_cifuzz")
+	cmd := exec.Command("sh", "-c", "'"+cifuzzPath+"' completion bash > \""+completionScriptPath+"\"")
+	cmd.Stderr = os.Stderr
+	log.Printf("Command: %s", cmd.String())
+	err = cmd.Run()
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
 	switch runtime.GOOS {
 	case "linux":
 		var dir string
@@ -223,13 +244,22 @@ func installBashCompletionScript(cifuzzPath string) error {
 			return errors.WithStack(err)
 		}
 		cmd = exec.Command("bash", "-c", "'"+cifuzzPath+"' completion bash > \""+dir+"/cifuzz\"")
+		log.Printf("Command: %s", cmd.String())
+		err = cmd.Run()
+		if err != nil {
+			return errors.WithStack(err)
+		}
 	case "darwin":
-		cmd = exec.Command("bash", "-c", "'"+cifuzzPath+"' completion bash > \"$(brew --prefix)/etc/bash_completion.d/cifuzz\"")
+		// There are no bash completoin directories on macOS by default,
+		// so we need user action to source our installation directory
+		notes = append(notes, fmt.Sprintf(`To enable command completion:
+
+    echo source '%s' >> ~/.bash_profile
+
+`, completionScriptPath))
 	}
-	cmd.Stderr = os.Stderr
-	log.Printf("Command: %s", cmd.String())
-	err := cmd.Run()
-	return errors.WithStack(err)
+
+	return nil
 }
 
 func installZshCompletionScript(targetDir, cifuzzPath string) error {
