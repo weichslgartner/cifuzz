@@ -204,7 +204,7 @@ func (c *runCmd) run() error {
 
 	c.reportHandler.PrintCrashingInputNote()
 
-	err = c.printFinalMetrics(buildResult.SeedCorpus)
+	err = c.printFinalMetrics(buildResult.GeneratedCorpus, buildResult.SeedCorpus)
 	if err != nil {
 		return err
 	}
@@ -253,6 +253,7 @@ func (c *runCmd) buildFuzzTest() (*build.Result, error) {
 			return nil, errors.New("CMake is the only supported build system on Windows")
 		}
 		builder, err := other.NewBuilder(&other.BuilderOptions{
+			ProjectDir:   c.opts.ProjectDir,
 			BuildCommand: c.opts.BuildCommand,
 			// TODO: Do not hardcode this value.
 			Engine:     "libfuzzer",
@@ -277,12 +278,11 @@ func (c *runCmd) runFuzzTest(buildResult *build.Result) error {
 	log.Infof("Running %s", pterm.Style{pterm.Reset, pterm.FgLightBlue}.Sprintf(c.opts.fuzzTest))
 	log.Debugf("Executable: %s", buildResult.Executable)
 
-	generatedCorpusDir := cmdutils.GeneratedCorpusDir(c.opts.ProjectDir, c.opts.fuzzTest)
-	err := os.MkdirAll(generatedCorpusDir, 0755)
+	err := os.MkdirAll(buildResult.GeneratedCorpus, 0755)
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	log.Infof("Storing generated corpus in %s", fileutil.PrettifyPath(generatedCorpusDir))
+	log.Infof("Storing generated corpus in %s", fileutil.PrettifyPath(buildResult.GeneratedCorpus))
 
 	// Use user-specified seed corpus dirs (if any) and the default seed
 	// corpus (if it exists)
@@ -297,7 +297,7 @@ func (c *runCmd) runFuzzTest(buildResult *build.Result) error {
 
 	// Ensure that symlinks are resolved to be able to add minijail
 	// bindings for the corpus dirs.
-	generatedCorpusDir, err = filepath.EvalSymlinks(generatedCorpusDir)
+	buildResult.GeneratedCorpus, err = filepath.EvalSymlinks(buildResult.GeneratedCorpus)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -313,7 +313,7 @@ func (c *runCmd) runFuzzTest(buildResult *build.Result) error {
 		EngineArgs:         c.opts.EngineArgs,
 		EnvVars:            []string{"NO_CIFUZZ=1"},
 		FuzzTarget:         buildResult.Executable,
-		GeneratedCorpusDir: generatedCorpusDir,
+		GeneratedCorpusDir: buildResult.GeneratedCorpus,
 		KeepColor:          !c.opts.PrintJSON,
 		ProjectDir:         c.opts.ProjectDir,
 		ReadOnlyBindings:   []string{buildResult.BuildDir},
@@ -373,19 +373,13 @@ func (c *runCmd) runFuzzTest(buildResult *build.Result) error {
 	return err
 }
 
-func (c *runCmd) printFinalMetrics(seedCorpus string) error {
-	numSeeds, err := countSeeds(append(c.opts.SeedCorpusDirs, c.generatedCorpusPath(), seedCorpus))
+func (c *runCmd) printFinalMetrics(generatedCorpus, seedCorpus string) error {
+	numSeeds, err := countSeeds(append(c.opts.SeedCorpusDirs, generatedCorpus, seedCorpus))
 	if err != nil {
 		return err
 	}
 
 	return c.reportHandler.PrintFinalMetrics(numSeeds)
-}
-
-func (c *runCmd) generatedCorpusPath() string {
-	// Store the generated corpus in a single persistent directory per
-	// fuzz test in a hidden subdirectory.
-	return filepath.Join(c.opts.ProjectDir, ".cifuzz-corpus", c.opts.fuzzTest)
 }
 
 func (c *runCmd) checkDependencies() (bool, error) {

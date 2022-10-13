@@ -257,6 +257,7 @@ func (c *coverageCmd) buildFuzzTest() (*build.Result, error) {
 			return nil, errors.New("CMake is the only supported build system on Windows")
 		}
 		builder, err := other.NewBuilder(&other.BuilderOptions{
+			ProjectDir:   c.opts.ProjectDir,
 			BuildCommand: c.opts.BuildCommand,
 			Engine:       "libfuzzer",
 			Sanitizers:   []string{"coverage"},
@@ -290,13 +291,12 @@ func (c *coverageCmd) runFuzzTest(buildResult *build.Result) error {
 	if exists {
 		corpusDirs = append(corpusDirs, buildResult.SeedCorpus)
 	}
-	generatedCorpusDir := cmdutils.GeneratedCorpusDir(c.opts.ProjectDir, c.opts.fuzzTest)
-	exists, err = fileutil.Exists(generatedCorpusDir)
+	exists, err = fileutil.Exists(buildResult.GeneratedCorpus)
 	if err != nil {
 		return err
 	}
 	if exists {
-		corpusDirs = append(corpusDirs, generatedCorpusDir)
+		corpusDirs = append(corpusDirs, buildResult.GeneratedCorpus)
 	}
 
 	// Ensure that symlinks are resolved to be able to add minijail

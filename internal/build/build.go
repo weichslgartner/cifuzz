@@ -12,6 +12,8 @@ import (
 type Result struct {
 	// Canonical path of the fuzz test executable
 	Executable string
+	// Canonical path of the fuzz test's generated corpus directory
+	GeneratedCorpus string
 	// Canonical path of the fuzz test's default seed corpus directory
 	SeedCorpus string
 	// Canonical path of the build directory

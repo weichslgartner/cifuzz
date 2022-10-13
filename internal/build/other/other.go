@@ -23,11 +23,25 @@ import (
 )
 
 type BuilderOptions struct {
+	ProjectDir   string
 	BuildCommand string
 	Engine       string
 	Sanitizers   []string
 	Stdout       io.Writer
 	Stderr       io.Writer
+}
+
+func (opts *BuilderOptions) Validate() error {
+	// Check that the project dir is set
+	if opts.ProjectDir == "" {
+		return errors.New("ProjectDir is not set")
+	}
+	// Check that the project dir exists and can be accessed
+	_, err := os.Stat(opts.ProjectDir)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	return nil
 }
 
 type Builder struct {
@@ -37,7 +51,11 @@ type Builder struct {
 }
 
 func NewBuilder(opts *BuilderOptions) (*Builder, error) {
-	var err error
+	err := opts.Validate()
+	if err != nil {
+		return nil, err
+	}
+
 	b := &Builder{BuilderOptions: opts}
 
 	// Create a temporary build directory
@@ -131,13 +149,15 @@ func (b *Builder) Build(fuzzTest string) (*build.Result, error) {
 	if err != nil {
 		return nil, err
 	}
+	generatedCorpus := filepath.Join(b.ProjectDir, ".cifuzz-corpus", fuzzTest)
 	return &build.Result{
-		Executable:  executable,
-		SeedCorpus:  seedCorpus,
-		BuildDir:    buildDir,
-		Engine:      b.Engine,
-		Sanitizers:  b.Sanitizers,
-		RuntimeDeps: runtimeDeps,
+		Executable:      executable,
+		GeneratedCorpus: generatedCorpus,
+		SeedCorpus:      seedCorpus,
+		BuildDir:        buildDir,
+		Engine:          b.Engine,
+		Sanitizers:      b.Sanitizers,
+		RuntimeDeps:     runtimeDeps,
 	}, nil
 }
 

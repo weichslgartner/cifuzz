@@ -381,6 +381,7 @@ func (b *Bundler) buildAllVariantsOther(configureVariants []configureVariant) ([
 	var allVariantBuildResults []map[string]*build.Result
 	for i, variant := range configureVariants {
 		builder, err := other.NewBuilder(&other.BuilderOptions{
+			ProjectDir:   b.Opts.ProjectDir,
 			BuildCommand: b.Opts.BuildCommand,
 			Engine:       variant.Engine,
 			Sanitizers:   variant.Sanitizers,
