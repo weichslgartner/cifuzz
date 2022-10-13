@@ -35,3 +35,30 @@ func TestSelect(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "item2", userInput)
 }
+
+func TestMultiSelect(t *testing.T) {
+	var outBuf bytes.Buffer
+	pterm.SetDefaultOutput(&outBuf)
+
+	defer pterm.SetDefaultOutput(os.Stdout)
+
+	go func() {
+		require.NoError(t, keyboard.SimulateKeyPress(keys.Down))
+		require.NoError(t, keyboard.SimulateKeyPress(keys.Down))
+		require.NoError(t, keyboard.SimulateKeyPress(keys.Up))
+		require.NoError(t, keyboard.SimulateKeyPress(keys.Space))
+		require.NoError(t, keyboard.SimulateKeyPress(keys.Up))
+		require.NoError(t, keyboard.SimulateKeyPress(keys.Space))
+		require.NoError(t, keyboard.SimulateKeyPress(keys.Enter))
+	}()
+
+	items := map[string]string{
+		"Item No1": "item1",
+		"Item No2": "item2",
+		"Item No3": "item3",
+		"Item No4": "item4",
+	}
+	userInput, err := MultiSelect("Test", items)
+	require.NoError(t, err)
+	assert.Equal(t, []string{"item1", "item2"}, userInput)
+}
