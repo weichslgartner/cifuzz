@@ -143,7 +143,6 @@ https://github.com/CodeIntelligenceTesting/cifuzz/issues`, system)
 		cmdutils.AddDockerImageFlag,
 		cmdutils.AddEngineArgFlag,
 		cmdutils.AddEnvFlag,
-		cmdutils.AddFuzzTestArgFlag,
 		cmdutils.AddProjectDirFlag,
 		cmdutils.AddSeedCorpusFlag,
 		cmdutils.AddTimeoutFlag,

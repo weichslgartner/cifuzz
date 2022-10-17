@@ -27,10 +27,6 @@ build-command: make clean && make $FUZZ_TEST
 #engine-args:
 # - -rss_limit_mb=4096
 
-## Command-line arguments to pass to the fuzz tests.
-#fuzz-test-args:
-# - --config-file=path/to/config
-
 ## Maximum time to run fuzz tests. The default is to run indefinitely.
 #timeout: 30m
 

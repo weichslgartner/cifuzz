@@ -49,8 +49,6 @@ func TestBundle(t *testing.T, dir string, cifuzz string, args ...string) {
 		"--dict", dictPath,
 		// Only run the fuzzer on the empty input.
 		"--engine-arg", "-runs=0",
-		"--fuzz-test-arg", "arg3",
-		"--fuzz-test-arg", "arg4",
 		"--seed-corpus", seedCorpusDir,
 		"--timeout", "100m",
 		"--branch", "my-branch",
@@ -117,9 +115,8 @@ func TestBundle(t *testing.T, dir string, cifuzz string, args ...string) {
 	assert.Equal(t, "my-branch", metadata.CodeRevision.Git.Branch)
 	assert.Equal(t, "123456abcdef", metadata.CodeRevision.Git.Commit)
 
-	// Verify that the metadata contain the engine args and fuzz test args
+	// Verify that the metadata contain the engine flags
 	assert.Equal(t, []string{"-runs=0"}, metadata.Fuzzers[0].EngineOptions.Flags)
-	assert.Equal(t, []string{"arg3", "arg4"}, metadata.Fuzzers[0].FuzzTestArgs)
 
 	// Verify that the metadata contains the Docker image
 	assert.Equal(t, "my-image", metadata.RunEnvironment.Docker)

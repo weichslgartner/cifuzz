@@ -116,15 +116,6 @@ func AddEnvFlag(cmd *cobra.Command) func() {
 	}
 }
 
-func AddFuzzTestArgFlag(cmd *cobra.Command) func() {
-	cmd.Flags().StringArray("fuzz-test-arg", nil,
-		"Command-line `argument` to pass to the fuzz test.\n"+
-			"This flag can be used multiple times.")
-	return func() {
-		ViperMustBindPFlag("fuzz-test-args", cmd.Flags().Lookup("fuzz-test-arg"))
-	}
-}
-
 func AddPrintJSONFlag(cmd *cobra.Command) func() {
 	cmd.Flags().Bool("json", false, "Print output as JSON")
 	return func() {

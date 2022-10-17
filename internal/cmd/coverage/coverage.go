@@ -43,7 +43,6 @@ type coverageOptions struct {
 	BuildCommand   string   `mapstructure:"build-command"`
 	NumBuildJobs   uint     `mapstructure:"build-jobs"`
 	SeedCorpusDirs []string `mapstructure:"seed-corpus-dirs"`
-	FuzzTestArgs   []string `mapstructure:"fuzz-test-args"`
 	UseSandbox     bool     `mapstructure:"use-sandbox"`
 
 	ProjectDir string
@@ -148,7 +147,6 @@ Write out an lcov trace file:
 	bindFlags = cmdutils.AddFlags(cmd,
 		cmdutils.AddBuildCommandFlag,
 		cmdutils.AddBuildJobsFlag,
-		cmdutils.AddFuzzTestArgFlag,
 		cmdutils.AddProjectDirFlag,
 		cmdutils.AddSeedCorpusFlag,
 		cmdutils.AddUseSandboxFlag,
@@ -367,9 +365,6 @@ func (c *coverageCmd) runFuzzer(executable string, preCorpusArgs []string, corpu
 	args := []string{executable}
 	args = append(args, preCorpusArgs...)
 	args = append(args, corpusDirs...)
-	if len(c.opts.FuzzTestArgs) > 0 {
-		args = append(append(args, "--"), c.opts.FuzzTestArgs...)
-	}
 
 	if c.opts.UseSandbox {
 		bindings := []*minijail.Binding{

@@ -493,8 +493,6 @@ func testRemoteRun(t *testing.T, dir string, cifuzz string) {
 		"--dict", dictPath,
 		"--engine-arg", "arg1",
 		"--engine-arg", "arg2",
-		"--fuzz-test-arg", "arg3",
-		"--fuzz-test-arg", "arg4",
 		"--seed-corpus", seedCorpusDir,
 		"--timeout", "100m",
 		"--project", projectName,

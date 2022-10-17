@@ -79,7 +79,6 @@ type Opts struct {
 	DockerImage    string        `mapstructure:"docker-image"`
 	EngineArgs     []string      `mapstructure:"engine-args"`
 	Env            []string      `mapstructure:"env"`
-	FuzzTestArgs   []string      `mapstructure:"fuzz-test-args"`
 	SeedCorpusDirs []string      `mapstructure:"seed-corpus-dirs"`
 	Timeout        time.Duration `mapstructure:"timeout"`
 	ProjectDir     string        `mapstructure:"project-dir"`
@@ -653,8 +652,7 @@ depsLoop:
 			Env:   env,
 			Flags: b.Opts.EngineArgs,
 		},
-		FuzzTestArgs: b.Opts.FuzzTestArgs,
-		MaxRunTime:   uint(b.Opts.Timeout.Seconds()),
+		MaxRunTime: uint(b.Opts.Timeout.Seconds()),
 	}
 
 	if externalLibrariesPrefix != "" {

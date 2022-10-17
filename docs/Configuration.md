@@ -10,7 +10,6 @@ precedence over the respective config file setting.
 [seed-corpus-dirs](#seed-corpus-dirs) <br/>
 [dict](#dict) <br/>
 [engine-args](#engine-args) <br/>
-[fuzz-test-args](#fuzz-test-args) <br/>
 [timeout](#timeout) <br/>
 [use-sandbox](#use-sandbox) <br/>
 [print-json](#print-json) <br/>
@@ -81,17 +80,6 @@ https://www.mankier.com/8/afl-fuzz.
 ```yaml
 engine-args:
  - -rss_limit_mb=4096
-```
-
-<a id="fuzz-test-args"></a>
-
-### fuzz-test-args
-Command-line arguments to pass to the fuzz tests.
-
-#### Example
-```yaml
-fuzz-test-args:
- - --config-file=path/to/config
 ```
 
 <a id="timeout"></a>

@@ -37,7 +37,6 @@ type runOptions struct {
 	NumBuildJobs   uint          `mapstructure:"build-jobs"`
 	Dictionary     string        `mapstructure:"dict"`
 	EngineArgs     []string      `mapstructure:"engine-args"`
-	FuzzTestArgs   []string      `mapstructure:"fuzz-test-args"`
 	RecoverUBSan   bool          `mapstructure:"recover-ubsan"`
 	SeedCorpusDirs []string      `mapstructure:"seed-corpus-dirs"`
 	Timeout        time.Duration `mapstructure:"timeout"`
@@ -157,7 +156,6 @@ depends on the build system configured for the project:
 		cmdutils.AddBuildJobsFlag,
 		cmdutils.AddDictFlag,
 		cmdutils.AddEngineArgFlag,
-		cmdutils.AddFuzzTestArgFlag,
 		cmdutils.AddPrintJSONFlag,
 		cmdutils.AddProjectDirFlag,
 		cmdutils.AddRecoverUBSanFlag,
@@ -315,7 +313,6 @@ func (c *runCmd) runFuzzTest(buildResult *build.Result) error {
 		EngineArgs:         c.opts.EngineArgs,
 		EnvVars:            []string{"NO_CIFUZZ=1"},
 		FuzzTarget:         buildResult.Executable,
-		FuzzTestArgs:       c.opts.FuzzTestArgs,
 		GeneratedCorpusDir: generatedCorpusDir,
 		KeepColor:          !c.opts.PrintJSON,
 		ProjectDir:         c.opts.ProjectDir,
