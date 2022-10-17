@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"golang.org/x/exp/maps"
 
@@ -125,8 +126,7 @@ to keep them close to the tested code - just like regular unit tests.`)
 func (c *createCmd) getTestType() (config.FuzzTestType, error) {
 	userSelectedType, err := dialog.Select("Select type of the fuzz test", supportedTestTypes)
 	if err != nil {
-		fmt.Printf("%+v \n", err)
-		return "", cmdutils.ErrSilent
+		return "", errors.WithStack(err)
 	}
 	return config.FuzzTestType(userSelectedType), nil
 }
