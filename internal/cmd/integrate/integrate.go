@@ -9,9 +9,11 @@ import (
 	copy2 "github.com/otiai10/copy"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	"golang.org/x/exp/maps"
 
 	"code-intelligence.com/cifuzz/internal/cmdutils"
 	"code-intelligence.com/cifuzz/internal/config"
+	"code-intelligence.com/cifuzz/pkg/dialog"
 	"code-intelligence.com/cifuzz/pkg/log"
 	"code-intelligence.com/cifuzz/pkg/runfiles"
 	"code-intelligence.com/cifuzz/util/fileutil"
@@ -24,8 +26,10 @@ type integrateCmd struct {
 	tools []string
 }
 
-func supportedTools() []string {
-	return []string{"git", "cmake", "vscode"}
+var supportedTools = map[string]string{
+	"Git":     "git",
+	"CMake":   "cmake",
+	"VS Code": "vscode",
 }
 
 func New() *cobra.Command {
@@ -51,8 +55,8 @@ tasks to your tasks.json:
 
 Missing files are generated automatically.
 `,
-		ValidArgs: supportedTools(),
-		Args:      cobra.MatchAll(cobra.RangeArgs(1, len(supportedTools())), cobra.OnlyValidArgs),
+		ValidArgs: maps.Values(supportedTools),
+		Args:      cobra.MatchAll(cobra.RangeArgs(0, len(supportedTools)), cobra.OnlyValidArgs),
 		RunE: func(c *cobra.Command, args []string) error {
 			cmd := integrateCmd{
 				Command: c,
@@ -81,6 +85,14 @@ func (c *integrateCmd) run() error {
 		return err
 	}
 
+	if len(c.tools) == 0 {
+		selectedTools, err := selectTools()
+		if err != nil {
+			return err
+		}
+		c.tools = selectedTools
+	}
+
 	for _, tool := range c.tools {
 		switch tool {
 		case "git":
@@ -102,6 +114,15 @@ func (c *integrateCmd) run() error {
 	}
 
 	return nil
+}
+
+// selectTools lets the user select the desired tools via an interactive multiselect dialog
+func selectTools() ([]string, error) {
+	selectedTools, err := dialog.MultiSelect("Select tools for integration", supportedTools)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return selectedTools, nil
 }
 
 func setupGitIgnore(projectDir string) error {
