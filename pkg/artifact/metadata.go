@@ -6,7 +6,7 @@ import (
 )
 
 // MetadataFileName is the name of the meta information yaml file within an artifact archive.
-const MetadataFileName = "cifuzz.yaml"
+const MetadataFileName = "bundle.yaml"
 
 // Metadata defines meta information for artifacts contained within a fuzzing artifact archive.
 type Metadata struct {

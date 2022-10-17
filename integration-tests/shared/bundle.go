@@ -102,7 +102,7 @@ func TestBundle(t *testing.T, dir string, cifuzz string, args ...string) {
 	require.NoError(t, err)
 
 	// Read the fuzzer path from the YAML.
-	metadataPath := filepath.Join(archiveDir, "cifuzz.yaml")
+	metadataPath := filepath.Join(archiveDir, "bundle.yaml")
 	require.FileExists(t, metadataPath)
 	metadataYaml, err := os.ReadFile(metadataPath)
 	require.NoError(t, err)
