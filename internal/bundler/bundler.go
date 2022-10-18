@@ -18,6 +18,7 @@ import (
 	"golang.org/x/exp/maps"
 
 	"code-intelligence.com/cifuzz/internal/build"
+	"code-intelligence.com/cifuzz/internal/build/bazel"
 	"code-intelligence.com/cifuzz/internal/build/cmake"
 	"code-intelligence.com/cifuzz/internal/build/other"
 	"code-intelligence.com/cifuzz/internal/cmdutils"
@@ -112,6 +113,15 @@ func (opts *Opts) Validate() error {
 		}
 	}
 
+	if opts.BuildSystem == config.BuildSystemBazel {
+		// We currently don't support building a bundle with bazel
+		// without any specified fuzz tests
+		if len(opts.FuzzTests) == 0 {
+			msg := `At least one <fuzz test> argument must be provided`
+			return cmdutils.WrapIncorrectUsageError(errors.New(msg))
+		}
+	}
+
 	if opts.BuildSystem == config.BuildSystemOther {
 		// To build with other build systems, a build command must be provided
 		if opts.BuildCommand == "" {
@@ -180,14 +190,6 @@ func (b *Bundler) Bundle() error {
 		return dependencies.Error()
 	}
 
-	if b.Opts.OutputPath == "" {
-		if len(b.Opts.FuzzTests) == 1 {
-			b.Opts.OutputPath = b.Opts.FuzzTests[0] + ".tar.gz"
-		} else {
-			b.Opts.OutputPath = "fuzz_tests.tar.gz"
-		}
-	}
-
 	// TODO: Do not hardcode these values.
 	sanitizers := []string{"address"}
 	// UBSan is not supported by MSVC
@@ -225,6 +227,14 @@ func (b *Bundler) Bundle() error {
 				return errors.Errorf("conflict for archive path %q: %q and %q", archivePath, existingAbsPath, absPath)
 			}
 			archiveManifest[archivePath] = absPath
+		}
+
+		if b.Opts.OutputPath == "" {
+			if len(b.Opts.FuzzTests) == 1 {
+				b.Opts.OutputPath = filepath.Base(buildResult.Executable) + ".tar.gz"
+			} else {
+				b.Opts.OutputPath = "fuzz_tests.tar.gz"
+			}
 		}
 	}
 	systemDeps := maps.Keys(deduplicatedSystemDeps)
@@ -301,6 +311,8 @@ func (b *Bundler) buildAllVariants() ([]*build.Result, error) {
 	}
 
 	switch b.Opts.BuildSystem {
+	case config.BuildSystemBazel:
+		return b.buildAllVariantsBazel(configureVariants)
 	case config.BuildSystemCMake:
 		return b.buildAllVariantsCMake(configureVariants)
 	case config.BuildSystemOther:
@@ -312,6 +324,42 @@ func (b *Bundler) buildAllVariants() ([]*build.Result, error) {
 		// in the Opts.Validate function.
 		panic(fmt.Sprintf("Unsupported build system: %v", b.Opts.BuildSystem))
 	}
+}
+
+func (b *Bundler) buildAllVariantsBazel(configureVariants []configureVariant) ([]*build.Result, error) {
+	var allResults []*build.Result
+	for i, variant := range configureVariants {
+		builder, err := bazel.NewBuilder(&bazel.BuilderOptions{
+			ProjectDir: b.Opts.ProjectDir,
+			Engine:     "libfuzzer",
+			NumJobs:    b.Opts.NumBuildJobs,
+			Stdout:     b.Opts.Stdout,
+			Stderr:     b.Opts.Stderr,
+			TempDir:    b.tempDir,
+			Verbose:    viper.GetBool("verbose"),
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		b.printBuildingMsg(variant, i)
+
+		if len(b.Opts.FuzzTests) == 0 {
+			// We panic here instead of returning an error because it's a
+			// programming error if this function was called without any
+			// fuzz tests, that case should have been handled in the
+			// Opts.Validate function.
+			panic("No fuzz tests specified")
+		}
+
+		results, err := builder.BuildForBundle(variant.Engine, variant.Sanitizers, b.Opts.FuzzTests)
+		if err != nil {
+			return nil, err
+		}
+		allResults = append(allResults, results...)
+	}
+
+	return allResults, nil
 }
 
 func (b *Bundler) buildAllVariantsCMake(configureVariants []configureVariant) ([]*build.Result, error) {

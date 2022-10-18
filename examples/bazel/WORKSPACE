@@ -3,9 +3,9 @@ load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 http_archive(
     name = "rules_fuzzing",
-    sha256 = "93353c864968596cfee046ea1ef587ff62eda90dd24d4360c70465376e507982",
-    strip_prefix = "rules_fuzzing-2492fd2f37163de8e19ce85061e90a464f3e9255",
-    urls = ["https://github.com/bazelbuild/rules_fuzzing/archive/2492fd2f37163de8e19ce85061e90a464f3e9255.tar.gz"],
+    sha256 = "6fd5814a271c90c196b9da723b642efb6752b2fcde137e42567a3c42a7cf9bb6",
+    strip_prefix = "rules_fuzzing-949389c58e7cbbb2b3a2c7d3b840cefc3c0e6353",
+    urls = ["https://github.com/CodeIntelligenceTesting/rules_fuzzing/archive/949389c58e7cbbb2b3a2c7d3b840cefc3c0e6353.tar.gz"],
 )
 
 load("@rules_fuzzing//fuzzing:repositories.bzl", "rules_fuzzing_dependencies")

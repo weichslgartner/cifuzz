@@ -239,18 +239,6 @@ func (c *runCmd) buildFuzzTest() (*build.Result, error) {
 	}
 
 	if c.opts.BuildSystem == config.BuildSystemBazel {
-		// The cc_fuzz_test rule defines multiple bazel targets: If the
-		// name is "foo", it defines the targets "foo", "foo_bin", and
-		// others. We need to run the "foo_bin" target but want to
-		// allow users to specify either "foo" or "foo_bin", so we check
-		// if the fuzz test name appended with "_bin" is a valid target
-		// and use that in that case
-		cmd := exec.Command("bazel", "query", c.opts.fuzzTest+"_bin")
-		err := cmd.Run()
-		if err == nil {
-			c.opts.fuzzTest += "_bin"
-		}
-
 		builder, err := bazel.NewBuilder(&bazel.BuilderOptions{
 			ProjectDir: c.opts.ProjectDir,
 			Engine:     "libfuzzer",
@@ -263,7 +251,7 @@ func (c *runCmd) buildFuzzTest() (*build.Result, error) {
 		if err != nil {
 			return nil, err
 		}
-		buildResults, err := builder.Build([]string{c.opts.fuzzTest})
+		buildResults, err := builder.BuildForRun([]string{c.opts.fuzzTest})
 		if err != nil {
 			return nil, err
 		}

@@ -7,6 +7,7 @@ import (
 	"runtime"
 	"testing"
 
+	"github.com/mattn/go-zglob"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
@@ -77,9 +78,7 @@ func TestBundle(t *testing.T, dir string, cifuzz string, args ...string) {
 	// Extract the archive into a new temporary directory.
 	archiveDir, err := os.MkdirTemp("", "cifuzz-extracted-archive-*")
 	require.NoError(t, err)
-	archiveFile, err := os.Open(bundlePath)
-	require.NoError(t, err)
-	err = artifact.ExtractArchiveForTestsOnly(archiveFile, archiveDir)
+	err = artifact.ExtractArchiveForTestsOnly(bundlePath, archiveDir)
 	require.NoError(t, err)
 
 	// List the files in the archive for easier debugging
@@ -157,7 +156,10 @@ func TestBundle(t *testing.T, dir string, cifuzz string, args ...string) {
 	// Verify that the seed corpus has been packaged with the fuzzer.
 	seedCorpusPath := filepath.Join(archiveDir, fuzzerMetadata.Seeds)
 	require.DirExists(t, seedCorpusPath)
-	assert.FileExists(t, filepath.Join(seedCorpusPath, fuzzerMetadata.Target+"_inputs", "some_seed"))
+	pattern := filepath.Join(seedCorpusPath, "**", "*some_seed")
+	matches, err := zglob.Glob(pattern)
+	require.NoError(t, err)
+	assert.NotEmpty(t, matches, "seed not found: %s", pattern)
 	// Check that the empty seed from the user-specified seed corpus
 	// was copied into the archive
 	assert.FileExists(t, filepath.Join(seedCorpusPath, filepath.Base(seedCorpusDir), "empty"))

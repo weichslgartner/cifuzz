@@ -11,6 +11,8 @@ import (
 
 	"github.com/pkg/errors"
 	"golang.org/x/exp/maps"
+
+	"code-intelligence.com/cifuzz/util/archiveutil"
 )
 
 // WriteArchive writes a GZip-compressed TAR to out containing the files and directories given in manifest.
@@ -57,58 +59,18 @@ func AddDirToManifest(manifest map[string]string, archiveBasePath string, dir st
 	})
 }
 
-// ExtractArchiveForTestsOnly extracts the GZip-compressed TAR read by in into dir.
-func ExtractArchiveForTestsOnly(in io.Reader, dir string) error {
-	gr, err := gzip.NewReader(in)
+// ExtractArchiveForTestsOnly extracts the bundle to dir.
+func ExtractArchiveForTestsOnly(bundle, dir string) error {
+	f, err := os.Open(bundle)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	gr, err := gzip.NewReader(f)
 	if err != nil {
 		return errors.WithStack(err)
 	}
 	defer gr.Close()
-	tr := tar.NewReader(gr)
-
-	for {
-		var header *tar.Header
-		header, err = tr.Next()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return errors.WithStack(err)
-		}
-
-		switch header.Typeflag {
-		case tar.TypeDir:
-			err = os.MkdirAll(filepath.Join(dir, header.Name), 0755)
-			if err != nil {
-				return errors.WithStack(err)
-			}
-		case tar.TypeReg:
-			err = func() error {
-				filePath := filepath.Join(dir, header.Name)
-				err = os.MkdirAll(filepath.Dir(filePath), 0755)
-				if err != nil {
-					return errors.WithStack(err)
-				}
-				var file *os.File
-				file, err = os.OpenFile(filePath, os.O_CREATE|os.O_WRONLY, os.FileMode(header.Mode))
-				if err != nil {
-					return errors.WithStack(err)
-				}
-				defer file.Close()
-				_, err = io.Copy(file, tr)
-				if err != nil {
-					return errors.WithStack(err)
-				}
-				return nil
-			}()
-			if err != nil {
-				return err
-			}
-		default:
-			return errors.Errorf("unsupported file type: %d", header.Typeflag)
-		}
-	}
-	return nil
+	return archiveutil.Untar(gr, dir)
 }
 
 // addToArchive adds the file absPath to the archive under the path archivePath.
