@@ -50,7 +50,7 @@ type remoteRunOpts struct {
 }
 
 func (opts *remoteRunOpts) Validate() error {
-	if !sliceutil.Contains([]string{config.BuildSystemCMake, config.BuildSystemOther}, opts.BuildSystem) {
+	if !sliceutil.Contains([]string{config.BuildSystemBazel, config.BuildSystemCMake, config.BuildSystemOther}, opts.BuildSystem) {
 		err := errors.Errorf(`Starting a remote run is currently not supported for %[1]s projects. If you
 are interested in using this feature with %[1]s, please file an issue at
 https://github.com/CodeIntelligenceTesting/cifuzz/issues`, cases.Title(language.Und).String(opts.BuildSystem))
