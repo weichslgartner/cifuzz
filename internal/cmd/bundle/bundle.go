@@ -7,6 +7,8 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 
 	"code-intelligence.com/cifuzz/internal/bundler"
 	"code-intelligence.com/cifuzz/internal/cmdutils"
@@ -24,7 +26,7 @@ func (opts *options) Validate() error {
 	if !sliceutil.Contains([]string{config.BuildSystemBazel, config.BuildSystemCMake, config.BuildSystemOther}, opts.BuildSystem) {
 		err := errors.Errorf(`Creating a bundle is currently not supported for %[1]s projects. If you
 are interested in using this feature with %[1]s, please file an issue at
-https://github.com/CodeIntelligenceTesting/cifuzz/issues`, strings.ToTitle(opts.BuildSystem))
+https://github.com/CodeIntelligenceTesting/cifuzz/issues`, cases.Title(language.Und).String(opts.BuildSystem))
 		log.Print(err.Error())
 		return cmdutils.WrapSilentError(err)
 	}

@@ -19,6 +19,8 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/term"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 
 	"code-intelligence.com/cifuzz/internal/access_tokens"
 	"code-intelligence.com/cifuzz/internal/bundler"
@@ -51,7 +53,7 @@ func (opts *remoteRunOpts) Validate() error {
 	if !sliceutil.Contains([]string{config.BuildSystemCMake, config.BuildSystemOther}, opts.BuildSystem) {
 		err := errors.Errorf(`Starting a remote run is currently not supported for %[1]s projects. If you
 are interested in using this feature with %[1]s, please file an issue at
-https://github.com/CodeIntelligenceTesting/cifuzz/issues`, strings.ToTitle(opts.BuildSystem))
+https://github.com/CodeIntelligenceTesting/cifuzz/issues`, cases.Title(language.Und).String(opts.BuildSystem))
 		log.Print(err.Error())
 		return cmdutils.WrapSilentError(err)
 	}
