@@ -88,6 +88,12 @@ fuzzing run.
 
 If the --bundle flag is used, building and bundling is skipped and the
 specified bundle is uploaded to start a remote fuzzing run instead.
+
+This command needs a token to access the API of the remote fuzzing
+server. You can specify this token via the CIFUZZ_API_TOKEN environment
+variable. If no token is specified, you will be prompted to enter the
+token. That token is then stored in ~/.config/cifuzz/access_tokens.json
+and used the next time the remote-run command is used.
 `,
 		ValidArgsFunction: completion.ValidFuzzTests,
 		Args:              cobra.ArbitraryArgs,
