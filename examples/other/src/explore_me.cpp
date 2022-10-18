@@ -1,6 +1,6 @@
 #include "explore_me.h"
 #include <cstdio>
-#include <string.h>
+#include <cstring>
 using namespace std;
 
 // just a function with multiple paths that can be discoverd by a fuzzer
