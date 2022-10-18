@@ -79,7 +79,7 @@ func NewBuilder(opts *BuilderOptions) (*Builder, error) {
 // support combining sanitizers, so we can't build with both ASan
 // and UBSan. Therefore, we only build with ASan and plan to upstream
 // support for combining sanitizers.
-func (b *Builder) Build(fuzzTests []string) (map[string]*build.Result, error) {
+func (b *Builder) Build(fuzzTests []string) ([]*build.Result, error) {
 	var err error
 
 	// The BuildDir field of the build results is expected to be a
@@ -150,7 +150,7 @@ func (b *Builder) Build(fuzzTests []string) (map[string]*build.Result, error) {
 	}
 
 	// Assemble the build results
-	results := make(map[string]*build.Result)
+	var results []*build.Result
 
 	for _, fuzzTest := range fuzzTests {
 		// For bazel, we expect the seed corpus in the directory which
@@ -189,7 +189,7 @@ func (b *Builder) Build(fuzzTests []string) (map[string]*build.Result, error) {
 		parent := filepath.Join(b.ProjectDir, ".cifuzz-corpus")
 		generatedCorpus := filepath.Join(parent, filepath.Join(strings.Split(canonicalName, "/")...))
 
-		results[fuzzTest] = &build.Result{
+		result := &build.Result{
 			Name:            canonicalName,
 			Executable:      fuzzScript,
 			GeneratedCorpus: generatedCorpus,
@@ -198,6 +198,7 @@ func (b *Builder) Build(fuzzTests []string) (map[string]*build.Result, error) {
 			Engine:          b.Engine,
 			Sanitizers:      []string{"address"},
 		}
+		results = append(results, result)
 	}
 
 	return results, nil

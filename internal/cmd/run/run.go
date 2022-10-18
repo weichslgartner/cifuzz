@@ -267,7 +267,7 @@ func (c *runCmd) buildFuzzTest() (*build.Result, error) {
 		if err != nil {
 			return nil, err
 		}
-		return buildResults[c.opts.fuzzTest], nil
+		return buildResults[0], nil
 	} else if c.opts.BuildSystem == config.BuildSystemCMake {
 		builder, err := cmake.NewBuilder(&cmake.BuilderOptions{
 			ProjectDir: c.opts.ProjectDir,
@@ -292,7 +292,7 @@ func (c *runCmd) buildFuzzTest() (*build.Result, error) {
 		if err != nil {
 			return nil, err
 		}
-		return buildResults[c.opts.fuzzTest], nil
+		return buildResults[0], nil
 	} else if c.opts.BuildSystem == config.BuildSystemOther {
 		builder, err := other.NewBuilder(&other.BuilderOptions{
 			ProjectDir:   c.opts.ProjectDir,
