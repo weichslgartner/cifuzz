@@ -204,6 +204,7 @@ func (b *Builder) Build(fuzzTests []string) (map[string]*build.Result, error) {
 		}
 		generatedCorpus := filepath.Join(b.ProjectDir, ".cifuzz-corpus", fuzzTest)
 		results[fuzzTest] = &build.Result{
+			Name:            fuzzTest,
 			Executable:      executable,
 			GeneratedCorpus: generatedCorpus,
 			SeedCorpus:      seedCorpus,

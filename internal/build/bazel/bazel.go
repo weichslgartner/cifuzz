@@ -190,6 +190,7 @@ func (b *Builder) Build(fuzzTests []string) (map[string]*build.Result, error) {
 		generatedCorpus := filepath.Join(parent, filepath.Join(strings.Split(canonicalName, "/")...))
 
 		results[fuzzTest] = &build.Result{
+			Name:            canonicalName,
 			Executable:      fuzzScript,
 			GeneratedCorpus: generatedCorpus,
 			SeedCorpus:      seedCorpus,

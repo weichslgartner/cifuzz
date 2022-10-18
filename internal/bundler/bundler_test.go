@@ -53,6 +53,7 @@ func TestAssembleArtifacts_Fuzzing(t *testing.T) {
 		runtimeDeps = append(runtimeDeps, uncommonSystemDepUnix)
 	}
 	buildResult := &build.Result{
+		Name:        fuzzTest,
 		Executable:  filepath.Join(buildDir, "pkg", fuzzTest),
 		SeedCorpus:  seedCorpus,
 		BuildDir:    buildDir,
@@ -65,7 +66,7 @@ func TestAssembleArtifacts_Fuzzing(t *testing.T) {
 		Env: []string{"FOO=foo"},
 	})
 	b.tempDir = tempDir
-	fuzzers, manifest, systemDeps, err := b.assembleArtifacts(fuzzTest, buildResult, projectDir)
+	fuzzers, manifest, systemDeps, err := b.assembleArtifacts(buildResult, projectDir)
 	require.NoError(t, err)
 
 	require.Equal(t, 1, len(fuzzers))
@@ -118,6 +119,7 @@ func TestAssembleArtifacts_Coverage(t *testing.T) {
 		runtimeDeps = append(runtimeDeps, uncommonSystemDepUnix)
 	}
 	buildResult := &build.Result{
+		Name:        fuzzTest,
 		Executable:  filepath.Join(buildDir, "pkg", fuzzTest),
 		SeedCorpus:  seedCorpus,
 		BuildDir:    buildDir,
@@ -128,7 +130,7 @@ func TestAssembleArtifacts_Coverage(t *testing.T) {
 
 	c := NewBundler(&Opts{})
 	c.tempDir = tempDir
-	fuzzers, manifest, systemDeps, err := c.assembleArtifacts(fuzzTest, buildResult, projectDir)
+	fuzzers, manifest, systemDeps, err := c.assembleArtifacts(buildResult, projectDir)
 	require.NoError(t, err)
 
 	require.Equal(t, 1, len(fuzzers))

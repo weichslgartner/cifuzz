@@ -209,8 +209,8 @@ func (b *Bundler) Bundle() error {
 	archiveManifest := make(map[string]string)
 	deduplicatedSystemDeps := make(map[string]struct{})
 	for _, buildResults := range allVariantBuildResults {
-		for fuzzTest, buildResult := range buildResults {
-			fuzzTestFuzzers, fuzzTestArchiveManifest, systemDeps, err := b.assembleArtifacts(fuzzTest, buildResult, b.Opts.ProjectDir)
+		for _, buildResult := range buildResults {
+			fuzzTestFuzzers, fuzzTestArchiveManifest, systemDeps, err := b.assembleArtifacts(buildResult, b.Opts.ProjectDir)
 			if err != nil {
 				return err
 			}
@@ -412,7 +412,7 @@ func (b *Bundler) buildAllVariantsOther(configureVariants []configureVariant) ([
 			// To avoid that subsequent builds overwrite the artifacts
 			// from this build, we copy them to a temporary directory
 			// and adjust the paths in the build.Result struct
-			tempDir := filepath.Join(b.tempDir, fuzzTestPrefix(fuzzTest, buildResult))
+			tempDir := filepath.Join(b.tempDir, fuzzTestPrefix(buildResult))
 			err = b.copyArtifactsToTempdir(buildResult, tempDir)
 			if err != nil {
 				return nil, err
@@ -480,7 +480,7 @@ func (b *Bundler) checkDependencies() (bool, error) {
 }
 
 //nolint:nonamedreturns
-func (b *Bundler) assembleArtifacts(fuzzTest string, buildResult *build.Result, projectDir string) (
+func (b *Bundler) assembleArtifacts(buildResult *build.Result, projectDir string) (
 	fuzzers []*artifact.Fuzzer,
 	archiveManifest map[string]string,
 	systemDeps []string,
@@ -491,7 +491,7 @@ func (b *Bundler) assembleArtifacts(fuzzTest string, buildResult *build.Result, 
 	archiveManifest = make(map[string]string)
 	// Add all build artifacts under a subdirectory of the fuzz test base path so that these files don't clash with
 	// seeds and dictionaries.
-	buildArtifactsPrefix := filepath.Join(fuzzTestPrefix(fuzzTest, buildResult), "bin")
+	buildArtifactsPrefix := filepath.Join(fuzzTestPrefix(buildResult), "bin")
 
 	// Add the fuzz test executable.
 	ok, err := fileutil.IsBelow(fuzzTestExecutableAbsPath, buildResult.BuildDir)
@@ -577,12 +577,12 @@ depsLoop:
 		// to the library search path in the run environment.
 		// Note: Since all libraries are placed in a single directory, we have to ensure that basenames of external
 		// libraries are unique. If they aren't, we report a conflict.
-		externalLibrariesPrefix = filepath.Join(fuzzTestPrefix(fuzzTest, buildResult), "external_libs")
+		externalLibrariesPrefix = filepath.Join(fuzzTestPrefix(buildResult), "external_libs")
 		archivePath := filepath.Join(externalLibrariesPrefix, filepath.Base(dep))
 		if conflictingDep, hasConflict := archiveManifest[archivePath]; hasConflict {
 			err = errors.Errorf(
 				"fuzz test %q has conflicting runtime dependencies: %s and %s",
-				fuzzTest,
+				buildResult.Name,
 				dep,
 				conflictingDep,
 			)
@@ -594,7 +594,7 @@ depsLoop:
 	// Add dictionary to archive
 	var archiveDict string
 	if b.Opts.Dictionary != "" {
-		archiveDict = filepath.Join(fuzzTestPrefix(fuzzTest, buildResult), "dict")
+		archiveDict = filepath.Join(fuzzTestPrefix(buildResult), "dict")
 		archiveManifest[archiveDict] = b.Opts.Dictionary
 	}
 
@@ -611,7 +611,7 @@ depsLoop:
 	}
 	var archiveSeedsDir string
 	if len(seedCorpusDirs) > 0 {
-		archiveSeedsDir = filepath.Join(fuzzTestPrefix(fuzzTest, buildResult), "seeds")
+		archiveSeedsDir = filepath.Join(fuzzTestPrefix(buildResult), "seeds")
 		var targetDirs []string
 		for _, sourceDir := range seedCorpusDirs {
 			// Put the seeds into subdirectories of the "seeds" directory
@@ -644,7 +644,7 @@ depsLoop:
 	}
 
 	baseFuzzerInfo := artifact.Fuzzer{
-		Target:     fuzzTest,
+		Target:     buildResult.Name,
 		Path:       fuzzTestArchivePath,
 		ProjectDir: projectDir,
 		Dictionary: archiveDict,
@@ -727,7 +727,7 @@ func (b *Bundler) getCodeRevision() *artifact.CodeRevision {
 
 // fuzzTestPrefix returns the path in the resulting artifact archive under which fuzz test specific files should be
 // added.
-func fuzzTestPrefix(fuzzTest string, buildResult *build.Result) string {
+func fuzzTestPrefix(buildResult *build.Result) string {
 	sanitizerSegment := strings.Join(buildResult.Sanitizers, "+")
 	if sanitizerSegment == "" {
 		sanitizerSegment = "none"
@@ -741,7 +741,7 @@ func fuzzTestPrefix(fuzzTest string, buildResult *build.Result) string {
 		//  directory arguments.
 		engine = "replayer"
 	}
-	return filepath.Join(engine, sanitizerSegment, fuzzTest)
+	return filepath.Join(engine, sanitizerSegment, buildResult.Name)
 }
 
 func isCoverageBuild(sanitizers []string) bool {
