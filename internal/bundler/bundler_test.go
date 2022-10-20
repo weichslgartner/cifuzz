@@ -60,13 +60,14 @@ func TestAssembleArtifacts_Fuzzing(t *testing.T) {
 		Engine:      "libfuzzer",
 		Sanitizers:  []string{"address"},
 		RuntimeDeps: runtimeDeps,
+		ProjectDir:  projectDir,
 	}
 
 	b := NewBundler(&Opts{
 		Env: []string{"FOO=foo"},
 	})
 	b.tempDir = tempDir
-	fuzzers, manifest, systemDeps, err := b.assembleArtifacts(buildResult, projectDir)
+	fuzzers, manifest, systemDeps, err := b.assembleArtifacts(buildResult)
 	require.NoError(t, err)
 
 	require.Equal(t, 1, len(fuzzers))
@@ -126,11 +127,12 @@ func TestAssembleArtifacts_Coverage(t *testing.T) {
 		Engine:      "libfuzzer",
 		Sanitizers:  []string{"coverage"},
 		RuntimeDeps: runtimeDeps,
+		ProjectDir:  projectDir,
 	}
 
 	c := NewBundler(&Opts{})
 	c.tempDir = tempDir
-	fuzzers, manifest, systemDeps, err := c.assembleArtifacts(buildResult, projectDir)
+	fuzzers, manifest, systemDeps, err := c.assembleArtifacts(buildResult)
 	require.NoError(t, err)
 
 	require.Equal(t, 1, len(fuzzers))

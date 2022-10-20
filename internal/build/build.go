@@ -28,6 +28,9 @@ type Result struct {
 	Sanitizers []string
 	// The canonical paths of the fuzz test's runtime dependencies
 	RuntimeDeps []string
+	// Canonical path of the directory to which source file paths should
+	// be made relative
+	ProjectDir string
 }
 
 func CommonBuildEnv() ([]string, error) {

@@ -371,10 +371,12 @@ func (b *Builder) BuildForBundle(engine string, sanitizers []string, fuzzTests [
 		}
 
 		result := &build.Result{
-			Name:        path,
-			Executable:  executable,
-			SeedCorpus:  extractedCorpus,
-			BuildDir:    extractedDir,
+			Name:       path,
+			Executable: executable,
+			SeedCorpus: extractedCorpus,
+			BuildDir:   extractedDir,
+			// Bazel builds files with PWD=/proc/self/cwd
+			ProjectDir:  "/proc/self/cwd",
 			Engine:      b.Engine,
 			Sanitizers:  sanitizers,
 			RuntimeDeps: runtimeDeps,

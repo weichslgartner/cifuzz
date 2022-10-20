@@ -211,7 +211,7 @@ func (b *Bundler) Bundle() error {
 	archiveManifest := make(map[string]string)
 	deduplicatedSystemDeps := make(map[string]struct{})
 	for _, buildResult := range buildResults {
-		fuzzTestFuzzers, fuzzTestArchiveManifest, systemDeps, err := b.assembleArtifacts(buildResult, b.Opts.ProjectDir)
+		fuzzTestFuzzers, fuzzTestArchiveManifest, systemDeps, err := b.assembleArtifacts(buildResult)
 		if err != nil {
 			return err
 		}
@@ -525,7 +525,7 @@ func (b *Bundler) checkDependencies() (bool, error) {
 }
 
 //nolint:nonamedreturns
-func (b *Bundler) assembleArtifacts(buildResult *build.Result, projectDir string) (
+func (b *Bundler) assembleArtifacts(buildResult *build.Result) (
 	fuzzers []*artifact.Fuzzer,
 	archiveManifest map[string]string,
 	systemDeps []string,
@@ -691,7 +691,7 @@ depsLoop:
 	baseFuzzerInfo := artifact.Fuzzer{
 		Target:     buildResult.Name,
 		Path:       fuzzTestArchivePath,
-		ProjectDir: projectDir,
+		ProjectDir: buildResult.ProjectDir,
 		Dictionary: archiveDict,
 		Seeds:      archiveSeedsDir,
 		EngineOptions: artifact.EngineOptions{

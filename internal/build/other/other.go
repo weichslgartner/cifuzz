@@ -163,6 +163,7 @@ func (b *Builder) Build(fuzzTest string) (*build.Result, error) {
 		GeneratedCorpus: generatedCorpus,
 		SeedCorpus:      seedCorpus,
 		BuildDir:        buildDir,
+		ProjectDir:      b.ProjectDir,
 		Engine:          b.Engine,
 		Sanitizers:      b.Sanitizers,
 		RuntimeDeps:     runtimeDeps,
