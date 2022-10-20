@@ -179,6 +179,9 @@ func (b *Builder) setLibFuzzerEnv() error {
 		// TODO: Check if there are other additional error detectors
 		//       which we want to use
 		"-fsanitize-address-use-after-scope",
+		// Disable source fortification, which is currently not supported
+		// in combination with ASan, see https://github.com/google/sanitizers/issues/247
+		"-U_FORTIFY_SOURCE",
 	}...)
 	b.env, err = envutil.Setenv(b.env, "CFLAGS", strings.Join(cflags, " "))
 	if err != nil {
@@ -232,6 +235,9 @@ func (b *Builder) setCoverageEnv() error {
 		// ----- Flags used to build with code coverage -----
 		"-fprofile-instr-generate",
 		"-fcoverage-mapping",
+		// Disable source fortification to ensure that coverage builds
+		// reach all code reached by ASan builds.
+		"-U_FORTIFY_SOURCE",
 	}...)
 
 	if runtime.GOOS != "darwin" {
