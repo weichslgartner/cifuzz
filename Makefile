@@ -45,6 +45,10 @@ clean/examples/cmake:
 deps:
 	go mod download
 
+.PHONY: deps/integration-tests
+deps/integration-tests:
+	go install github.com/bazelbuild/buildtools/buildozer@latest
+
 .PHONY: deps/dev
 deps/dev: deps
 	go install github.com/incu6us/goimports-reviser/v2@latest
@@ -135,11 +139,11 @@ test/unit: deps
 	go test -v ./... -short
 
 .PHONY: test/integration
-test/integration: deps
+test/integration: deps deps/integration-tests
 	go test -v ./... -run 'TestIntegration.*'
 
 .PHONY: test/integration/sequential
-test/integration/sequential: deps
+test/integration/sequential: deps deps/integration-tests
 	go test -v -parallel=1 ./... -run 'TestIntegration.*'
 
 .PHONY: test/race

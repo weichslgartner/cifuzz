@@ -1,0 +1,12 @@
+cc_library(
+    name = "secrets",
+    srcs = ["secrets.cpp"],
+    hdrs = ["secrets.h"],
+)
+
+cc_library(
+    name = "parser",
+    srcs = ["parser.cpp"],
+    hdrs = ["parser.h"],
+    deps = [":secrets"],
+)

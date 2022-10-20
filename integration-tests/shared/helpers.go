@@ -59,7 +59,16 @@ func AddLinesToFileAtBreakPoint(t *testing.T, filePath string, linesToAdd []stri
 	// Write the new content of pom.xml back to filePath
 	_, err = f.Seek(0, io.SeekStart)
 	require.NoError(t, err)
-	_, err = f.WriteString(strings.Join(lines, "\n"))
+	_, err = f.WriteString(strings.Join(lines, "\n") + "\n")
+	require.NoError(t, err)
+}
+
+func AppendLines(t *testing.T, filePath string, linesToAdd []string) {
+	f, err := os.OpenFile(filePath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
+	require.NoError(t, err)
+	defer f.Close()
+
+	_, err = f.WriteString(strings.Join(linesToAdd, "\n") + "\n")
 	require.NoError(t, err)
 }
 
@@ -142,30 +151,36 @@ func InstallCIFuzzInTemp(t *testing.T) string {
 	return installDir
 }
 
-// RunCommand runs "cifuzz <args>" command in the given directory
-// and returns the suggested code blocks from the console output.
-func RunCommand(t *testing.T, dir, cifuzz string, args []string) []string {
-	t.Helper()
+func ModifyFuzzTestToCallFunction(t *testing.T, fuzzTestPath string) {
+	// Modify the fuzz test stub created by `cifuzz create` to actually
+	// call a function.
 
-	cmd := executil.Command(cifuzz, args...)
-	cmd.Dir = dir
-	stderrPipe, err := cmd.StderrTeePipe(os.Stderr)
-	defer stderrPipe.Close()
+	f, err := os.OpenFile(fuzzTestPath, os.O_RDWR, 0700)
 	require.NoError(t, err)
-
-	t.Logf("Command: %s", cmd.String())
-	err = cmd.Run()
-	require.NoError(t, err)
-
-	scanner := bufio.NewScanner(stderrPipe)
-	var linesToAdd []string
+	defer f.Close()
+	scanner := bufio.NewScanner(f)
+	// At the top of the file we add the required headers
+	lines := []string{`#include "parser.h"`}
+	var seenBeginningOfFuzzTestFunc bool
+	var addedFunctionCall bool
 	for scanner.Scan() {
-		if strings.HasPrefix(scanner.Text(), "    ") {
-			linesToAdd = append(linesToAdd, strings.TrimSpace(scanner.Text()))
-		} else if len(linesToAdd) != 0 {
-			break
+		if strings.HasPrefix(scanner.Text(), "FUZZ_TEST(") {
+			seenBeginningOfFuzzTestFunc = true
 		}
+		// Insert the function call at the end of the FUZZ_TEST
+		// function, right above the "}".
+		if seenBeginningOfFuzzTestFunc && strings.HasPrefix(scanner.Text(), "}") {
+			lines = append(lines, "  parse(std::string(reinterpret_cast<const char *>(data), size));")
+			addedFunctionCall = true
+		}
+		lines = append(lines, scanner.Text())
 	}
+	require.NoError(t, scanner.Err())
+	require.True(t, addedFunctionCall)
 
-	return linesToAdd
+	// Write the new content of the fuzz test back to file
+	_, err = f.Seek(0, io.SeekStart)
+	require.NoError(t, err)
+	_, err = f.WriteString(strings.Join(lines, "\n"))
+	require.NoError(t, err)
 }

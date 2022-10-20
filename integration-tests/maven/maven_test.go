@@ -25,14 +25,21 @@ func TestIntegration_Maven(t *testing.T) {
 	projectDir := shared.CopyTestdataDir(t, "maven")
 	defer fileutil.Cleanup(projectDir)
 
+	cifuzzRunner := shared.CIFuzzRunner{
+		CIFuzzPath:     cifuzz,
+		DefaultWorkDir: projectDir,
+	}
+
 	// Execute the init command
-	output := shared.RunCommand(t, projectDir, cifuzz, []string{"init"})
+	linesToAdd := cifuzzRunner.Command(t, "init", nil)
 	assert.FileExists(t, filepath.Join(projectDir, "cifuzz.yaml"))
-	shared.AddLinesToFileAtBreakPoint(t, filepath.Join(projectDir, "pom.xml"), output, "    </dependencies>", false)
+	shared.AddLinesToFileAtBreakPoint(t, filepath.Join(projectDir, "pom.xml"), linesToAdd, "    </dependencies>", false)
 
 	// Execute the create command
 	outputPath := filepath.Join("src", "MyClassFuzzTest.java")
-	shared.RunCommand(t, projectDir, cifuzz, []string{"create", "java", "--output", outputPath})
+	cifuzzRunner.Command(t, "create", &shared.CommandOptions{
+		Args: []string{"java", "--output", outputPath}},
+	)
 
 	// Check that the fuzz test was created in the correct directory
 	fuzzTestPath := filepath.Join(projectDir, outputPath)

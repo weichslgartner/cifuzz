@@ -3,23 +3,17 @@ package cmake
 import (
 	"bufio"
 	"bytes"
-	"context"
-	"io"
 	"os"
-	"os/signal"
 	"path/filepath"
 	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
-	"sync"
-	"syscall"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"golang.org/x/sync/errgroup"
 
 	"code-intelligence.com/cifuzz/integration-tests/shared"
 	builderPkg "code-intelligence.com/cifuzz/internal/builder"
@@ -48,38 +42,40 @@ func TestIntegration_CMake_InitCreateRunCoverageBundle(t *testing.T) {
 	defer fileutil.Cleanup(dir)
 	t.Logf("executing cmake integration test in %s", dir)
 
+	cifuzzRunner := shared.CIFuzzRunner{
+		CIFuzzPath:      cifuzz,
+		DefaultWorkDir:  dir,
+		DefaultFuzzTest: "parser_fuzz_test",
+	}
+
 	// Execute the root command
-	shared.RunCommand(t, dir, cifuzz, nil)
+	cifuzzRunner.Command(t, "", nil)
 
 	// Execute the init command
-	initOutput := shared.RunCommand(t, dir, cifuzz, []string{"init"})
-	shared.AddLinesToFileAtBreakPoint(t, filepath.Join(dir, "CMakeLists.txt"), initOutput, "add_subdirectory", false)
+	linesToAdd := cifuzzRunner.Command(t, "init", nil)
+	shared.AddLinesToFileAtBreakPoint(t, filepath.Join(dir, "CMakeLists.txt"), linesToAdd, "add_subdirectory", false)
 
 	// Execute the create command
 	outputPath := filepath.Join("src", "parser", "parser_fuzz_test.cpp")
-	createOutput := shared.RunCommand(t, dir, cifuzz, []string{"create", "cpp", "--output", outputPath})
+	linesToAdd = cifuzzRunner.Command(t, "create", &shared.CommandOptions{
+		Args: []string{"cpp", "--output", outputPath}},
+	)
 
 	// Check that the fuzz test was created in the correct directory
 	fuzzTestPath := filepath.Join(dir, outputPath)
 	require.FileExists(t, fuzzTestPath)
 
 	// Append the lines to CMakeLists.txt
-	f, err := os.OpenFile(filepath.Join(filepath.Dir(fuzzTestPath), "CMakeLists.txt"), os.O_APPEND|os.O_WRONLY, 0600)
-	defer f.Close()
-	require.NoError(t, err)
-	for _, s := range createOutput {
-		_, err = f.WriteString(s + "\n")
-		require.NoError(t, err)
-	}
+	shared.AppendLines(t, filepath.Join(filepath.Dir(fuzzTestPath), "CMakeLists.txt"), linesToAdd)
 
 	// Check that the findings command doesn't list any findings yet
 	findings := shared.GetFindings(t, cifuzz, dir)
 	require.Empty(t, findings)
 
 	// Run the (empty) fuzz test
-	runFuzzer(t, cifuzz, dir, &runFuzzerOptions{
-		expectedOutputs:              []*regexp.Regexp{regexp.MustCompile(`^paths: \d+`)},
-		terminateAfterExpectedOutput: true,
+	cifuzzRunner.Run(t, &shared.RunOptions{
+		ExpectedOutputs:              []*regexp.Regexp{regexp.MustCompile(`^paths: \d+`)},
+		TerminateAfterExpectedOutput: true,
 	})
 
 	// Make the fuzz test call a function. Before we do that, we sleep
@@ -87,7 +83,11 @@ func TestIntegration_CMake_InitCreateRunCoverageBundle(t *testing.T) {
 	// the full seconds of the timestamp to not rebuild the target, see
 	// https://www.gnu.org/software/autoconf/manual/autoconf-2.63/html_node/Timestamps-and-Make.html
 	time.Sleep(time.Second)
-	modifyFuzzTestToCallFunction(t, fuzzTestPath)
+	shared.ModifyFuzzTestToCallFunction(t, fuzzTestPath)
+
+	// Add dependency on parser lib to CMakeLists.txt
+	cmakeLists := filepath.Join(filepath.Dir(fuzzTestPath), "CMakeLists.txt")
+	shared.AppendLines(t, cmakeLists, []string{"target_link_libraries(parser_fuzz_test PRIVATE parser)"})
 
 	// Run the fuzz test and check that it finds the undefined behavior
 	// (unless we're running on Windows, in which case UBSan is not
@@ -96,7 +96,7 @@ func TestIntegration_CMake_InitCreateRunCoverageBundle(t *testing.T) {
 		expectedOutputs := []*regexp.Regexp{
 			regexp.MustCompile(`^SUMMARY: UndefinedBehaviorSanitizer: undefined-behavior`),
 		}
-		runFuzzer(t, cifuzz, dir, &runFuzzerOptions{expectedOutputs: expectedOutputs})
+		cifuzzRunner.Run(t, &shared.RunOptions{ExpectedOutputs: expectedOutputs})
 	}
 
 	expectedOutputs := []*regexp.Regexp{
@@ -113,9 +113,9 @@ func TestIntegration_CMake_InitCreateRunCoverageBundle(t *testing.T) {
 
 	// Run the fuzz test with --recover-ubsan and verify that it now
 	// also finds the heap buffer overflow
-	runFuzzer(t, cifuzz, dir, &runFuzzerOptions{
-		expectedOutputs: expectedOutputs,
-		args:            []string{"--recover-ubsan"},
+	cifuzzRunner.Run(t, &shared.RunOptions{
+		Args:            []string{"--recover-ubsan"},
+		ExpectedOutputs: expectedOutputs,
 	})
 
 	// Check that the findings command lists the findings
@@ -169,15 +169,15 @@ func TestIntegration_CMake_InitCreateRunCoverageBundle(t *testing.T) {
 	expectedOutputs = []*regexp.Regexp{
 		regexp.MustCompile(regexp.QuoteMeta(`artifact_prefix='` + filepath.Join(os.TempDir(), "libfuzzer-out"))),
 	}
-	runFuzzer(t, cifuzz, dir, &runFuzzerOptions{expectedOutputs: expectedOutputs})
+	cifuzzRunner.Run(t, &shared.RunOptions{ExpectedOutputs: expectedOutputs})
 
 	if runtime.GOOS == "linux" {
 		// Check that command-line flags take precedence over config file
 		// settings (only on Linux because we only support Minijail on
 		// Linux).
-		runFuzzer(t, cifuzz, dir, &runFuzzerOptions{
-			expectedOutputs: []*regexp.Regexp{regexp.MustCompile(`minijail`)},
-			args:            []string{"--use-sandbox=true"},
+		cifuzzRunner.Run(t, &shared.RunOptions{
+			Args:            []string{"--use-sandbox=true"},
+			ExpectedOutputs: []*regexp.Regexp{regexp.MustCompile(`minijail`)},
 		})
 	}
 	// Clear cifuzz.yml so that subsequent tests run with defaults (e.g. sandboxing).
@@ -187,11 +187,11 @@ func TestIntegration_CMake_InitCreateRunCoverageBundle(t *testing.T) {
 	// Check that ASAN_OPTIONS can be set
 	env, err := envutil.Setenv(os.Environ(), "ASAN_OPTIONS", "print_stats=1:atexit=1")
 	require.NoError(t, err)
-	runFuzzer(t, cifuzz, dir, &runFuzzerOptions{
-		expectedOutputs:              []*regexp.Regexp{regexp.MustCompile(`Stats:`)},
-		terminateAfterExpectedOutput: false,
-		env:                          env,
-		args:                         []string{"--recover-ubsan"},
+	cifuzzRunner.Run(t, &shared.RunOptions{
+		Args:                         []string{"--recover-ubsan"},
+		Env:                          env,
+		ExpectedOutputs:              []*regexp.Regexp{regexp.MustCompile(`Stats:`)},
+		TerminateAfterExpectedOutput: false,
 	})
 
 	// Building with coverage instrumentation doesn't work on Windows yet
@@ -209,138 +209,7 @@ func TestIntegration_CMake_InitCreateRunCoverageBundle(t *testing.T) {
 	if runtime.GOOS == "linux" {
 		testRemoteRun(t, dir, cifuzz)
 	}
-}
 
-type runFuzzerOptions struct {
-	expectedOutputs              []*regexp.Regexp
-	terminateAfterExpectedOutput bool
-	env                          []string
-	args                         []string
-}
-
-func runFuzzer(t *testing.T, cifuzz string, dir string, opts *runFuzzerOptions) {
-	t.Helper()
-
-	if opts.env == nil {
-		opts.env = os.Environ()
-	}
-
-	runCtx, closeRunCtx := context.WithCancel(context.Background())
-	defer closeRunCtx()
-	args := append([]string{"run", "-v", "parser_fuzz_test",
-		"--no-notifications",
-		"--engine-arg=-seed=1",
-		"--engine-arg=-runs=1000000"},
-		opts.args...)
-	cmd := executil.CommandContext(
-		runCtx,
-		cifuzz,
-		args...,
-	)
-	cmd.Dir = dir
-	cmd.Env = opts.env
-	stdoutPipe, err := cmd.StdoutTeePipe(os.Stdout)
-	require.NoError(t, err)
-	stderrPipe, err := cmd.StderrTeePipe(os.Stderr)
-	require.NoError(t, err)
-
-	// Terminate the cifuzz process when we receive a termination signal
-	// (else the test won't stop). An alternative would be to run the
-	// command in the foreground, via syscall.SysProcAttr.Foreground,
-	// but that's not supported on Windows.
-	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, os.Interrupt, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
-	go func() {
-		s := <-sigs
-		t.Logf("Received %s", s.String())
-		err = cmd.TerminateProcessGroup()
-		require.NoError(t, err)
-	}()
-
-	t.Logf("Command: %s", cmd.String())
-	err = cmd.Start()
-	require.NoError(t, err)
-
-	waitErrCh := make(chan error)
-	// Wait for the command to exit in a go routine, so that below
-	// we can cancel waiting when the context is done
-	go func() {
-		waitErrCh <- cmd.Wait()
-	}()
-
-	// Check that the output contains the expected output
-	var seenExpectedOutputs int
-	lenExpectedOutputs := len(opts.expectedOutputs)
-	mutex := sync.Mutex{}
-
-	routines := errgroup.Group{}
-	routines.Go(func() error {
-		// cifuzz progress messages go to stdout.
-		scanner := bufio.NewScanner(stdoutPipe)
-		for scanner.Scan() {
-			mutex.Lock()
-			var remainingExpectedOutputs []*regexp.Regexp
-			for _, expectedOutput := range opts.expectedOutputs {
-				if expectedOutput.MatchString(scanner.Text()) {
-					seenExpectedOutputs += 1
-				} else {
-					remainingExpectedOutputs = append(remainingExpectedOutputs, expectedOutput)
-				}
-			}
-			opts.expectedOutputs = remainingExpectedOutputs
-			if seenExpectedOutputs == lenExpectedOutputs && opts.terminateAfterExpectedOutput {
-				err = cmd.TerminateProcessGroup()
-				require.NoError(t, err)
-			}
-			mutex.Unlock()
-		}
-		err = stdoutPipe.Close()
-		require.NoError(t, err)
-		return nil
-	})
-
-	routines.Go(func() error {
-		// Fuzzer output goes to stderr.
-		scanner := bufio.NewScanner(stderrPipe)
-		for scanner.Scan() {
-			mutex.Lock()
-			var remainingExpectedOutputs []*regexp.Regexp
-			for _, expectedOutput := range opts.expectedOutputs {
-				if expectedOutput.MatchString(scanner.Text()) {
-					seenExpectedOutputs += 1
-				} else {
-					remainingExpectedOutputs = append(remainingExpectedOutputs, expectedOutput)
-				}
-			}
-			opts.expectedOutputs = remainingExpectedOutputs
-			if seenExpectedOutputs == lenExpectedOutputs && opts.terminateAfterExpectedOutput {
-				err = cmd.TerminateProcessGroup()
-				require.NoError(t, err)
-			}
-			mutex.Unlock()
-		}
-		err = stderrPipe.Close()
-		require.NoError(t, err)
-		return nil
-	})
-
-	select {
-	case waitErr := <-waitErrCh:
-
-		err = routines.Wait()
-		require.NoError(t, err)
-
-		seen := seenExpectedOutputs == lenExpectedOutputs
-		if seen && opts.terminateAfterExpectedOutput && executil.IsTerminatedExitErr(waitErr) {
-			return
-		}
-		require.NoError(t, waitErr)
-	case <-runCtx.Done():
-		require.NoError(t, runCtx.Err())
-	}
-
-	seen := seenExpectedOutputs == lenExpectedOutputs
-	require.True(t, seen, "Did not see %q in fuzzer output", opts.expectedOutputs)
 }
 
 func createHtmlCoverageReport(t *testing.T, cifuzz string, dir string) {
@@ -421,48 +290,6 @@ func createAndVerifyLcovCoverageReport(t *testing.T, cifuzz string, dir string) 
 		// instrumentation, so we conservatively assume they aren't covered.
 		21, 31, 41},
 		uncoveredLines)
-}
-
-func modifyFuzzTestToCallFunction(t *testing.T, fuzzTestPath string) {
-	// Modify the fuzz test stub created by `cifuzz create` to actually
-	// call a function.
-
-	f, err := os.OpenFile(fuzzTestPath, os.O_RDWR, 0700)
-	require.NoError(t, err)
-	defer f.Close()
-	scanner := bufio.NewScanner(f)
-	// At the top of the file we add the required headers
-	lines := []string{`#include "parser.h"`}
-	var seenBeginningOfFuzzTestFunc bool
-	var addedFunctionCall bool
-	for scanner.Scan() {
-		if strings.HasPrefix(scanner.Text(), "FUZZ_TEST(") {
-			seenBeginningOfFuzzTestFunc = true
-		}
-		// Insert the function call at the end of the FUZZ_TEST
-		// function, right above the "}".
-		if seenBeginningOfFuzzTestFunc && strings.HasPrefix(scanner.Text(), "}") {
-			lines = append(lines, "  parse(std::string(reinterpret_cast<const char *>(data), size));")
-			addedFunctionCall = true
-		}
-		lines = append(lines, scanner.Text())
-	}
-	require.NoError(t, scanner.Err())
-	require.True(t, addedFunctionCall)
-
-	// Write the new content of the fuzz test back to file
-	_, err = f.Seek(0, io.SeekStart)
-	require.NoError(t, err)
-	_, err = f.WriteString(strings.Join(lines, "\n"))
-	require.NoError(t, err)
-
-	// Add dependency on parser lib to CMakeLists.txt
-	cmakeLists := filepath.Join(filepath.Dir(fuzzTestPath), "CMakeLists.txt")
-	f, err = os.OpenFile(cmakeLists, os.O_APPEND|os.O_WRONLY, 0700)
-	require.NoError(t, err)
-	defer f.Close()
-	_, err = f.WriteString("target_link_libraries(parser_fuzz_test PRIVATE parser)\n")
-	require.NoError(t, err)
 }
 
 func testRemoteRun(t *testing.T, dir string, cifuzz string) {
