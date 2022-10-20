@@ -18,7 +18,7 @@ import (
 	"code-intelligence.com/cifuzz/util/fileutil"
 )
 
-func TestIntegration_Bazel_InitCreateRun(t *testing.T) {
+func TestIntegration_Bazel_InitCreateRunBundle(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
@@ -148,4 +148,7 @@ func TestIntegration_Bazel_InitCreateRun(t *testing.T) {
 		ExpectedOutputs:              []*regexp.Regexp{regexp.MustCompile(`Stats:`)},
 		TerminateAfterExpectedOutput: false,
 	})
+
+	// Run cifuzz bundle and verify the contents of the archive.
+	shared.TestBundle(t, dir, cifuzz, "//src/parser:parser_fuzz_test")
 }
