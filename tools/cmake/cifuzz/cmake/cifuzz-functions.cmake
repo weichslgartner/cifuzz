@@ -78,6 +78,13 @@ function(enable_fuzz_testing)
             -fsanitize=address
             -fsanitize-recover=address
             -fsanitize-address-use-after-scope
+            # Disable source fortification, which is currently not supported
+            # in combination with ASan, see https://github.com/google/sanitizers/issues/247
+            # Note that this does not override a user-specified -D_FORTIFY_SOURCE,
+            # because the flags we add here come before user-specified flags.
+            # It's still useful to disable source fortification which the
+            # toolchain or distribution might have enabled by default.
+            -U_FORTIFY_SOURCE
         )
         add_link_options(-fsanitize=address)
       endif()
@@ -92,7 +99,13 @@ function(enable_fuzz_testing)
       if(MSVC)
         message(FATAL_ERROR "cifuzz: MSVC does not support coverage builds yet")
       else()
-        add_compile_options(-fprofile-instr-generate -fcoverage-mapping)
+        add_compile_options(
+            -fprofile-instr-generate
+            -fcoverage-mapping
+            # Disable source fortification to ensure that coverage builds
+            # reach all code reached by ASan builds.
+            -U_FORTIFY_SOURCE
+        )
         if(NOT APPLE)
           # LLVM's continuous coverage mode currently requires compile-time support on non-macOS platforms. This is only
           # really working as of clang 14 though, earlier versions are affected by runtime crashes.
