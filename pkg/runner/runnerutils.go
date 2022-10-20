@@ -2,6 +2,7 @@ package runner
 
 import (
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -176,11 +177,21 @@ func FuzzerEnvironment() ([]string, error) {
 
 	// Tell the address sanitizer where it can find llvm-symbolizer.
 	// See https://clang.llvm.org/docs/AddressSanitizer.html#symbolizing-the-reports
-	llvmSymbolizer, err := runfiles.Finder.LLVMSymbolizerPath()
+	llvmSymbolizerPath, err := runfiles.Finder.LLVMSymbolizerPath()
 	if err != nil {
 		return nil, err
 	}
-	env, err = envutil.Setenv(env, "ASAN_SYMBOLIZER_PATH", llvmSymbolizer)
+	// Resolve the path to the llvm-symbolizer to ensure that the path
+	// can be accessed inside the sandbox
+	resolvedLLVMSymbolizerPath, err := filepath.EvalSymlinks(llvmSymbolizerPath)
+	if err != nil {
+		return nil, errors.Wrapf(err, "path: %s", llvmSymbolizerPath)
+	}
+	_, err = os.Stat(resolvedLLVMSymbolizerPath)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	env, err = envutil.Setenv(env, "ASAN_SYMBOLIZER_PATH", resolvedLLVMSymbolizerPath)
 	if err != nil {
 		return nil, err
 	}

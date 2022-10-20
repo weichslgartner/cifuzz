@@ -308,7 +308,15 @@ func NewMinijail(opts *Options) (*minijail, error) {
 	if err != nil {
 		return nil, err
 	}
-	llvmDir := filepath.Dir(filepath.Dir(llvmSymbolizerPath))
+	resolvedLLVMSymbolizerPath, err := filepath.EvalSymlinks(llvmSymbolizerPath)
+	if err != nil {
+		return nil, errors.Wrapf(err, "path: %s", llvmSymbolizerPath)
+	}
+	_, err = os.Stat(resolvedLLVMSymbolizerPath)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	llvmDir := filepath.Dir(filepath.Dir(resolvedLLVMSymbolizerPath))
 	bindings = append(bindings, &Binding{Source: llvmDir})
 
 	// Add binding for process_wrapper. process_wrapper changes the
