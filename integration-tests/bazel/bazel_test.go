@@ -25,6 +25,12 @@ func TestIntegration_Bazel_InitCreateRun(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("Using cifuzz with bazel is currently only supported on Unix")
 	}
+
+	// TODO: Fix this test on macOS
+	if runtime.GOOS == "darwin" {
+		t.Skip("Building with bazel is currently broken on our macOS GitHub Action runner")
+	}
+
 	testutil.RegisterTestDepOnCIFuzz()
 
 	// Install cifuzz
