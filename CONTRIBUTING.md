@@ -1,8 +1,8 @@
 # Contributing
 
-## Building from Source (Linux)
+## Building from Source (Linux / macOS)
 
-### Prerequisites
+## Prerequisites
 * [git](https://git-scm.com/)
 * [make](https://www.gnu.org/software/make/)
 * [CMake >= 3.21](https://cmake.org/)
@@ -11,13 +11,13 @@
 * [libcap](https://man7.org/linux/man-pages/man3/libcap.3.html)
 
 
-#### Ubuntu / Debian
+### Ubuntu / Debian
 <!-- when changing this, please make sure it is in sync with the E2E pipeline -->
 ```bash
 sudo apt install git make cmake clang llvm golang-go libcap-dev
 ```
 
-#### Arch
+### Arch
 <!-- when changing this, please make sure it is in sync with the E2E pipeline -->
 ```bash
 sudo pacman -S git make cmake clang llvm go
@@ -34,7 +34,21 @@ make
 make install
 ```
 
-### Steps
+### macOS
+<!-- when changing this, please make sure it`is in sync with the E2E pipeline -->
+```bash
+brew install git cmake llvm go
+```
+
+Add the following to your `~/.zshrc` or `~/.bashrc` to use the correct version of
+LLVM:
+```bash
+export PATH=$(brew --prefix)/opt/llvm/bin:$PATH
+export LDFLAGS="-L$(brew --prefix)/opt/llvm/lib"
+export CPPFLAGS="-I$(brew --prefix)/opt/llvm/include"
+```
+
+## Steps
 To build **cifuzz** from source you have to execute the following steps:
 ```bash
 git clone https://github.com/CodeIntelligenceTesting/cifuzz.git
