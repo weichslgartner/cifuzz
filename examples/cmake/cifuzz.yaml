@@ -38,7 +38,7 @@
 ## Recover from findings of the UndefinedBehaviorSanitizer and continue
 ## fuzzing. Note that when using this option, no crashing input is
 ## stored for findings of the UndefinedBehaviorSanitizer.
-#recover-ubsan: true
+recover-ubsan: true
 
 ## Set to true to print output of the `cifuzz run` command as JSON.
 #print-json: true
