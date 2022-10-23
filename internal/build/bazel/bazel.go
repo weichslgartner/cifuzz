@@ -117,6 +117,9 @@ func (b *Builder) Build(fuzzTests []string) (map[string]*build.Result, error) {
 	runFlags := []string{
 		// Build with debug symbols
 		"-c", "opt", "--copt", "-g",
+		// Disable source fortification, which is currently not supported
+		// in combination with ASan, see https://github.com/google/sanitizers/issues/247
+		"--copt", "-U_FORTIFY_SOURCE",
 		// Build with libFuzzer
 		"--@rules_fuzzing//fuzzing:cc_engine=@rules_fuzzing//fuzzing/engines:libfuzzer",
 		"--@rules_fuzzing//fuzzing:cc_engine_instrumentation=libfuzzer",
