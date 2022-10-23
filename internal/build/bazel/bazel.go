@@ -146,6 +146,11 @@ func (b *Builder) BuildForRun(fuzzTests []string) ([]*build.Result, error) {
 		"--verbose_failures",
 		"--script_path=" + fuzzScript,
 	}
+
+	if os.Getenv("BAZEL_SUBCOMMANDS") != "" {
+		runFlags = append(runFlags, "--subcommands")
+	}
+
 	args := []string{"run"}
 	args = append(args, sharedFlags...)
 	args = append(args, runFlags...)
@@ -235,6 +240,10 @@ func (b *Builder) BuildForBundle(engine string, sanitizers []string, fuzzTests [
 		"--@rules_fuzzing//fuzzing:cc_engine=@rules_fuzzing_oss_fuzz//:oss_fuzz_engine",
 		"--@rules_fuzzing//fuzzing:cc_engine_instrumentation=oss-fuzz",
 		"--verbose_failures",
+	}
+
+	if os.Getenv("BAZEL_SUBCOMMANDS") != "" {
+		buildFlags = append(buildFlags, "--subcommands")
 	}
 
 	// Add sanitizer-specific flags
