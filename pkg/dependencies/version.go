@@ -57,7 +57,7 @@ func clangVersion(dep *Dependency, clangCheck execCheck) (*semver.Version, error
 			if err != nil {
 				return nil, err
 			}
-			log.Debugf("Found clang version %s in CC", ccVersion.String())
+			log.Debugf("Found clang version %s in CC: %s", ccVersion.String(), cc)
 			minVersion = ccVersion
 		} else {
 			log.Warn("No clang found in CC")
@@ -73,7 +73,7 @@ func clangVersion(dep *Dependency, clangCheck execCheck) (*semver.Version, error
 			if err != nil {
 				return nil, err
 			}
-			log.Debugf("Found clang version %s in CXX", cxxVersion.String())
+			log.Debugf("Found clang version %s in CXX: %s", cxxVersion.String(), cxx)
 			if minVersion == nil || minVersion.GreaterThan(cxxVersion) {
 				minVersion = cxxVersion
 			}
@@ -92,7 +92,7 @@ func clangVersion(dep *Dependency, clangCheck execCheck) (*semver.Version, error
 			return nil, err
 		}
 		pathVersion, err := clangCheck(path, dep.Key)
-		log.Debugf("Found clang version %s in PATH", pathVersion.String())
+		log.Debugf("Found clang version %s in PATH: %s", pathVersion.String(), path)
 		if minVersion == nil || minVersion.GreaterThan(pathVersion) {
 			minVersion = pathVersion
 		}
@@ -122,6 +122,7 @@ func cmakeVersion(dep *Dependency) (*semver.Version, error) {
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
+	log.Debugf("Found CMake version %s in PATH: %s", version, path)
 	return version, nil
 }
 

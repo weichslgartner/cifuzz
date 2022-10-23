@@ -3,6 +3,8 @@ package dependencies
 import (
 	"github.com/Masterminds/semver"
 	"github.com/pkg/errors"
+
+	"code-intelligence.com/cifuzz/pkg/log"
 )
 
 type Dependencies map[Key]*Dependency
@@ -76,7 +78,12 @@ var all = map[Key]Dependency{
 			if err != nil {
 				return nil, err
 			}
-			return llvmVersion(path, dep)
+			version, err := llvmVersion(path, dep)
+			if err != nil {
+				return nil, err
+			}
+			log.Debugf("Found llvm-cov version %s in PATH: %s", version, path)
+			return version, nil
 		},
 		Installed: func(dep *Dependency) bool {
 			return dep.checkFinder(dep.finder.LLVMCovPath)
@@ -90,7 +97,12 @@ var all = map[Key]Dependency{
 			return semver.NewVersion("0.0.0")
 		},
 		Installed: func(dep *Dependency) bool {
-			return dep.checkFinder(dep.finder.LLVMProfDataPath)
+			path, err := dep.finder.LLVMProfDataPath()
+			if err != nil {
+				return false
+			}
+			log.Debugf("Found llvm-profdata in PATH: %s", path)
+			return true
 		},
 	},
 	LLVM_SYMBOLIZER: {
@@ -101,7 +113,12 @@ var all = map[Key]Dependency{
 			if err != nil {
 				return nil, err
 			}
-			return llvmVersion(path, dep)
+			version, err := llvmVersion(path, dep)
+			if err != nil {
+				return nil, err
+			}
+			log.Debugf("Found llvm-symbolizer version %s in PATH: %s", version, path)
+			return version, nil
 		},
 		Installed: func(dep *Dependency) bool {
 			return dep.checkFinder(dep.finder.LLVMSymbolizerPath)
