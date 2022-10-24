@@ -71,15 +71,15 @@ func TestLLVM(t *testing.T) {
 			errBuf := io.Writer(&bErr)
 
 			testLLVM := &LLVMCoverageGenerator{
-				OutputFormat: tc.format,
-				BuildSystem:  "other",
-				BuildCommand: "make clean && make $FUZZ_TEST",
-				UseSandbox:   false,
-				FuzzTest:     "my_fuzz_test",
-				ProjectDir:   tmpDir,
-				StdOut:       outBuf,
-				StdErr:       errBuf,
-				finder:       finderMock,
+				OutputFormat:   tc.format,
+				BuildSystem:    "other",
+				BuildCommand:   "make clean && make $FUZZ_TEST",
+				UseSandbox:     false,
+				FuzzTest:       "my_fuzz_test",
+				ProjectDir:     tmpDir,
+				StdOut:         outBuf,
+				StdErr:         errBuf,
+				runfilesFinder: finderMock,
 			}
 
 			reportPath, err := testLLVM.Generate()
