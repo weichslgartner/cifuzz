@@ -2,7 +2,7 @@
 
 ## Building from Source (Linux / macOS)
 
-## Prerequisites
+### Prerequisites
 * [git](https://git-scm.com/)
 * [make](https://www.gnu.org/software/make/)
 * [CMake >= 3.21](https://cmake.org/)
@@ -66,4 +66,3 @@ cd examples/cmake
 cifuzz run my_fuzz_test
 ```
 This should stop after a few seconds with an actual finding.
-

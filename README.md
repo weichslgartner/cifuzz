@@ -42,10 +42,9 @@ can change.
 based tests into your project.
 
 ### Features
-* Easily setup, create and run fuzz tests 
-* Get coverage reports
-* Manage your findings with ease
-* Integrates into your favorite IDE (see [coverage IDE integrations](docs/Coverage-ide-integrations.md))
+* Easily set up, create and run fuzz tests 
+* Generate coverage reports that [can be integrated in your
+  IDE](docs/Coverage-ide-integrations.md)
 * Supports multiple programming languages and build systems
 
 ![CLion](/docs/assets/tools/clion.png)
@@ -62,12 +61,13 @@ If you are new to the world of fuzzing, we recommend you to take a
 look at our [Glossary](docs/Glossary.md) and our 
 [example projects](examples/).
 
-> Read the [getting started guide](docs/Getting-Started.md) if you just want to
-learn how to fuzz your applications with cifuzz.
+**Read the [getting started guide](docs/Getting-Started.md) if you just want to
+learn how to fuzz your applications with cifuzz.**
 
 
 ## Installation
-You can get the latest release [here](https://github.com/CodeIntelligenceTesting/cifuzz/releases/latest)
+You can get the
+[latest release from GitHub](https://github.com/CodeIntelligenceTesting/cifuzz/releases/latest)
 or by running our install script:
 
 ```bash
@@ -80,11 +80,11 @@ and execute it.
 By default, cifuzz gets installed in your home directory under `cifuzz`.
 You can customize the installation directory with `./cifuzz_installer -i /target/dir`.
 
-Do not forget to add the installation directory to your `PATH`.
+Do not forget to add the installation's `bin` directory to your `PATH`.
 
 
 ### Prerequisites
-Depending on our language / build system of choice **cifuzz** has
+Depending on your language / build system of choice **cifuzz** has
 different prerequisites:
 
 <details>
