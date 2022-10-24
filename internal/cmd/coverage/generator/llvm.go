@@ -131,13 +131,14 @@ func (cov *LLVMCoverageGenerator) build() error {
 			return errors.New("CMake is the only supported build system on Windows")
 		}
 		builder, err := other.NewBuilder(&other.BuilderOptions{
-			ProjectDir:   cov.ProjectDir,
-			BuildCommand: cov.BuildCommand,
-			Engine:       "libfuzzer",
-			Sanitizers:   []string{"coverage"},
-			Stdout:       cov.StdOut,
-			Stderr:       cov.StdErr,
-		}, cov.finder)
+			ProjectDir:     cov.ProjectDir,
+			BuildCommand:   cov.BuildCommand,
+			Engine:         "libfuzzer",
+			Sanitizers:     []string{"coverage"},
+			RunfilesFinder: cov.finder,
+			Stdout:         cov.StdOut,
+			Stderr:         cov.StdErr,
+		})
 		if err != nil {
 			return err
 		}
