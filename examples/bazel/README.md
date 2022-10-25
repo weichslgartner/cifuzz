@@ -8,7 +8,7 @@ main [README](../../README.md).
 
 You can start the fuzzing with
 ```bash
-cifuzz run my_fuzz_test
+cifuzz run //src:explore_me_fuzz_test
 ```
 
 ## Create regression test
