@@ -168,6 +168,10 @@ func (c *runRemoteCmd) run() error {
 
 	// Obtain the API access token
 	token := os.Getenv("CIFUZZ_API_TOKEN")
+	// Support CI_FUZZ_API_TOKEN for compatibility with older CI/CD pipelines/templates
+	if token == "" {
+		token = os.Getenv("CI_FUZZ_API_TOKEN")
+	}
 	if token == "" {
 		token = access_tokens.Get(c.opts.Server)
 	}
