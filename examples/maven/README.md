@@ -10,3 +10,21 @@ You can start fuzzing with
 ```bash
 cifuzz run com.example.FuzzTestCase
 ```
+
+To start make sure you installed **cifuzz** according to the 
+main [README](../../README.md).
+
+You can start fuzzing with
+```bash
+cifuzz run com.example.FuzzTestCase
+```
+
+## Coverage
+cifuzz can generate Java coverage reports using
+[jacoco](https://www.jacoco.org). This example is configured to use both HTML
+and XML (e.g. for IDE support) as output formats.
+
+Run the coverage command after your cifuzz run:
+```bash
+cifuzz coverage com.example.FuzzTestCase
+```
