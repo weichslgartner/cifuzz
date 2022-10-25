@@ -34,10 +34,10 @@ clean: clean/examples/cmake
 
 .ONESHELL:
 clean/examples/cmake:
-	-rm -r examples/cmake/.cifuzz-*
-	-rm -r examples/cmake/build/
-	-rm examples/cmake/crash-*
-	-rm -r examples/cmake/*_inputs
+	-rm -rf examples/cmake/.cifuzz-*
+	-rm -rf examples/cmake/build/
+	-rm -f examples/cmake/crash-*
+	-rm -rf examples/cmake/*_inputs
 
 .PHONY: deps
 deps:
