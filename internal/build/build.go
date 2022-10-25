@@ -147,3 +147,8 @@ func JazzerSeedCorpus(targetClass string, projectDir string) string {
 
 	return filepath.Join(projectDir, filepath.Join(path...))
 }
+
+func JazzerGeneratedCorpus(targetClass string, projectDir string) string {
+    return filepath.Join(projectDir, ".cifuzz-corpus", targetClass)
+}
+

@@ -21,6 +21,8 @@ import (
 	"code-intelligence.com/cifuzz/internal/build"
 	"code-intelligence.com/cifuzz/internal/build/bazel"
 	"code-intelligence.com/cifuzz/internal/build/cmake"
+	"code-intelligence.com/cifuzz/internal/build/gradle"
+	"code-intelligence.com/cifuzz/internal/build/maven"
 	"code-intelligence.com/cifuzz/internal/build/other"
 	"code-intelligence.com/cifuzz/internal/cmd/run/report_handler"
 	"code-intelligence.com/cifuzz/internal/cmdutils"
@@ -29,6 +31,7 @@ import (
 	"code-intelligence.com/cifuzz/pkg/dependencies"
 	"code-intelligence.com/cifuzz/pkg/log"
 	"code-intelligence.com/cifuzz/pkg/runfiles"
+	"code-intelligence.com/cifuzz/pkg/runner/jazzer"
 	"code-intelligence.com/cifuzz/pkg/runner/libfuzzer"
 	"code-intelligence.com/cifuzz/util/fileutil"
 )
@@ -100,6 +103,11 @@ type runCmd struct {
 
 	reportHandler *report_handler.ReportHandler
 	tempDir       string
+}
+
+type runner interface {
+	Run(context.Context) error
+	Cleanup(context.Context)
 }
 
 func New() *cobra.Command {
@@ -234,11 +242,28 @@ func (c *runCmd) buildFuzzTest() (*build.Result, error) {
 		sanitizers = append(sanitizers, "undefined")
 	}
 
-	if runtime.GOOS == "windows" && c.opts.BuildSystem != config.BuildSystemCMake {
-		return nil, errors.New("CMake is the only supported build system on Windows")
+	if runtime.GOOS == "windows" &&
+		(c.opts.BuildSystem != config.BuildSystemCMake &&
+			c.opts.BuildSystem != config.BuildSystemMaven &&
+			c.opts.BuildSystem != config.BuildSystemGradle) {
+
+		return nil, errors.New("Build system unsupported on Windows")
 	}
 
-	if c.opts.BuildSystem == config.BuildSystemBazel {
+	switch c.opts.BuildSystem {
+	case config.BuildSystemBazel:
+		// The cc_fuzz_test rule defines multiple bazel targets: If the
+		// name is "foo", it defines the targets "foo", "foo_bin", and
+		// others. We need to run the "foo_bin" target but want to
+		// allow users to specify either "foo" or "foo_bin", so we check
+		// if the fuzz test name appended with "_bin" is a valid target
+		// and use that in that case
+		cmd := exec.Command("bazel", "query", c.opts.fuzzTest+"_bin")
+		err := cmd.Run()
+		if err == nil {
+			c.opts.fuzzTest += "_bin"
+		}
+
 		builder, err := bazel.NewBuilder(&bazel.BuilderOptions{
 			ProjectDir: c.opts.ProjectDir,
 			Engine:     "libfuzzer",
@@ -256,7 +281,7 @@ func (c *runCmd) buildFuzzTest() (*build.Result, error) {
 			return nil, err
 		}
 		return buildResults[0], nil
-	} else if c.opts.BuildSystem == config.BuildSystemCMake {
+	case config.BuildSystemCMake:
 		builder, err := cmake.NewBuilder(&cmake.BuilderOptions{
 			ProjectDir: c.opts.ProjectDir,
 			// TODO: Do not hardcode this value.
@@ -281,7 +306,43 @@ func (c *runCmd) buildFuzzTest() (*build.Result, error) {
 			return nil, err
 		}
 		return buildResults[0], nil
-	} else if c.opts.BuildSystem == config.BuildSystemOther {
+	case config.BuildSystemMaven:
+		builder, err := maven.NewBuilder(&maven.BuilderOptions{
+			ProjectDir: c.opts.ProjectDir,
+			Parallel: maven.ParallelOptions{
+				Enabled: viper.IsSet("build-jobs"),
+				NumJobs: c.opts.NumBuildJobs,
+			},
+			Stdout: c.OutOrStdout(),
+			Stderr: c.OutOrStderr(),
+		})
+		if err != nil {
+			return nil, err
+		}
+		buildResult, err := builder.Build(c.opts.fuzzTest)
+		if err != nil {
+			return nil, err
+		}
+		return buildResult, err
+	case config.BuildSystemGradle:
+		builder, err := gradle.NewBuilder(&gradle.BuilderOptions{
+			ProjectDir: c.opts.ProjectDir,
+			Parallel: gradle.ParallelOptions{
+				Enabled: viper.IsSet("build-jobs"),
+				NumJobs: c.opts.NumBuildJobs,
+			},
+			Stdout: c.OutOrStdout(),
+			Stderr: c.OutOrStderr(),
+		})
+		if err != nil {
+			return nil, err
+		}
+		buildResult, err := builder.Build(c.opts.fuzzTest)
+		if err != nil {
+			return nil, err
+		}
+		return buildResult, err
+	case config.BuildSystemOther:
 		builder, err := other.NewBuilder(&other.BuilderOptions{
 			ProjectDir:   c.opts.ProjectDir,
 			BuildCommand: c.opts.BuildCommand,
@@ -299,14 +360,16 @@ func (c *runCmd) buildFuzzTest() (*build.Result, error) {
 			return nil, err
 		}
 		return buildResult, nil
-	} else {
-		return nil, errors.Errorf("Unsupported build system \"%s\"", c.opts.BuildSystem)
 	}
+
+	return nil, errors.Errorf("Unsupported build system \"%s\"", c.opts.BuildSystem)
 }
 
 func (c *runCmd) runFuzzTest(buildResult *build.Result) error {
 	log.Infof("Running %s", pterm.Style{pterm.Reset, pterm.FgLightBlue}.Sprintf(c.opts.fuzzTest))
-	log.Debugf("Executable: %s", buildResult.Executable)
+	if buildResult.Executable != "" {
+		log.Debugf("Executable: %s", buildResult.Executable)
+	}
 
 	err := os.MkdirAll(buildResult.GeneratedCorpus, 0755)
 	if err != nil {
@@ -372,8 +435,73 @@ func (c *runCmd) runFuzzTest(buildResult *build.Result) error {
 		UseMinijail:        c.opts.UseSandbox,
 		Verbose:            viper.GetBool("verbose"),
 	}
-	runner := libfuzzer.NewRunner(runnerOpts)
 
+	var runner runner
+
+	switch c.opts.BuildSystem {
+	case config.BuildSystemCMake, config.BuildSystemBazel, config.BuildSystemOther:
+		runner = libfuzzer.NewRunner(runnerOpts)
+	case config.BuildSystemMaven, config.BuildSystemGradle:
+		runnerOpts := &jazzer.RunnerOptions{
+			TargetClass:      c.opts.fuzzTest,
+			ClassPaths:       buildResult.RuntimeDeps,
+			LibfuzzerOptions: runnerOpts,
+		}
+		runner = jazzer.NewRunner(runnerOpts)
+	}
+
+	return executeRunner(runner)
+}
+
+func (c *runCmd) printFinalMetrics(generatedCorpus, seedCorpus string) error {
+	numSeeds, err := countSeeds(append(c.opts.SeedCorpusDirs, generatedCorpus, seedCorpus))
+	if err != nil {
+		return err
+	}
+
+	return c.reportHandler.PrintFinalMetrics(numSeeds)
+}
+
+func (c *runCmd) checkDependencies() (bool, error) {
+	switch c.opts.BuildSystem {
+	case config.BuildSystemCMake:
+		deps := []dependencies.Key{
+			dependencies.CLANG,
+			dependencies.LLVM_SYMBOLIZER,
+			dependencies.CMAKE,
+		}
+		return dependencies.Check(deps, dependencies.CMakeDeps, runfiles.Finder)
+	case config.BuildSystemMaven:
+		deps := []dependencies.Key{
+			dependencies.MAVEN,
+		}
+		return dependencies.Check(deps, dependencies.MavenDeps, runfiles.Finder)
+	case config.BuildSystemGradle:
+		// First check if gradle wrapper exists and check for gradle in path otherwise
+		wrapper, err := gradle.FindGradleWrapper(c.opts.ProjectDir)
+		if err != nil && !errors.Is(err, os.ErrNotExist) {
+			return false, err
+		}
+		if wrapper != "" {
+			return true, nil
+		}
+
+		deps := []dependencies.Key{
+			dependencies.GRADLE,
+		}
+		return dependencies.Check(deps, dependencies.GradleDeps, runfiles.Finder)
+	case config.BuildSystemBazel, config.BuildSystemOther:
+		deps := []dependencies.Key{
+			dependencies.CLANG,
+			dependencies.LLVM_SYMBOLIZER,
+		}
+		return dependencies.Check(deps, dependencies.CMakeDeps, runfiles.Finder)
+	}
+
+	return false, errors.Errorf("Unsupported build system \"%s\"", c.opts.BuildSystem)
+}
+
+func executeRunner(runner runner) error {
 	// Handle cleanup (terminating the fuzzer process) when receiving
 	// termination signals
 	signalHandlerCtx, cancelSignalHandler := context.WithCancel(context.Background())
@@ -399,7 +527,7 @@ func (c *runCmd) runFuzzTest(buildResult *build.Result) error {
 		return runner.Run(routinesCtx)
 	})
 
-	err = routines.Wait()
+	err := routines.Wait()
 	// We use a separate variable to pass signal errors, because when
 	// a signal was received, the first goroutine terminates the second
 	// one, resulting in a race of which returns an error first. In that
@@ -419,23 +547,6 @@ func (c *runCmd) runFuzzTest(buildResult *build.Result) error {
 	}
 
 	return err
-}
-
-func (c *runCmd) printFinalMetrics(generatedCorpus, seedCorpus string) error {
-	numSeeds, err := countSeeds(append(c.opts.SeedCorpusDirs, generatedCorpus, seedCorpus))
-	if err != nil {
-		return err
-	}
-
-	return c.reportHandler.PrintFinalMetrics(numSeeds)
-}
-
-func (c *runCmd) checkDependencies() (bool, error) {
-	deps := []dependencies.Key{dependencies.CLANG, dependencies.LLVM_SYMBOLIZER}
-	if c.opts.BuildSystem == config.BuildSystemCMake {
-		deps = append(deps, dependencies.CMAKE)
-	}
-	return dependencies.Check(deps, dependencies.Default, runfiles.Finder)
 }
 
 func countSeeds(seedCorpusDirs []string) (uint, error) {

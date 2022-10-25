@@ -92,7 +92,9 @@ func (b *Builder) Build(targetClass string) (*build.Result, error) {
 		return nil, err
 	}
 	seedCorpus := build.JazzerSeedCorpus(targetClass, b.ProjectDir)
+    generatedCorpus := build.JazzerGeneratedCorpus(targetClass, b.ProjectDir)
 	result := &build.Result{
+        GeneratedCorpus: generatedCorpus,
 		SeedCorpus:  seedCorpus,
 		RuntimeDeps: deps,
 	}
