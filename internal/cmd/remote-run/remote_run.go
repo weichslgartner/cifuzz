@@ -170,13 +170,14 @@ func (c *runRemoteCmd) run() error {
 	// Obtain the API access token
 	token := os.Getenv("CIFUZZ_API_TOKEN")
 	if token == "" {
+		token = access_tokens.Get(c.opts.Server)
+	}
+
+	if token == "" {
 		// cictl reads the API token from CI_FUZZ_API_TOKEN, so we try
 		// reading that as well to support setups which already set that
 		// environment variable.
 		token = os.Getenv("CI_FUZZ_API_TOKEN")
-	}
-	if token == "" {
-		token = access_tokens.Get(c.opts.Server)
 	}
 
 	if token == "" {
