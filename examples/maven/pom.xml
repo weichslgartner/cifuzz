@@ -16,16 +16,18 @@
     </properties>
 
     <dependencies>
+        <!-- Use JUnit Jupiter for testing. -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-engine</artifactId>
             <version>5.9.0</version>
             <scope>test</scope>
         </dependency>
+        <!-- Use Jazzer for fuzzing -->
         <dependency>
             <groupId>com.code-intelligence</groupId>
             <artifactId>jazzer-junit</artifactId>
-            <version>0.12.0</version>
+            <version>0.13.0</version>
             <scope>test</scope>
         </dependency>
     </dependencies>

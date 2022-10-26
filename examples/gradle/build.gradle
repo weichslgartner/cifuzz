@@ -20,8 +20,8 @@ repositories {
 dependencies {
     // Use JUnit Jupiter for testing.
     testImplementation 'org.junit.jupiter:junit-jupiter:5.9.0'
-    // Use Jazzer for fuzzing
-    testImplementation 'com.code-intelligence:jazzer-junit:0.12.0'
+    // Use Jazzer for fuzzing.
+    testImplementation 'com.code-intelligence:jazzer-junit:0.13.0'
 
     // This dependency is used by the application.
     implementation 'com.google.guava:guava:31.1-jre'
