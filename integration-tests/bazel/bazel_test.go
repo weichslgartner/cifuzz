@@ -151,4 +151,9 @@ func TestIntegration_Bazel_InitCreateRunBundle(t *testing.T) {
 
 	// Run cifuzz bundle and verify the contents of the archive.
 	shared.TestBundle(t, dir, cifuzz, "//src/parser:parser_fuzz_test")
+
+	// The remote-run command is currently only supported on Linux
+	if runtime.GOOS == "linux" {
+		shared.TestRemoteRun(t, dir, cifuzz, "//src/parser:parser_fuzz_test")
+	}
 }

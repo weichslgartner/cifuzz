@@ -207,7 +207,7 @@ func TestIntegration_CMake_InitCreateRunCoverageBundle(t *testing.T) {
 
 	// The remote-run command is currently only supported on Linux
 	if runtime.GOOS == "linux" {
-		testRemoteRun(t, dir, cifuzz)
+		shared.TestRemoteRun(t, dir, cifuzz)
 	}
 
 }
@@ -290,50 +290,4 @@ func createAndVerifyLcovCoverageReport(t *testing.T, cifuzz string, dir string) 
 		// instrumentation, so we conservatively assume they aren't covered.
 		21, 31, 41},
 		uncoveredLines)
-}
-
-func testRemoteRun(t *testing.T, dir string, cifuzz string) {
-	projectName := "test-project"
-	artifactsName := "test-artifacts-123"
-	token := "test-token"
-
-	// Start a mock server to handle our requests
-	server := shared.StartMockServer(t, projectName, artifactsName)
-
-	tempDir, err := os.MkdirTemp("", "cifuzz-archive-*")
-	require.NoError(t, err)
-	defer fileutil.Cleanup(tempDir)
-
-	// Create a dictionary
-	dictPath := filepath.Join(tempDir, "some_dict")
-	err = os.WriteFile(dictPath, []byte("test-dictionary-content"), 0600)
-	require.NoError(t, err)
-
-	// Create a seed corpus directory with an empty seed
-	seedCorpusDir, err := os.MkdirTemp(tempDir, "seeds-")
-	require.NoError(t, err)
-	err = fileutil.Touch(filepath.Join(seedCorpusDir, "empty"))
-	require.NoError(t, err)
-
-	// Try to start a remote run on our mock server
-	cmd := executil.Command(cifuzz, "remote-run",
-		"--dict", dictPath,
-		"--engine-arg", "arg1",
-		"--engine-arg", "arg2",
-		"--seed-corpus", seedCorpusDir,
-		"--timeout", "100m",
-		"--project", projectName,
-		"--server", server.Address,
-	)
-	cmd.Env, err = envutil.Setenv(os.Environ(), "CIFUZZ_API_TOKEN", token)
-	require.NoError(t, err)
-	cmd.Dir = dir
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	t.Logf("Command: %s", cmd.String())
-	err = cmd.Run()
-	require.NoError(t, err)
-
-	require.True(t, server.ArtifactsUploaded)
-	require.True(t, server.RunStarted)
 }
