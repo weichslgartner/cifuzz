@@ -5,9 +5,11 @@ import (
 	"path/filepath"
 	"runtime"
 
+	"github.com/pkg/errors"
 	"github.com/spf13/pflag"
 
 	builderPkg "code-intelligence.com/cifuzz/internal/builder"
+	"code-intelligence.com/cifuzz/internal/cmdutils"
 	"code-intelligence.com/cifuzz/pkg/log"
 )
 
@@ -18,9 +20,11 @@ func main() {
 	goarch := flags.String("goarch", runtime.GOARCH, "cross compilation GOARCH, defaults to runtime.GOARCH")
 	helpRequested := flags.BoolP("help", "h", false, "")
 	buildDirFlag := flags.String("build-dir", "cmd/installer/build", "the directory where the build results are written to")
+	flags.Bool("verbose", false, "Print verbose output")
+	cmdutils.ViperMustBindPFlag("verbose", flags.Lookup("verbose"))
 
 	if err := flags.Parse(os.Args); err != nil {
-		log.Error(err, err.Error())
+		log.Error(errors.WithStack(err))
 		os.Exit(1)
 	}
 
@@ -33,7 +37,7 @@ func main() {
 	buildDir := *buildDirFlag
 	projectDir, err := builderPkg.FindProjectDir()
 	if err != nil {
-		log.Error(err, err.Error())
+		log.Error(err)
 		os.Exit(1)
 	}
 	if !filepath.IsAbs(buildDir) {
@@ -49,12 +53,13 @@ func main() {
 
 	builder, err := builderPkg.NewCIFuzzBuilder(opts)
 	if err != nil {
-		log.Error(err, err.Error())
+		log.Error(err)
 		os.Exit(1)
 	}
 
-	if err = builder.BuildCIFuzzAndDeps(); err != nil {
-		log.Error(err, err.Error())
+	err = builder.BuildCIFuzzAndDeps()
+	if err != nil {
+		log.Error(err)
 		os.Exit(1)
 	}
 }
