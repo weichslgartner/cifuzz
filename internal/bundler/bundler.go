@@ -114,11 +114,24 @@ func (opts *Opts) Validate() error {
 	}
 
 	if opts.BuildSystem == config.BuildSystemBazel {
-		// We currently don't support building a bundle with bazel
-		// without any specified fuzz tests
+		// We don't support building a bundle with bazel without any
+		// specified fuzz tests
 		if len(opts.FuzzTests) == 0 {
 			msg := `At least one <fuzz test> argument must be provided`
 			return cmdutils.WrapIncorrectUsageError(errors.New(msg))
+		}
+
+		// Evaluate any target patterns which users might have provided
+		patterns := opts.FuzzTests
+		opts.FuzzTests, err = cmdutils.EvaluateBazelTargetPatterns(patterns)
+		if err != nil {
+			return err
+		}
+
+		if len(opts.FuzzTests) == 0 {
+			err := errors.Errorf("No valid targets found for patterns: %s", strings.Join(patterns, " "))
+			log.Error(err)
+			return cmdutils.WrapSilentError(err)
 		}
 	}
 
