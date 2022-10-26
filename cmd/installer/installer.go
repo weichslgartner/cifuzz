@@ -15,8 +15,8 @@ import (
 	"github.com/otiai10/copy"
 	"github.com/pkg/errors"
 	"github.com/spf13/pflag"
-	"github.com/spf13/viper"
 
+	"code-intelligence.com/cifuzz/internal/cmdutils"
 	"code-intelligence.com/cifuzz/internal/installer"
 	"code-intelligence.com/cifuzz/pkg/log"
 	"code-intelligence.com/cifuzz/util/fileutil"
@@ -32,10 +32,11 @@ func main() {
 	installDir := flags.StringP("install-dir", "i", "~/cifuzz", "The directory to install cifuzz in")
 	helpRequested := flags.BoolP("help", "h", false, "")
 	flags.Bool("verbose", false, "Print verbose output")
-	viper.BindPFlag("verbose", flags.Lookup("verbose"))
+	cmdutils.ViperMustBindPFlag("verbose", flags.Lookup("verbose"))
 
-	if err := flags.Parse(os.Args); err != nil {
-		log.Error(err, err.Error())
+	err := flags.Parse(os.Args)
+	if err != nil {
+		log.Error(errors.WithStack(err))
 		os.Exit(1)
 	}
 
@@ -45,8 +46,9 @@ func main() {
 		os.Exit(0)
 	}
 
-	if err := ExtractEmbeddedFiles(*installDir, &buildFiles); err != nil {
-		log.Error(err, err.Error())
+	err = ExtractEmbeddedFiles(*installDir, &buildFiles)
+	if err != nil {
+		log.Error(err)
 		os.Exit(1)
 	}
 
@@ -253,7 +255,7 @@ func installBashCompletionScript(targetDir, cifuzzPath string) error {
 			return errors.WithStack(err)
 		}
 	case "darwin":
-		// There are no bash completoin directories on macOS by default,
+		// There are no bash completion directories on macOS by default,
 		// so we need user action to source our installation directory
 		notes = append(notes, fmt.Sprintf(`To enable command completion:
 
