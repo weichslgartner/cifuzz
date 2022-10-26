@@ -29,7 +29,7 @@ default:
 	@echo cifuzz
 
 .PHONY: clean
-clean: clean/examples/cmake
+clean: clean/examples/cmake clean/third-party/minijail
 	rm -rf build/
 
 .ONESHELL:
@@ -38,6 +38,10 @@ clean/examples/cmake:
 	-rm -rf examples/cmake/build/
 	-rm -f examples/cmake/crash-*
 	-rm -rf examples/cmake/*_inputs
+
+.PHONY: clean/third-party/minijail
+clean/third-party/minijail:
+	PWD=${PWD}/third-party/minijail make -C third-party/minijail clean
 
 .PHONY: deps
 deps:
