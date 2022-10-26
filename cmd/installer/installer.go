@@ -151,13 +151,16 @@ func ExtractEmbeddedFiles(targetDir string, files *embed.FS) error {
 	// Install the autocompletion script for the current shell (if the
 	// shell is supported)
 	cifuzzPath := filepath.Join(targetDir, "bin", "cifuzz")
-	switch filepath.Base(os.Getenv("SHELL")) {
+	shell := filepath.Base(os.Getenv("SHELL"))
+	switch shell {
 	case "bash":
 		err = installBashCompletionScript(targetDir, cifuzzPath)
 	case "zsh":
 		err = installZshCompletionScript(targetDir, cifuzzPath)
 	case "fish":
 		err = installFishCompletionScript(cifuzzPath)
+	default:
+		log.Printf("Not installing shell completion script: Unsupported shell: %s", shell)
 	}
 	if err != nil {
 		return err
