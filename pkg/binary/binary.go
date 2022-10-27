@@ -42,5 +42,5 @@ func SupportsLlvmProfileContinuousMode(binary string) bool {
 	}
 	// Check taken from:
 	// https://github.com/llvm/llvm-project/blob/846709b287abe541fcad42e5a54d37a41dae3f67/compiler-rt/lib/profile/InstrProfilingFile.c#L574
-	return biasVarAddress != 0 && biasVarAddress != biasDefaultVarAddress
+	return biasVarAddress != 0 && biasDefaultVarAddress != 0 && biasVarAddress != biasDefaultVarAddress
 }
