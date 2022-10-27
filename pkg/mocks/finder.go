@@ -26,16 +26,6 @@ func (m *RunfilesFinderMock) CMakePresetsPath() (string, error) {
 	return args.String(0), args.Error(1)
 }
 
-func (m *RunfilesFinderMock) JazzerAgentDeployJarPath() (string, error) {
-	args := m.Called()
-	return args.String(0), args.Error(1)
-}
-
-func (m *RunfilesFinderMock) JazzerPath() (string, error) {
-	args := m.Called()
-	return args.String(0), args.Error(1)
-}
-
 func (m *RunfilesFinderMock) LLVMCovPath() (string, error) {
 	args := m.Called()
 	return args.String(0), args.Error(1)
@@ -87,6 +77,11 @@ func (m *RunfilesFinderMock) LogoPath() (string, error) {
 }
 
 func (m *RunfilesFinderMock) GradleClasspathScriptPath() (string, error) {
+	args := m.Called()
+	return args.String(0), args.Error(1)
+}
+
+func (m *RunfilesFinderMock) JavaHomePath() (string, error) {
 	args := m.Called()
 	return args.String(0), args.Error(1)
 }

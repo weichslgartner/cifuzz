@@ -1,10 +1,12 @@
 package dependencies
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -12,6 +14,7 @@ import (
 	"github.com/pkg/errors"
 
 	"code-intelligence.com/cifuzz/pkg/log"
+	"code-intelligence.com/cifuzz/pkg/runfiles"
 )
 
 /*
@@ -22,6 +25,7 @@ var (
 	clangRegex = regexp.MustCompile(`(?m)clang version (?P<version>\d+\.\d+(\.\d+)?)`)
 	cmakeRegex = regexp.MustCompile(`(?m)cmake version (?P<version>\d+\.\d+(\.\d+)?)`)
 	llvmRegex  = regexp.MustCompile(`(?m)LLVM version (?P<version>\d+\.\d+(\.\d+)?)`)
+	javaRegex  = regexp.MustCompile(`(?m)version \"(?P<version>\d+(\.\d+\.\d+)?)\"`)
 )
 
 type execCheck func(string, Key) (*semver.Version, error)
@@ -35,7 +39,7 @@ func ClangVersion(path string) (*semver.Version, error) {
 func clangCheck(path string, key Key) (*semver.Version, error) {
 	version, err := getVersionFromCommand(path, []string{"--version"}, clangRegex, key)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 	return version, nil
 }
@@ -107,7 +111,7 @@ func clangVersion(dep *Dependency, clangCheck execCheck) (*semver.Version, error
 func llvmVersion(path string, dep *Dependency) (*semver.Version, error) {
 	version, err := getVersionFromCommand(path, []string{"--version"}, llvmRegex, dep.Key)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 	return version, nil
 }
@@ -115,25 +119,43 @@ func llvmVersion(path string, dep *Dependency) (*semver.Version, error) {
 func cmakeVersion(dep *Dependency) (*semver.Version, error) {
 	path, err := exec.LookPath("cmake")
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 
 	version, err := getVersionFromCommand(path, []string{"--version"}, cmakeRegex, dep.Key)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 	log.Debugf("Found CMake version %s in PATH: %s", version, path)
 	return version, nil
 }
 
-// takes a command + args and parses the output for a semver
-func getVersionFromCommand(cmdPath string, args []string, re *regexp.Regexp, key Key) (*semver.Version, error) {
-	cmd := exec.Command(cmdPath, args...)
-	output, err := cmd.Output()
+func javaVersion(dep *Dependency) (*semver.Version, error) {
+	javaHome, err := runfiles.Finder.JavaHomePath()
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	return extractVersion(string(output), re, key)
+	javaBin := filepath.Join(javaHome, "bin", "java")
+
+	version, err := getVersionFromCommand(javaBin, []string{"-version"}, javaRegex, dep.Key)
+	if err != nil {
+		return nil, err
+	}
+	log.Debugf("Found Java version %s in PATH: %s", version, javaHome)
+	return version, nil
+}
+
+// takes a command + args and parses the output for a semver
+func getVersionFromCommand(cmdPath string, args []string, re *regexp.Regexp, key Key) (*semver.Version, error) {
+	output := bytes.Buffer{}
+	cmd := exec.Command(cmdPath, args...)
+	cmd.Stdout = &output
+	cmd.Stderr = &output
+	err := cmd.Run()
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return extractVersion(output.String(), re, key)
 }
 
 func extractVersion(output string, re *regexp.Regexp, key Key) (*semver.Version, error) {

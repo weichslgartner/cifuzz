@@ -473,6 +473,7 @@ func (c *runCmd) checkDependencies() (bool, error) {
 		return dependencies.Check(deps, dependencies.CMakeDeps, runfiles.Finder)
 	case config.BuildSystemMaven:
 		deps := []dependencies.Key{
+			dependencies.JAVA,
 			dependencies.MAVEN,
 		}
 		return dependencies.Check(deps, dependencies.MavenDeps, runfiles.Finder)
@@ -487,6 +488,7 @@ func (c *runCmd) checkDependencies() (bool, error) {
 		}
 
 		deps := []dependencies.Key{
+			dependencies.JAVA,
 			dependencies.GRADLE,
 		}
 		return dependencies.Check(deps, dependencies.GradleDeps, runfiles.Finder)

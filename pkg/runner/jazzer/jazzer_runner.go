@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 
@@ -67,7 +68,11 @@ func (r *Runner) Run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+
 	javaBin := filepath.Join(javaHome, "bin", "java")
+	if runtime.GOOS == "windows" {
+		javaBin = filepath.Join(javaHome, "bin", "java.exe")
+	}
 	args := []string{javaBin}
 
 	// class paths
@@ -206,5 +211,5 @@ func (r *Runner) FuzzerEnvironment() ([]string, error) {
 }
 
 func (r *Runner) Cleanup(ctx context.Context) {
-	r.Runner.Cleanup(ctx)
+	r.Cleanup(ctx)
 }

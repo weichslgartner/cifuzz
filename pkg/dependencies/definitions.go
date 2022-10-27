@@ -31,6 +31,7 @@ func setDefaults() {
 	CMakeDeps = cmakeDeps
 
 	mavenDeps, err := Define([]Key{
+		JAVA,
 		MAVEN,
 	})
 	if err != nil {
@@ -39,6 +40,7 @@ func setDefaults() {
 	MavenDeps = mavenDeps
 
 	gradleDeps, err := Define([]Key{
+		JAVA,
 		GRADLE,
 	})
 	if err != nil {
@@ -139,6 +141,14 @@ var all = map[Key]Dependency{
 		},
 		Installed: func(dep *Dependency) bool {
 			return dep.checkFinder(dep.finder.LLVMSymbolizerPath)
+		},
+	},
+	JAVA: {
+		Key:        JAVA,
+		MinVersion: *semver.MustParse("8.0.0"),
+		GetVersion: javaVersion,
+		Installed: func(dep *Dependency) bool {
+			return dep.checkFinder(dep.finder.JavaHomePath)
 		},
 	},
 	MAVEN: {

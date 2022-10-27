@@ -19,8 +19,8 @@ func TestResetDefault(t *testing.T) {
 
 	ResetDefaultsForTestsOnly()
 	assert.Len(t, CMakeDeps, 5)
-	assert.Len(t, MavenDeps, 1)
-	assert.Len(t, GradleDeps, 1)
+	assert.Len(t, MavenDeps, 2)
+	assert.Len(t, GradleDeps, 2)
 
 	newCMakeKeys := maps.Keys(CMakeDeps)
 	for key, _ := range oldDefaultCMake {
