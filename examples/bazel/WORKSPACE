@@ -18,9 +18,7 @@ rules_fuzzing_init()
 
 git_repository(
     name = "cifuzz",
-    # TODO: Change this to branch main once merged to main and to tag
-    # once released
-    branch = "bazel-support",
+    branch = "main",
     remote = "https://github.com/CodeIntelligenceTesting/cifuzz",
     strip_prefix = "tools/cmake/cifuzz/include/cifuzz",
 )
