@@ -13,14 +13,17 @@ The `add_fuzz_test` directive can be treated like `add_executable`.
 
 ## How to convert/cast the fuzzer data into the data types you need
 
-### C/C++
+You might have to convert/cast the input parameters to other types to call your
+functions. A useful tool for this is The
+[FuzzedDataProvider](https://github.com/google/fuzzing/blob/master/docs/split-inputs.md#fuzzed-data-provider).
 
-You might have to convert/cast the input parameters 
-`const uint8_t *data, size_t size` to other types to call your 
-functions. A useful tool for this is the [FuzzedDataProvider](https://github.com/google/fuzzing/blob/master/docs/split-inputs.md#fuzzed-data-provider).
+<details>
+<summary>C/C++</summary>
+
 If you use Clang/LLVM as your compiler of choice you can use it directly with 
 `#include <fuzzer/FuzzedDataProvider.h>`, otherwise you can just copy 
 the source file and add it to your project. 
+
 An example can look like this:
 
 ``` cpp
@@ -39,6 +42,32 @@ FUZZ_TEST(const uint8_t *data, size_t size) {
   myFunction(my_int, my_string);
 }
 ```
+</details>
+
+<details>
+<summary>Java</summary>
+For Java, you can use the FuzzedDataProvider which is part of the Jazzer API
+package that is automatically downloaded by maven/gradle respectively if set up
+properly after cifuzz init. 
+
+An example can look like this:
+
+```java
+import com.code_intelligence.jazzer.api.FuzzedDataProvider;
+import com.code_intelligence.jazzer.junit.FuzzTest;
+
+public class FuzzTestCase {
+    @FuzzTest
+    void myFuzzTest(FuzzedDataProvider data) {
+        int a = data.consumeInt();
+        int b = data.consumeInt();
+        String c = data.consumeRemainingAsString();
+
+        myFunction(a, b, c);
+    }
+}
+```
+</details>
 
 ## Best Practices
 
@@ -57,6 +86,7 @@ the cli.
 
 After selecting the preset the fuzz test is executed in regression
 test mode.
+
 ![fuzz test in CMake](/docs/assets/cmake_clion.gif)
 
 You can also run the fuzz tests in regression test mode from the CLI:
