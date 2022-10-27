@@ -47,6 +47,7 @@ type LLVMCoverageGenerator struct {
 
 	buildResult    *build.Result
 	tmpDir         string
+	outputDir      string
 	runfilesFinder runfiles.RunfilesFinder
 }
 
@@ -59,6 +60,11 @@ func (cov *LLVMCoverageGenerator) Generate() (string, error) {
 
 	var err error
 	cov.tmpDir, err = os.MkdirTemp("", "llvm-coverage-")
+	if err != nil {
+		return "", err
+	}
+	cov.outputDir = filepath.Join(cov.tmpDir, "output")
+	err = os.Mkdir(cov.outputDir, 0o755)
 	if err != nil {
 		return "", err
 	}
@@ -191,23 +197,25 @@ func (cov *LLVMCoverageGenerator) run() error {
 	// The environment we run minijail in
 	wrapperEnv := os.Environ()
 
-	dirWithEmptyFile, err := os.MkdirTemp(cov.tmpDir, "empty-file-corpus-*")
+	dirWithEmptyFile := filepath.Join(cov.outputDir, "empty-file-corpus")
+	err = os.Mkdir(dirWithEmptyFile, 0o755)
 	if err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 	err = fileutil.Touch(filepath.Join(dirWithEmptyFile, "empty_file"))
 	if err != nil {
 		return err
 	}
 
-	emptyDir, err := os.MkdirTemp(cov.tmpDir, "merge-target-*")
+	emptyDir := filepath.Join(cov.outputDir, "merge-target")
+	err = os.Mkdir(emptyDir, 0o755)
 	if err != nil {
-		return errors.WithStack(err)
+		return err
 	}
-
-	artifactsDir, err := os.MkdirTemp(cov.tmpDir, "merge-artifacts-*")
+	artifactsDir := filepath.Join(cov.outputDir, "merge-artifacts")
+	err = os.Mkdir(artifactsDir, 0o755)
 	if err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 
 	// libFuzzer emits crashing inputs in merge mode, but these aren't useful as we only run on already known inputs.
@@ -249,7 +257,7 @@ func (cov *LLVMCoverageGenerator) runFuzzer(preCorpusArgs []string, corpusDirs [
 			Args:      args,
 			Bindings:  bindings,
 			Env:       binaryEnv,
-			OutputDir: cov.tmpDir,
+			OutputDir: cov.outputDir,
 		})
 		if err != nil {
 			return err
@@ -372,7 +380,7 @@ func (cov *LLVMCoverageGenerator) rawProfilePattern(supportsContinuousMode bool)
 	if supportsContinuousMode {
 		basePattern = "%c" + basePattern
 	}
-	return filepath.Join(cov.tmpDir, basePattern)
+	return filepath.Join(cov.outputDir, basePattern)
 }
 
 func (cov *LLVMCoverageGenerator) generateHTMLReport() (string, error) {
@@ -495,7 +503,7 @@ func (cov *LLVMCoverageGenerator) getIgnoreCIFuzzIncludesArgs() ([]string, error
 }
 
 func (cov *LLVMCoverageGenerator) rawProfileFiles() ([]string, error) {
-	files, err := filepath.Glob(filepath.Join(cov.tmpDir, "*.profraw"))
+	files, err := filepath.Glob(filepath.Join(cov.outputDir, "*.profraw"))
 	return files, errors.WithStack(err)
 }
 
