@@ -71,8 +71,7 @@ func (b *Builder) Build(targetClass string) (*build.Result, error) {
 	args := append(flags, "test-compile")
 
 	cmd := exec.Command("mvn", args...)
-	// Redirect the command's stdout to stderr to only have
-	// reports printed to stdout
+
 	cmd.Stdout = b.Stderr
 	cmd.Stderr = b.Stderr
 	cmd.Dir = b.ProjectDir
@@ -92,11 +91,11 @@ func (b *Builder) Build(targetClass string) (*build.Result, error) {
 		return nil, err
 	}
 	seedCorpus := build.JazzerSeedCorpus(targetClass, b.ProjectDir)
-    generatedCorpus := build.JazzerGeneratedCorpus(targetClass, b.ProjectDir)
+	generatedCorpus := build.JazzerGeneratedCorpus(targetClass, b.ProjectDir)
 	result := &build.Result{
-        GeneratedCorpus: generatedCorpus,
-		SeedCorpus:  seedCorpus,
-		RuntimeDeps: deps,
+		GeneratedCorpus: generatedCorpus,
+		SeedCorpus:      seedCorpus,
+		RuntimeDeps:     deps,
 	}
 
 	return result, nil
@@ -139,6 +138,7 @@ func (b *Builder) getDependencies() ([]string, error) {
 
 	deps := strings.Split(string(bytes), string(os.PathListSeparator))
 	// Append local dependencies which are not listed by "mvn dependency:build-classpath"
+	// These directories are configurable
 	localDeps := []string{"classes", "test-classes", "resource", "test-resource"}
 	for _, dep := range localDeps {
 		deps = append(deps, filepath.Join(b.ProjectDir, "target", dep))

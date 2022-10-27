@@ -141,7 +141,7 @@ func CoverageCFlags(clangVersion *semver.Version) []string {
 }
 
 func JazzerSeedCorpus(targetClass string, projectDir string) string {
-	seedCorpus := targetClass + "SeedCorpus"
+	seedCorpus := targetClass + "Inputs"
 	path := strings.Split(seedCorpus, ".")
 	path = append([]string{"src", "test", "resources"}, path...)
 
@@ -149,6 +149,5 @@ func JazzerSeedCorpus(targetClass string, projectDir string) string {
 }
 
 func JazzerGeneratedCorpus(targetClass string, projectDir string) string {
-    return filepath.Join(projectDir, ".cifuzz-corpus", targetClass)
+	return filepath.Join(projectDir, ".cifuzz-corpus", targetClass)
 }
-

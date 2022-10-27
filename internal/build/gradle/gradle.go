@@ -112,11 +112,11 @@ func (b *Builder) Build(targetClass string) (*build.Result, error) {
 		return nil, err
 	}
 	seedCorpus := build.JazzerSeedCorpus(targetClass, b.ProjectDir)
-    generatedCorpus := build.JazzerGeneratedCorpus(targetClass, b.ProjectDir)
+	generatedCorpus := build.JazzerGeneratedCorpus(targetClass, b.ProjectDir)
 	result := &build.Result{
-        GeneratedCorpus: generatedCorpus,
-		SeedCorpus:  seedCorpus,
-		RuntimeDeps: deps,
+		GeneratedCorpus: generatedCorpus,
+		SeedCorpus:      seedCorpus,
+		RuntimeDeps:     deps,
 	}
 
 	return result, nil
@@ -138,8 +138,7 @@ func (b *Builder) getDependencies() ([]string, error) {
 		classpathScript,
 		"printClasspath",
 	)
-	// Redirect the build command's stdout to stderr to only have
-	// reports printed to stdout
+
 	cmd.Dir = b.ProjectDir
 	log.Debugf("Working directory: %s", cmd.Dir)
 	log.Debugf("Command: %s", cmd.String())

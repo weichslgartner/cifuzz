@@ -6,7 +6,7 @@ see the progress of the fuzzer.
 To start make sure you installed **cifuzz** according to the
 main [README](../../README.md).
 
-You can start the fuzzing with
+You can start fuzzing with
 ```bash
 cifuzz run com.example.FuzzTestCase
 ```
