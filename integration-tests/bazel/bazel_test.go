@@ -95,8 +95,7 @@ func TestIntegration_Bazel_InitCreateRunBundle(t *testing.T) {
 	// Check that Minijail is used (if running on Linux, because Minijail
 	// is only supported on Linux)
 	if runtime.GOOS == "linux" {
-		minijailOutDir := filepath.Join(os.TempDir(), "minijail-out")
-		expectedOutputs = append(expectedOutputs, regexp.MustCompile(regexp.QuoteMeta(`artifact_prefix='`+minijailOutDir)))
+		expectedOutputs = append(expectedOutputs, regexp.MustCompile(`bin/minijail0`))
 	}
 
 	// Run the fuzz test with and verify check that it finds the heap

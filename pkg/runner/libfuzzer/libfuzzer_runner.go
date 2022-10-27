@@ -130,18 +130,12 @@ func (r *Runner) Run(ctx context.Context) error {
 	// stored. This must be an absolute path, because else crash files
 	// are created in the current working directory, which the fuzz test
 	// could change, causing the parser to not find the crash files.
-	if r.UseMinijail {
-		// When using Minijail, artifacts must be created in the
-		// (writable) Minijail output directory
-		args = append(args, "-artifact_prefix="+minijail.OutputDir+"/")
-	} else {
-		outputDir, err := os.MkdirTemp("", "libfuzzer-out-")
-		if err != nil {
-			return errors.WithStack(err)
-		}
-		defer fileutil.Cleanup(outputDir)
-		args = append(args, "-artifact_prefix="+outputDir+"/")
+	outputDir, err := os.MkdirTemp("", "libfuzzer-out-")
+	if err != nil {
+		return errors.WithStack(err)
 	}
+	defer fileutil.Cleanup(outputDir)
+	args = append(args, "-artifact_prefix="+outputDir+"/")
 
 	if len(r.FuzzTestArgs) > 0 {
 		// separate the libfuzzer and fuzz test arguments with a "--"
@@ -179,9 +173,10 @@ func (r *Runner) Run(ctx context.Context) error {
 
 		// Set up Minijail
 		mj, err := minijail.NewMinijail(&minijail.Options{
-			Args:     libfuzzerArgs,
-			Bindings: bindings,
-			Env:      fuzzerEnv,
+			Args:      libfuzzerArgs,
+			Bindings:  bindings,
+			Env:       fuzzerEnv,
+			OutputDir: outputDir,
 		})
 		if err != nil {
 			return err

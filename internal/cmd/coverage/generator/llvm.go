@@ -57,17 +57,8 @@ func (cov *LLVMCoverageGenerator) Generate() (string, error) {
 		cov.runfilesFinder = runfiles.Finder
 	}
 
-	var baseTmpDir string
-	if cov.UseSandbox {
-		baseTmpDir = minijail.OutputDir
-		err := os.MkdirAll(baseTmpDir, 0o700)
-		if err != nil {
-			return "", err
-		}
-	}
-
 	var err error
-	cov.tmpDir, err = os.MkdirTemp(baseTmpDir, "llvm-coverage-")
+	cov.tmpDir, err = os.MkdirTemp("", "llvm-coverage-")
 	if err != nil {
 		return "", err
 	}
@@ -255,9 +246,10 @@ func (cov *LLVMCoverageGenerator) runFuzzer(preCorpusArgs []string, corpusDirs [
 
 		// Set up Minijail
 		mj, err := minijail.NewMinijail(&minijail.Options{
-			Args:     args,
-			Bindings: bindings,
-			Env:      binaryEnv,
+			Args:      args,
+			Bindings:  bindings,
+			Env:       binaryEnv,
+			OutputDir: cov.tmpDir,
 		})
 		if err != nil {
 			return err
