@@ -93,10 +93,9 @@ specified bundle is uploaded to start a remote fuzzing run instead.
 
 This command needs a token to access the API of the remote fuzzing
 server. You can specify this token via the CIFUZZ_API_TOKEN environment
-variable (CI_FUZZ_API_TOKEN is also supported but deprecated). If no
-token is specified, you will be prompted to enter the token. That token
-is then stored in ~/.config/cifuzz/access_tokens.json and used the next
-time the remote-run command is used.
+variable. If no token is specified, you will be prompted to enter the
+token. That token is then stored in ~/.config/cifuzz/access_tokens.json
+and used the next time the remote-run command is used.
 `,
 		ValidArgsFunction: completion.ValidFuzzTests,
 		Args:              cobra.ArbitraryArgs,
@@ -173,13 +172,6 @@ func (c *runRemoteCmd) run() error {
 	token := os.Getenv("CIFUZZ_API_TOKEN")
 	if token == "" {
 		token = access_tokens.Get(c.opts.Server)
-	}
-
-	if token == "" {
-		// cictl reads the API token from CI_FUZZ_API_TOKEN, so we try
-		// reading that as well to support setups which already set that
-		// environment variable.
-		token = os.Getenv("CI_FUZZ_API_TOKEN")
 	}
 
 	if token == "" {
