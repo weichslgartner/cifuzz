@@ -242,14 +242,18 @@ func (b *Builder) BuildForBundle(engine string, sanitizers []string, fuzzTests [
 	}
 
 	// Flags which should only be used for bazel build
-	buildFlags := []string{
+	buildAndCQueryFlags := []string{
+		// Tell bazel to do an optimized build, which includes debug
+		// symbols (in contrast to the default "fastbuild" compilation
+		// mode which strips debug symbols).
+		"--compilation_mode=opt",
 		"--@rules_fuzzing//fuzzing:cc_engine=@rules_fuzzing_oss_fuzz//:oss_fuzz_engine",
 		"--@rules_fuzzing//fuzzing:cc_engine_instrumentation=oss-fuzz",
 		"--verbose_failures",
 	}
 
 	if os.Getenv("BAZEL_SUBCOMMANDS") != "" {
-		buildFlags = append(buildFlags, "--subcommands")
+		buildAndCQueryFlags = append(buildAndCQueryFlags, "--subcommands")
 	}
 
 	// Add sanitizer-specific flags
@@ -267,7 +271,7 @@ func (b *Builder) BuildForBundle(engine string, sanitizers []string, fuzzTests [
 			"--repo_env=GCOV="+llvmProfData,
 			"--repo_env=BAZEL_LLVM_COV="+llvmCov,
 		)
-		buildFlags = append(buildFlags,
+		buildAndCQueryFlags = append(buildAndCQueryFlags,
 			"--@rules_fuzzing//fuzzing:cc_engine_instrumentation=none",
 			"--@rules_fuzzing//fuzzing:cc_engine_sanitizer=none",
 			"--instrument_test_targets",
@@ -290,7 +294,7 @@ func (b *Builder) BuildForBundle(engine string, sanitizers []string, fuzzTests [
 
 	args := []string{"build"}
 	args = append(args, sharedFlags...)
-	args = append(args, buildFlags...)
+	args = append(args, buildAndCQueryFlags...)
 
 	// We have to build the "*_oss_fuzz" target defined by the
 	// cc_fuzz_test rule
@@ -323,6 +327,7 @@ func (b *Builder) BuildForBundle(engine string, sanitizers []string, fuzzTests [
 		// Get the path to the archive created by the build
 		args := []string{"cquery", "--output=starlark", "--starlark:expr=target.files.to_list()[0].path"}
 		args = append(args, sharedFlags...)
+		args = append(args, buildAndCQueryFlags...)
 		args = append(args, fuzzTest+"_oss_fuzz")
 		cmd = exec.Command("bazel", args...)
 		out, err := cmd.Output()
