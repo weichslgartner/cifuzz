@@ -137,6 +137,8 @@ func (b *Builder) BuildForRun(fuzzTests []string) ([]*build.Result, error) {
 		// symbols (in contrast to the default "fastbuild" compilation
 		// mode which strips debug symbols).
 		"--compilation_mode=opt",
+		// Do optimizations which don't harm debugging
+		"--copt", "-Og",
 		// Enable asserts (disabled by --compilation_mode=opt).
 		"--copt", "-UNDEBUG",
 		// Disable source fortification, which is currently not supported
