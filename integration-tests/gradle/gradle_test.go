@@ -23,6 +23,9 @@ func TestIntegration_Gradle_InitCreateRun(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
+	if runtime.GOOS == "windows" {
+		t.Skip("Running Jazzer is currently broken on our Windows GitHub Action runner")
+	}
 
 	// Create installation builder
 	installDir := shared.InstallCIFuzzInTemp(t)
@@ -75,7 +78,7 @@ func TestIntegration_Gradle_InitCreateRun(t *testing.T) {
 	// Make the fuzz test call a function
 	modifyFuzzTestToCallFunction(t, fuzzTestPath)
 	// Run the fuzz test
-	expectedOutputExp := regexp.MustCompile(`^==(=)* Java Exception: com.code_intelligence.jazzer.api.FuzzerSecurityIssueHigh: Remote Code Execution`)
+	expectedOutputExp := regexp.MustCompile(`High: Remote Code Execution`)
 	cifuzzRunner.Run(t, &shared.RunOptions{
 		ExpectedOutputs: []*regexp.Regexp{expectedOutputExp},
 	})
