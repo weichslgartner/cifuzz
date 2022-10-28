@@ -88,6 +88,8 @@ var commonCFlags = []string{
 	// Conventional macro to conditionally compile out fuzzer road blocks
 	// See https://llvm.org/docs/LibFuzzer.html#fuzzer-friendly-build-mode
 	"-DFUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION",
+	// Ensure that asserts are enabled regardless of compilation mode (e.g. explicit -DNDEBUG).
+	"-UNDEBUG",
 }
 
 func LibFuzzerCFlags() []string {

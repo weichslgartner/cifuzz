@@ -133,6 +133,8 @@ func (b *Builder) BuildForRun(fuzzTests []string) ([]*build.Result, error) {
 	runFlags := []string{
 		// Build with debug symbols
 		"-c", "opt", "--copt", "-g",
+		// Enable asserts (disabled by --compilation_mode=opt).
+		"--copt", "-UNDEBUG",
 		// Disable source fortification, which is currently not supported
 		// in combination with ASan, see https://github.com/google/sanitizers/issues/247
 		"--copt", "-U_FORTIFY_SOURCE",
