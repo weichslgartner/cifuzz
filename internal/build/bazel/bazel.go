@@ -132,7 +132,11 @@ func (b *Builder) BuildForRun(fuzzTests []string) ([]*build.Result, error) {
 	// not supported by the other bazel commands we use
 	runFlags := []string{
 		// Build with debug symbols
-		"-c", "opt", "--copt", "-g",
+		"--copt", "-g",
+		// Tell bazel to do an optimized build, which includes debug
+		// symbols (in contrast to the default "fastbuild" compilation
+		// mode which strips debug symbols).
+		"--compilation_mode=opt",
 		// Enable asserts (disabled by --compilation_mode=opt).
 		"--copt", "-UNDEBUG",
 		// Disable source fortification, which is currently not supported
