@@ -242,7 +242,7 @@ regression tests. For more information on regression tests, see:
 `, strings.Join(crashingInputs, "\n    "))
 }
 
-func (h *ReportHandler) PrintFinalMetrics(numSeeds uint) error {
+func (h *ReportHandler) PrintFinalMetrics(numCorpusEntries uint) error {
 	// We don't want to print colors to stderr unless it's a TTY
 	if !term.IsTerminal(int(os.Stderr.Fd())) {
 		color.Disable()
@@ -264,8 +264,8 @@ func (h *ReportHandler) PrintFinalMetrics(numSeeds uint) error {
 	}
 
 	duration := time.Since(h.startedAt)
-	totalSeeds := numSeeds
-	newSeeds := totalSeeds - h.numSeedsAtInit
+	totalCorpusEntries := numCorpusEntries
+	newCorpusEntries := totalCorpusEntries - h.numSeedsAtInit
 
 	var averageExecsStr string
 
@@ -296,8 +296,8 @@ func (h *ReportHandler) PrintFinalMetrics(numSeeds uint) error {
 		metrics.DescString("Execution time:\t") + metrics.NumberString(durationStr),
 		metrics.DescString("Average exec/s:\t") + averageExecsStr,
 		metrics.DescString("Findings:\t") + metrics.NumberString("%d", len(h.Findings)),
-		metrics.DescString("New seeds:\t") + metrics.NumberString("%d", newSeeds) +
-			metrics.DescString(" (total: %s)", metrics.NumberString("%d", totalSeeds)),
+		metrics.DescString("Corpus entries:\t") + metrics.NumberString("%d", totalCorpusEntries) +
+			metrics.DescString(" (+%s)", metrics.NumberString("%d", newCorpusEntries)),
 	}
 
 	w := tabwriter.NewWriter(log.NewPTermWriter(os.Stderr), 0, 0, 1, ' ', 0)

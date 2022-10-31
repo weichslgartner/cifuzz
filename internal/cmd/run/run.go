@@ -454,12 +454,12 @@ func (c *runCmd) runFuzzTest(buildResult *build.Result) error {
 }
 
 func (c *runCmd) printFinalMetrics(generatedCorpus, seedCorpus string) error {
-	numSeeds, err := countSeeds(append(c.opts.SeedCorpusDirs, generatedCorpus, seedCorpus))
+	numCorpusEntries, err := countCorpusEntries(append(c.opts.SeedCorpusDirs, generatedCorpus, seedCorpus))
 	if err != nil {
 		return err
 	}
 
-	return c.reportHandler.PrintFinalMetrics(numSeeds)
+	return c.reportHandler.PrintFinalMetrics(numCorpusEntries)
 }
 
 func (c *runCmd) checkDependencies() (bool, error) {
@@ -551,7 +551,7 @@ func executeRunner(runner runner) error {
 	return err
 }
 
-func countSeeds(seedCorpusDirs []string) (uint, error) {
+func countCorpusEntries(seedCorpusDirs []string) (uint, error) {
 	var numSeeds uint
 	for _, dir := range seedCorpusDirs {
 		var seedsInDir uint
