@@ -211,5 +211,5 @@ func (r *Runner) FuzzerEnvironment() ([]string, error) {
 }
 
 func (r *Runner) Cleanup(ctx context.Context) {
-	r.Cleanup(ctx)
+	r.Runner.Cleanup(ctx)
 }
