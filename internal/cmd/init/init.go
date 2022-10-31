@@ -10,6 +10,7 @@ import (
 	"code-intelligence.com/cifuzz/internal/cmdutils"
 	"code-intelligence.com/cifuzz/internal/config"
 	"code-intelligence.com/cifuzz/pkg/log"
+	"code-intelligence.com/cifuzz/util/fileutil"
 )
 
 //go:embed instructions/bazel
@@ -71,7 +72,7 @@ func run(opts *Options) error {
 		log.Error(err, "Failed to create config")
 		return err
 	}
-	log.Successf("Configuration saved in %s", configpath)
+	log.Successf("Configuration saved in %s", fileutil.PrettifyPath(configpath))
 
 	setUpAndMentionBuildSystemIntegrations(opts.Dir)
 
