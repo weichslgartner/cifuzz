@@ -1,5 +1,9 @@
 # Contributing
 
+## Release process
+
+For more information, see [how to create and publish a new release](./docs/RELEASE.md).
+
 ## Building from Source (Linux / macOS)
 
 ### Prerequisites
