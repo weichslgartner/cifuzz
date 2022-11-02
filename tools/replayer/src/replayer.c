@@ -248,6 +248,7 @@ static void run_file(const char *path) {
   size_t len;
   unsigned char *buf;
   size_t n_read;
+  long pos;
 
   fprintf(stderr, "Running: %s\n", path);
 #ifdef _WIN32
@@ -262,7 +263,12 @@ static void run_file(const char *path) {
     exit(1);
   }
   fseek(f, 0, SEEK_END);
-  len = ftell(f);
+  pos = ftell(f);
+  if (pos < 0) {
+    perror("File is not seekable");
+    exit(1);
+  }
+  len = (size_t) pos;
   fseek(f, 0, SEEK_SET);
   buf = (unsigned char*)malloc(len);
   assert(buf != NULL);

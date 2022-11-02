@@ -79,6 +79,7 @@ var clang = compilerCase{
 		"-Wall",
 		"-Wextra",
 		"-Werror",
+		"-Wconversion",
 		// Add debug info to make ASan and UBSan findings more useful.
 		"-g",
 		"-fsanitize=address,undefined",
@@ -100,6 +101,7 @@ var mingw = compilerCase{
 	[]string{
 		"-Wall",
 		"-Wextra",
+		"-Wconversion",
 		"-pedantic",
 		"-pedantic-errors",
 		"-Werror",
